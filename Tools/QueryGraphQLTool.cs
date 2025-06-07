@@ -21,7 +21,7 @@ namespace Tools
             _allowMutations = allowMutations;
         }
 
-        public async Task<object> QueryAsync(string query, string variables = null)
+        public async Task<object> QueryAsync(string query, string? variables = null)
         {
             // Basic mutation detection (not a full parser)
             if (IsMutation(query) && !_allowMutations)
