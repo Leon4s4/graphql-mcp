@@ -1,0 +1,6 @@
+﻿services:
+  grapql-mcp:
+    image: grapql-mcp
+    build:
+      context: .
+      dockerfile: grapql-mcp/Dockerfile
