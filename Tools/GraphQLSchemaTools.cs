@@ -512,7 +512,7 @@ public static class GraphQLSchemaTools
                     foreach (var field in fields.EnumerateArray())
                     {
                         var fieldName = field.GetProperty("name").GetString();
-                        var fieldType = GetTypeName(field.GetProperty("type"));
+                        var fieldType = GraphQLTypeHelpers.GetTypeName(field.GetProperty("type"));
                         var fieldDesc = field.TryGetProperty("description", out var fd) ? fd.GetString() : "";
                         
                         result.AppendLine($"- `{fieldName}`: {fieldType}" + 
@@ -540,20 +540,6 @@ public static class GraphQLSchemaTools
         return result.ToString();
     }
 
-    private static string GetTypeName(JsonElement typeElement)
-    {
-        var kind = typeElement.GetProperty("kind").GetString();
-        
-        switch (kind)
-        {
-            case "NON_NULL":
-                return GetTypeName(typeElement.GetProperty("ofType")) + "!";
-            case "LIST":
-                return "[" + GetTypeName(typeElement.GetProperty("ofType")) + "]";
-            default:
-                return typeElement.TryGetProperty("name", out var name) ? name.GetString() ?? "Unknown" : "Unknown";
-        }
-    }
 
     private static HashSet<string> GetTypeNames(JsonElement schema)
     {
