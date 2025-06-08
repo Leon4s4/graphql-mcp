@@ -164,7 +164,6 @@ public static class UtilityTools
 
             // Generate the query with variables
             var modifiedQuery = query;
-            variableCounter = 1;
             
             foreach (Match stringMatch in stringMatches)
             {
