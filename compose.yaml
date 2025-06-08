@@ -3,4 +3,4 @@
     image: grapql-mcp
     build:
       context: .
-      dockerfile: grapql-mcp/Dockerfile
+      dockerfile: Dockerfile
