@@ -161,6 +161,333 @@ public static class GraphQLSchemaTools
         }
     }
 
+    [McpServerTool, Description("Compare the same GraphQL request across two different services")]
+    public static async Task<string> CompareRequestResponses(
+        [Description("GraphQL query to execute on both services")] string query,
+        [Description("First GraphQL endpoint URL")] string endpoint1,
+        [Description("Second GraphQL endpoint URL")] string endpoint2,
+        [Description("GraphQL variables as JSON object (optional)")] string? variables = null,
+        [Description("HTTP headers for first endpoint as JSON (optional)")] string? headers1 = null,
+        [Description("HTTP headers for second endpoint as JSON (optional)")] string? headers2 = null,
+        [Description("Include response timing comparison")] bool includeTiming = true,
+        [Description("Show detailed diff of response data")] bool detailedDiff = true)
+    {
+        try
+        {
+            var result = new StringBuilder();
+            result.AppendLine("# GraphQL Request Comparison Report\n");
+            result.AppendLine($"**Query:**\n```graphql\n{query}\n```\n");
+            result.AppendLine($"**Service 1:** {endpoint1}");
+            result.AppendLine($"**Service 2:** {endpoint2}\n");
+
+            if (!string.IsNullOrEmpty(variables))
+            {
+                result.AppendLine($"**Variables:**\n```json\n{variables}\n```\n");
+            }
+
+            // Execute request on both services with timing
+            var stopwatch1 = System.Diagnostics.Stopwatch.StartNew();
+            var response1 = await ExecuteGraphQLRequest(endpoint1, query, variables, headers1);
+            stopwatch1.Stop();
+
+            var stopwatch2 = System.Diagnostics.Stopwatch.StartNew();
+            var response2 = await ExecuteGraphQLRequest(endpoint2, query, variables, headers2);
+            stopwatch2.Stop();
+
+            // Parse responses
+            JsonElement? data1 = null, data2 = null;
+            JsonElement? errors1 = null, errors2 = null;
+            bool parseSuccess1 = false, parseSuccess2 = false;
+
+            try
+            {
+                var json1 = JsonSerializer.Deserialize<JsonElement>(response1);
+                parseSuccess1 = true;
+                json1.TryGetProperty("data", out var d1);
+                data1 = d1;
+                json1.TryGetProperty("errors", out var e1);
+                errors1 = e1;
+            }
+            catch (Exception ex)
+            {
+                result.AppendLine($"**⚠️ Service 1 Response Parse Error:** {ex.Message}\n");
+            }
+
+            try
+            {
+                var json2 = JsonSerializer.Deserialize<JsonElement>(response2);
+                parseSuccess2 = true;
+                json2.TryGetProperty("data", out var d2);
+                data2 = d2;
+                json2.TryGetProperty("errors", out var e2);
+                errors2 = e2;
+            }
+            catch (Exception ex)
+            {
+                result.AppendLine($"**⚠️ Service 2 Response Parse Error:** {ex.Message}\n");
+            }
+
+            // Timing comparison
+            if (includeTiming)
+            {
+                result.AppendLine("## Performance Comparison\n");
+                result.AppendLine($"| Service | Response Time | Status |");
+                result.AppendLine($"|---------|---------------|--------|");
+                result.AppendLine($"| Service 1 | {stopwatch1.ElapsedMilliseconds}ms | {(parseSuccess1 ? "✅ Success" : "❌ Failed")} |");
+                result.AppendLine($"| Service 2 | {stopwatch2.ElapsedMilliseconds}ms | {(parseSuccess2 ? "✅ Success" : "❌ Failed")} |");
+                
+                var timeDiff = Math.Abs(stopwatch1.ElapsedMilliseconds - stopwatch2.ElapsedMilliseconds);
+                var fasterService = stopwatch1.ElapsedMilliseconds < stopwatch2.ElapsedMilliseconds ? "Service 1" : "Service 2";
+                result.AppendLine($"\n**Performance Summary:** {fasterService} is {timeDiff}ms faster\n");
+            }
+
+            // Error comparison
+            bool hasErrors1 = errors1.HasValue && errors1.Value.ValueKind == JsonValueKind.Array && errors1.Value.GetArrayLength() > 0;
+            bool hasErrors2 = errors2.HasValue && errors2.Value.ValueKind == JsonValueKind.Array && errors2.Value.GetArrayLength() > 0;
+
+            if (hasErrors1 || hasErrors2)
+            {
+                result.AppendLine("## Error Comparison\n");
+                
+                if (hasErrors1)
+                {
+                    result.AppendLine("### Service 1 Errors");
+                    foreach (var error in errors1.Value.EnumerateArray())
+                    {
+                        var message = error.TryGetProperty("message", out var msg) ? msg.GetString() : "Unknown error";
+                        result.AppendLine($"- {message}");
+                    }
+                    result.AppendLine();
+                }
+
+                if (hasErrors2)
+                {
+                    result.AppendLine("### Service 2 Errors");
+                    foreach (var error in errors2.Value.EnumerateArray())
+                    {
+                        var message = error.TryGetProperty("message", out var msg) ? msg.GetString() : "Unknown error";
+                        result.AppendLine($"- {message}");
+                    }
+                    result.AppendLine();
+                }
+
+                // Error status summary
+                if (hasErrors1 && hasErrors2)
+                {
+                    result.AppendLine("**Status:** Both services returned errors\n");
+                }
+                else if (hasErrors1)
+                {
+                    result.AppendLine("**Status:** Only Service 1 returned errors\n");
+                }
+                else if (hasErrors2)
+                {
+                    result.AppendLine("**Status:** Only Service 2 returned errors\n");
+                }
+            }
+
+            // Data comparison
+            if (data1.HasValue && data2.HasValue && parseSuccess1 && parseSuccess2)
+            {
+                result.AppendLine("## Data Comparison\n");
+                
+                var data1Json = JsonSerializer.Serialize(data1.Value, new JsonSerializerOptions { WriteIndented = true });
+                var data2Json = JsonSerializer.Serialize(data2.Value, new JsonSerializerOptions { WriteIndented = true });
+
+                if (data1Json == data2Json)
+                {
+                    result.AppendLine("✅ **Data Match:** Both services returned identical data\n");
+                }
+                else
+                {
+                    result.AppendLine("❌ **Data Mismatch:** Services returned different data\n");
+                    
+                    if (detailedDiff)
+                    {
+                        result.AppendLine("### Service 1 Response");
+                        result.AppendLine($"```json\n{data1Json}\n```\n");
+                        
+                        result.AppendLine("### Service 2 Response");
+                        result.AppendLine($"```json\n{data2Json}\n```\n");
+
+                        // Simple field-level comparison
+                        result.AppendLine("### Key Differences");
+                        var differences = FindJsonDifferences(data1.Value, data2.Value);
+                        if (differences.Any())
+                        {
+                            foreach (var diff in differences)
+                            {
+                                result.AppendLine($"- {diff}");
+                            }
+                        }
+                        else
+                        {
+                            result.AppendLine("- Structures are similar but values may differ");
+                        }
+                        result.AppendLine();
+                    }
+                }
+            }
+            else if (!parseSuccess1 || !parseSuccess2)
+            {
+                result.AppendLine("## Raw Response Comparison\n");
+                
+                if (!parseSuccess1)
+                {
+                    result.AppendLine("### Service 1 Raw Response");
+                    result.AppendLine($"```\n{response1}\n```\n");
+                }
+                
+                if (!parseSuccess2)
+                {
+                    result.AppendLine("### Service 2 Raw Response");
+                    result.AppendLine($"```\n{response2}\n```\n");
+                }
+            }
+
+            // Summary
+            result.AppendLine("## Summary\n");
+            if (parseSuccess1 && parseSuccess2 && !hasErrors1 && !hasErrors2)
+            {
+                if (data1.HasValue && data2.HasValue)
+                {
+                    var data1Json = JsonSerializer.Serialize(data1.Value);
+                    var data2Json = JsonSerializer.Serialize(data2.Value);
+                    
+                    if (data1Json == data2Json)
+                    {
+                        result.AppendLine("🎉 **Perfect Match:** Both services are fully compatible");
+                    }
+                    else
+                    {
+                        result.AppendLine("⚠️ **Data Differences:** Services are functional but return different data");
+                    }
+                }
+            }
+            else if (hasErrors1 || hasErrors2)
+            {
+                result.AppendLine("❌ **Errors Present:** One or both services have issues");
+            }
+            else
+            {
+                result.AppendLine("❓ **Inconclusive:** Unable to properly compare responses");
+            }
+
+            return result.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"Error comparing requests: {ex.Message}";
+        }
+    }
+
+    private static async Task<string> ExecuteGraphQLRequest(string endpoint, string query, string? variables, string? headers)
+    {
+        using var client = new HttpClient();
+        
+        // Parse and add headers if provided
+        if (!string.IsNullOrEmpty(headers))
+        {
+            try
+            {
+                var headerDict = JsonSerializer.Deserialize<Dictionary<string, string>>(headers);
+                if (headerDict != null)
+                {
+                    foreach (var header in headerDict)
+                    {
+                        client.DefaultRequestHeaders.Add(header.Key, header.Value);
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore header parsing errors
+            }
+        }
+
+        var requestBody = new
+        {
+            query = query,
+            variables = !string.IsNullOrEmpty(variables) ? JsonSerializer.Deserialize<object>(variables) : null
+        };
+
+        var json = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+        var response = await client.PostAsync(endpoint, content);
+        return await response.Content.ReadAsStringAsync();
+    }
+
+    private static List<string> FindJsonDifferences(JsonElement json1, JsonElement json2, string path = "")
+    {
+        var differences = new List<string>();
+
+        if (json1.ValueKind != json2.ValueKind)
+        {
+            differences.Add($"Type mismatch at '{path}': {json1.ValueKind} vs {json2.ValueKind}");
+            return differences;
+        }
+
+        switch (json1.ValueKind)
+        {
+            case JsonValueKind.Object:
+                var props1 = json1.EnumerateObject().Select(p => p.Name).ToHashSet();
+                var props2 = json2.EnumerateObject().Select(p => p.Name).ToHashSet();
+
+                foreach (var prop in props1.Union(props2))
+                {
+                    var newPath = string.IsNullOrEmpty(path) ? prop : $"{path}.{prop}";
+                    
+                    if (!props1.Contains(prop))
+                    {
+                        differences.Add($"Property missing in Service 1: '{newPath}'");
+                    }
+                    else if (!props2.Contains(prop))
+                    {
+                        differences.Add($"Property missing in Service 2: '{newPath}'");
+                    }
+                    else
+                    {
+                        differences.AddRange(FindJsonDifferences(
+                            json1.GetProperty(prop), 
+                            json2.GetProperty(prop), 
+                            newPath));
+                    }
+                }
+                break;
+
+            case JsonValueKind.Array:
+                var array1 = json1.EnumerateArray().ToArray();
+                var array2 = json2.EnumerateArray().ToArray();
+
+                if (array1.Length != array2.Length)
+                {
+                    differences.Add($"Array length mismatch at '{path}': {array1.Length} vs {array2.Length}");
+                }
+
+                var minLength = Math.Min(array1.Length, array2.Length);
+                for (int i = 0; i < minLength; i++)
+                {
+                    differences.AddRange(FindJsonDifferences(
+                        array1[i], 
+                        array2[i], 
+                        $"{path}[{i}]"));
+                }
+                break;
+
+            default:
+                var value1 = json1.ToString();
+                var value2 = json2.ToString();
+                if (value1 != value2)
+                {
+                    differences.Add($"Value mismatch at '{path}': '{value1}' vs '{value2}'");
+                }
+                break;
+        }
+
+        return differences;
+    }
+
     private static string FormatTypeDefinition(JsonElement type)
     {
         var name = type.GetProperty("name").GetString();
