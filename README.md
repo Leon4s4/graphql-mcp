@@ -7,14 +7,14 @@ This repository contains a sample Model Context Protocol (MCP) server with a col
 The project targets .NET 9. Use the standard `dotnet` CLI to run the server:
 
 ```bash
-dotnet run --project grapql-mcp.csproj
+dotnet run --project graphql-mcp.csproj
 ```
 
 You can also build a Docker image using the provided Dockerfile:
 
 ```bash
-docker build -t grapql-mcp .
-docker run --rm -it grapql-mcp
+docker build -t graphql-mcp .
+docker run --rm -it graphql-mcp
 ```
 
 ## Usage

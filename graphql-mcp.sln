@@ -1,6 +1,5 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "grapql-mcp", "grapql-mcp.csproj", "{67C36137-BE74-4F3F-9E1B-F90C4E2398BD}"
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "graphql-mcp", "graphql-mcp.csproj", "{67C36137-BE74-4F3F-9E1B-F90C4E2398BD}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{17B744DD-46C8-4D0F-9AAD-48E8E7872DBA}"
 	ProjectSection(SolutionItems) = preProject

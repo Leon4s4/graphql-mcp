@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "grapql-mcp": {
+    "graphql-mcp": {
       "commandName": "Project",
       "environmentVariables": {
         "ENDPOINT": "http://localhost:4000/graphql",
