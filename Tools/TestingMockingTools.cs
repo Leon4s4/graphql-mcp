@@ -254,6 +254,91 @@ public static class TestingMockingTools
         }
     }
 
+    [McpServerTool, Description("Generate comprehensive test suites for GraphQL queries and mutations")]
+    public static async Task<string> GenerateTestSuite(
+        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Query or mutation to test")] string query,
+        [Description("Test framework (jest, mocha, xunit, nunit)")] string framework = "jest",
+        [Description("Include integration tests")] bool includeIntegration = true,
+        [Description("Include error case tests")] bool includeErrorCases = true,
+        [Description("Include performance tests")] bool includePerformance = false,
+        [Description("HTTP headers as JSON object (optional)")] string? headers = null)
+    {
+        try
+        {
+            var testSuite = new StringBuilder();
+            testSuite.AppendLine("# Generated Test Suite\n");
+
+            // Analyze the query to understand what we're testing
+            var operationInfo = AnalyzeOperation(query);
+            var operationType = operationInfo.Type;
+            var operationName = operationInfo.Name;
+
+            testSuite.AppendLine($"## Test Suite for {operationName} ({operationType})\n");
+
+            switch (framework.ToLower())
+            {
+                case "jest":
+                    testSuite.AppendLine(GenerateJestTests(query, operationInfo, includeIntegration, includeErrorCases, includePerformance));
+                    break;
+                case "mocha":
+                    testSuite.AppendLine(GenerateMochaTests(query, operationInfo, includeIntegration, includeErrorCases, includePerformance));
+                    break;
+                case "xunit":
+                    testSuite.AppendLine(GenerateXUnitTests(query, operationInfo, includeIntegration, includeErrorCases, includePerformance));
+                    break;
+                case "nunit":
+                    testSuite.AppendLine(GenerateNUnitTests(query, operationInfo, includeIntegration, includeErrorCases, includePerformance));
+                    break;
+                default:
+                    return $"Framework '{framework}' not supported. Supported: jest, mocha, xunit, nunit";
+            }
+
+            return testSuite.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"Error generating test suite: {ex.Message}";
+        }
+    }
+
+    [McpServerTool, Description("Generate load testing scenarios for GraphQL endpoints")]
+    public static string GenerateLoadTests(
+        [Description("GraphQL query for load testing")] string query,
+        [Description("Load testing tool (k6, artillery, jmeter)")] string tool = "k6",
+        [Description("Number of virtual users")] int virtualUsers = 10,
+        [Description("Test duration in seconds")] int duration = 60,
+        [Description("Target requests per second")] int rps = 100)
+    {
+        try
+        {
+            var loadTest = new StringBuilder();
+            loadTest.AppendLine("# GraphQL Load Test Configuration\n");
+
+            switch (tool.ToLower())
+            {
+                case "k6":
+                    loadTest.AppendLine(GenerateK6LoadTest(query, virtualUsers, duration, rps));
+                    break;
+                case "artillery":
+                    loadTest.AppendLine(GenerateArtilleryLoadTest(query, virtualUsers, duration, rps));
+                    break;
+                case "jmeter":
+                    loadTest.AppendLine("## JMeter Configuration");
+                    loadTest.AppendLine("*JMeter configuration requires GUI setup. See JMeter documentation for GraphQL testing.*");
+                    break;
+                default:
+                    return $"Load testing tool '{tool}' not supported. Supported: k6, artillery, jmeter";
+            }
+
+            return loadTest.ToString();
+        }
+        catch (Exception ex)
+        {
+            return $"Error generating load tests: {ex.Message}";
+        }
+    }
+
     private static object GenerateMockInstance(JsonElement type, JsonElement allTypes, int index)
     {
         var mockData = new Dictionary<string, object?>();
@@ -669,5 +754,317 @@ public static class TestingMockingTools
             }
         }
         return valueNames;
+    }
+
+    private static (string Type, string Name) AnalyzeOperation(string query)
+    {
+        // Basic analysis to determine operation type and name
+        var operationMatch = Regex.Match(query, @"^\s*(query|mutation|subscription)\s+(\w+)?", RegexOptions.IgnoreCase);
+        var operationType = operationMatch.Success ? operationMatch.Groups[1].Value.ToLower() : "query";
+        var operationName = operationMatch.Success && operationMatch.Groups[2].Success ? 
+            operationMatch.Groups[2].Value : "AnonymousOperation";
+
+        return (operationType, operationName);
+    }
+
+    private static string GenerateJestTests(string query, (string Type, string Name) operationInfo, bool includeIntegration, bool includeErrorCases, bool includePerformance)
+    {
+        var tests = new StringBuilder();
+
+        // Basic Jest test structure
+        tests.AppendLine("import { request, gql } from 'graphql-request';");
+        tests.AppendLine("import { createServer } from 'http';");
+        tests.AppendLine();
+        tests.AppendLine("const endpoint = 'https://api.example.com/graphql';");
+        tests.AppendLine();
+        tests.AppendLine($"describe('GraphQL {operationInfo.Type} - {operationInfo.Name}', () => {{");
+        tests.AppendLine("  let server;");
+        tests.AppendLine();
+        tests.AppendLine("  beforeAll(async () => {");
+        tests.AppendLine("    server = createServer();");
+        tests.AppendLine("    await server.start();");
+        tests.AppendLine("  });");
+        tests.AppendLine();
+        tests.AppendLine("  afterAll(async () => {");
+        tests.AppendLine("    await server.stop();");
+        tests.AppendLine("  });");
+        tests.AppendLine();
+        tests.AppendLine("  it('should return a successful response', async () => {");
+        tests.AppendLine("    const query = `");
+        tests.AppendLine(query.Replace("`", "\\`").Replace("${", "\\${"));
+        tests.AppendLine("    `;");
+        tests.AppendLine("    const response = await request(endpoint, query);");
+        tests.AppendLine();
+        tests.AppendLine("    expect(response).toHaveProperty('data');");
+        tests.AppendLine("  });");
+        tests.AppendLine();
+        
+        // Error case test
+        if (includeErrorCases)
+        {
+            tests.AppendLine("  it('should handle errors gracefully', async () => {");
+            tests.AppendLine("    const query = `query { invalidField }`;");
+            tests.AppendLine("    try {");
+            tests.AppendLine("      await request(endpoint, query);");
+            tests.AppendLine("      fail('Expected an error to be thrown');");
+            tests.AppendLine("    } catch (error) {");
+            tests.AppendLine("      expect(error).toBeDefined();");
+            tests.AppendLine("      expect(error.response.errors).toBeDefined();");
+            tests.AppendLine("    }");
+            tests.AppendLine("  });");
+            tests.AppendLine();
+        }
+
+        // Performance test
+        if (includePerformance)
+        {
+            tests.AppendLine("  it('should complete within acceptable time', async () => {");
+            tests.AppendLine("    const query = `");
+            tests.AppendLine(query.Replace("`", "\\`").Replace("${", "\\${"));
+            tests.AppendLine("    `;");
+            tests.AppendLine("    const start = Date.now();");
+            tests.AppendLine("    await request(endpoint, query);");
+            tests.AppendLine("    const duration = Date.now() - start;");
+            tests.AppendLine();
+            tests.AppendLine("    expect(duration).toBeLessThan(1000); // 1 second");
+            tests.AppendLine("  });");
+            tests.AppendLine();
+        }
+
+        tests.AppendLine("});");
+        return tests.ToString();
+    }
+
+    private static string GenerateMochaTests(string query, (string Type, string Name) operationInfo, bool includeIntegration, bool includeErrorCases, bool includePerformance)
+    {
+        var tests = new StringBuilder();
+        
+        tests.AppendLine("const { request, gql } = require('graphql-request');");
+        tests.AppendLine("const { expect } = require('chai');");
+        tests.AppendLine();
+        tests.AppendLine("const endpoint = 'https://api.example.com/graphql';");
+        tests.AppendLine();
+        tests.AppendLine($"describe('GraphQL {operationInfo.Type} - {operationInfo.Name}', () => {{");
+        tests.AppendLine("  it('should return a successful response', async () => {");
+        tests.AppendLine("    const query = `");
+        tests.AppendLine(query.Replace("`", "\\`"));
+        tests.AppendLine("    `;");
+        tests.AppendLine("    const response = await request(endpoint, query);");
+        tests.AppendLine();
+        tests.AppendLine("    expect(response).to.have.property('data');");
+        tests.AppendLine("  });");
+
+        if (includeErrorCases)
+        {
+            tests.AppendLine();
+            tests.AppendLine("  it('should handle errors gracefully', async () => {");
+            tests.AppendLine("    const query = `query { invalidField }`;");
+            tests.AppendLine("    try {");
+            tests.AppendLine("      await request(endpoint, query);");
+            tests.AppendLine("      throw new Error('Expected an error');");
+            tests.AppendLine("    } catch (error) {");
+            tests.AppendLine("      expect(error).to.exist;");
+            tests.AppendLine("    }");
+            tests.AppendLine("  });");
+        }
+
+        tests.AppendLine("});");
+        return tests.ToString();
+    }
+
+    private static string GenerateXUnitTests(string query, (string Type, string Name) operationInfo, bool includeIntegration, bool includeErrorCases, bool includePerformance)
+    {
+        var tests = new StringBuilder();
+        
+        tests.AppendLine("using System;");
+        tests.AppendLine("using System.Net.Http;");
+        tests.AppendLine("using System.Text;");
+        tests.AppendLine("using System.Text.Json;");
+        tests.AppendLine("using System.Threading.Tasks;");
+        tests.AppendLine("using Xunit;");
+        tests.AppendLine();
+        tests.AppendLine($"public class {operationInfo.Name}Tests");
+        tests.AppendLine("{");
+        tests.AppendLine("    private readonly HttpClient _httpClient;");
+        tests.AppendLine("    private readonly string _endpoint = \"https://api.example.com/graphql\";");
+        tests.AppendLine();
+        tests.AppendLine($"    public {operationInfo.Name}Tests()");
+        tests.AppendLine("    {");
+        tests.AppendLine("        _httpClient = new HttpClient();");
+        tests.AppendLine("    }");
+        tests.AppendLine();
+        tests.AppendLine("    [Fact]");
+        tests.AppendLine("    public async Task Should_Return_Successful_Response()");
+        tests.AppendLine("    {");
+        tests.AppendLine("        // Arrange");
+        tests.AppendLine($"        var query = @\"{query.Replace("\"", "\"\"")}\";");
+        tests.AppendLine("        var request = new { query };");
+        tests.AppendLine("        var json = JsonSerializer.Serialize(request);");
+        tests.AppendLine("        var content = new StringContent(json, Encoding.UTF8, \"application/json\");");
+        tests.AppendLine();
+        tests.AppendLine("        // Act");
+        tests.AppendLine("        var response = await _httpClient.PostAsync(_endpoint, content);");
+        tests.AppendLine();
+        tests.AppendLine("        // Assert");
+        tests.AppendLine("        response.EnsureSuccessStatusCode();");
+        tests.AppendLine("        var responseContent = await response.Content.ReadAsStringAsync();");
+        tests.AppendLine("        var result = JsonSerializer.Deserialize<JsonElement>(responseContent);");
+        tests.AppendLine("        Assert.True(result.TryGetProperty(\"data\", out _));");
+        tests.AppendLine("    }");
+
+        if (includeErrorCases)
+        {
+            tests.AppendLine();
+            tests.AppendLine("    [Fact]");
+            tests.AppendLine("    public async Task Should_Handle_Errors_Gracefully()");
+            tests.AppendLine("    {");
+            tests.AppendLine("        // Arrange");
+            tests.AppendLine("        var query = \"query { invalidField }\";");
+            tests.AppendLine("        var request = new { query };");
+            tests.AppendLine("        var json = JsonSerializer.Serialize(request);");
+            tests.AppendLine("        var content = new StringContent(json, Encoding.UTF8, \"application/json\");");
+            tests.AppendLine();
+            tests.AppendLine("        // Act");
+            tests.AppendLine("        var response = await _httpClient.PostAsync(_endpoint, content);");
+            tests.AppendLine("        var responseContent = await response.Content.ReadAsStringAsync();");
+            tests.AppendLine("        var result = JsonSerializer.Deserialize<JsonElement>(responseContent);");
+            tests.AppendLine();
+            tests.AppendLine("        // Assert");
+            tests.AppendLine("        Assert.True(result.TryGetProperty(\"errors\", out _));");
+            tests.AppendLine("    }");
+        }
+
+        tests.AppendLine("}");
+        return tests.ToString();
+    }
+
+    private static string GenerateNUnitTests(string query, (string Type, string Name) operationInfo, bool includeIntegration, bool includeErrorCases, bool includePerformance)
+    {
+        var tests = new StringBuilder();
+        
+        tests.AppendLine("using System;");
+        tests.AppendLine("using System.Net.Http;");
+        tests.AppendLine("using System.Text;");
+        tests.AppendLine("using System.Text.Json;");
+        tests.AppendLine("using System.Threading.Tasks;");
+        tests.AppendLine("using NUnit.Framework;");
+        tests.AppendLine();
+        tests.AppendLine("[TestFixture]");
+        tests.AppendLine($"public class {operationInfo.Name}Tests");
+        tests.AppendLine("{");
+        tests.AppendLine("    private HttpClient _httpClient;");
+        tests.AppendLine("    private readonly string _endpoint = \"https://api.example.com/graphql\";");
+        tests.AppendLine();
+        tests.AppendLine("    [SetUp]");
+        tests.AppendLine("    public void SetUp()");
+        tests.AppendLine("    {");
+        tests.AppendLine("        _httpClient = new HttpClient();");
+        tests.AppendLine("    }");
+        tests.AppendLine();
+        tests.AppendLine("    [TearDown]");
+        tests.AppendLine("    public void TearDown()");
+        tests.AppendLine("    {");
+        tests.AppendLine("        _httpClient?.Dispose();");
+        tests.AppendLine("    }");
+        tests.AppendLine();
+        tests.AppendLine("    [Test]");
+        tests.AppendLine("    public async Task Should_Return_Successful_Response()");
+        tests.AppendLine("    {");
+        tests.AppendLine("        // Arrange");
+        tests.AppendLine($"        var query = @\"{query.Replace("\"", "\"\"")}\";");
+        tests.AppendLine("        var request = new { query };");
+        tests.AppendLine("        var json = JsonSerializer.Serialize(request);");
+        tests.AppendLine("        var content = new StringContent(json, Encoding.UTF8, \"application/json\");");
+        tests.AppendLine();
+        tests.AppendLine("        // Act");
+        tests.AppendLine("        var response = await _httpClient.PostAsync(_endpoint, content);");
+        tests.AppendLine();
+        tests.AppendLine("        // Assert");
+        tests.AppendLine("        Assert.That(response.IsSuccessStatusCode, Is.True);");
+        tests.AppendLine("        var responseContent = await response.Content.ReadAsStringAsync();");
+        tests.AppendLine("        var result = JsonSerializer.Deserialize<JsonElement>(responseContent);");
+        tests.AppendLine("        Assert.That(result.TryGetProperty(\"data\", out _), Is.True);");
+        tests.AppendLine("    }");
+        tests.AppendLine("}");
+        
+        return tests.ToString();
+    }
+
+    private static string GenerateK6LoadTest(string query, int virtualUsers, int duration, int rps)
+    {
+        var loadTest = new StringBuilder();
+        
+        loadTest.AppendLine("## K6 Load Test Script");
+        loadTest.AppendLine();
+        loadTest.AppendLine("```javascript");
+        loadTest.AppendLine("import http from 'k6/http';");
+        loadTest.AppendLine("import { check, sleep } from 'k6';");
+        loadTest.AppendLine();
+        loadTest.AppendLine("export let options = {");
+        loadTest.AppendLine($"  vus: {virtualUsers},");
+        loadTest.AppendLine($"  duration: '{duration}s',");
+        loadTest.AppendLine("  thresholds: {");
+        loadTest.AppendLine("    http_req_duration: ['p(95)<500'],");
+        loadTest.AppendLine("    http_req_failed: ['rate<0.1'],");
+        loadTest.AppendLine("  },");
+        loadTest.AppendLine("};");
+        loadTest.AppendLine();
+        loadTest.AppendLine("export default function () {");
+        loadTest.AppendLine("  const url = 'https://api.example.com/graphql';");
+        loadTest.AppendLine("  const payload = JSON.stringify({");
+        loadTest.AppendLine($"    query: `{query.Replace("`", "\\`")}`,");
+        loadTest.AppendLine("  });");
+        loadTest.AppendLine();
+        loadTest.AppendLine("  const params = {");
+        loadTest.AppendLine("    headers: {");
+        loadTest.AppendLine("      'Content-Type': 'application/json',");
+        loadTest.AppendLine("    },");
+        loadTest.AppendLine("  };");
+        loadTest.AppendLine();
+        loadTest.AppendLine("  const response = http.post(url, payload, params);");
+        loadTest.AppendLine();
+        loadTest.AppendLine("  check(response, {");
+        loadTest.AppendLine("    'status is 200': (r) => r.status === 200,");
+        loadTest.AppendLine("    'response has data': (r) => JSON.parse(r.body).data !== undefined,");
+        loadTest.AppendLine("  });");
+        loadTest.AppendLine();
+        loadTest.AppendLine($"  sleep(1 / {rps}); // Rate limiting");
+        loadTest.AppendLine("}");
+        loadTest.AppendLine("```");
+        
+        return loadTest.ToString();
+    }
+
+    private static string GenerateArtilleryLoadTest(string query, int virtualUsers, int duration, int rps)
+    {
+        var loadTest = new StringBuilder();
+        
+        loadTest.AppendLine("## Artillery Load Test Configuration");
+        loadTest.AppendLine();
+        loadTest.AppendLine("```yaml");
+        loadTest.AppendLine("config:");
+        loadTest.AppendLine("  target: 'https://api.example.com'");
+        loadTest.AppendLine("  phases:");
+        loadTest.AppendLine("    - duration: 60");
+        loadTest.AppendLine($"      arrivalRate: {rps}");
+        loadTest.AppendLine($"      maxVusers: {virtualUsers}");
+        loadTest.AppendLine("  defaults:");
+        loadTest.AppendLine("    headers:");
+        loadTest.AppendLine("      Content-Type: 'application/json'");
+        loadTest.AppendLine();
+        loadTest.AppendLine("scenarios:");
+        loadTest.AppendLine("  - name: 'GraphQL Load Test'");
+        loadTest.AppendLine("    requests:");
+        loadTest.AppendLine("      - post:");
+        loadTest.AppendLine("          url: '/graphql'");
+        loadTest.AppendLine("          json:");
+        loadTest.AppendLine($"            query: |");
+        foreach (var line in query.Split('\n'))
+        {
+            loadTest.AppendLine($"              {line}");
+        }
+        loadTest.AppendLine("```");
+        
+        return loadTest.ToString();
     }
 }
