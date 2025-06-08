@@ -373,11 +373,11 @@ public static class QueryAnalyzerTools
         return $"{lowerTypeName}s"; // Simple pluralization
     }
 
-    private static string BuildFieldSelection(JsonElement? typeInfo, List<string> requestedFields, 
+    private static string BuildFieldSelection(JsonElement? typeInfo, List<string> requestedFields,
         bool includeRelated, int maxDepth, JsonElement schema, int currentIndent)
     {
-        if (typeInfo == null || currentIndent > maxDepth * 2)
-            return "";
+        if (typeInfo == null || currentIndent / 2 > maxDepth)
+            return string.Empty;
 
         var selection = new StringBuilder();
         var indent = new string(' ', currentIndent);
@@ -387,7 +387,51 @@ public static class QueryAnalyzerTools
             selection.AppendLine($"{indent}{fieldName}");
         }
 
+        if (includeRelated && typeInfo.Value.TryGetProperty("fields", out var fields))
+        {
+            foreach (var field in fields.EnumerateArray())
+            {
+                var name = field.GetProperty("name").GetString();
+                if (requestedFields.Contains(name))
+                    continue;
+
+                var fieldType = field.GetProperty("type");
+                var childTypeName = GetNamedType(fieldType);
+                if (IsScalar(fieldType) || string.IsNullOrEmpty(childTypeName))
+                    continue;
+
+                var childInfo = FindTypeInSchema(schema, childTypeName);
+                if (childInfo == null)
+                    continue;
+
+                selection.AppendLine($"{indent}{name} {{");
+                selection.Append(BuildFieldSelection(childInfo, requestedFields, includeRelated, maxDepth, schema, currentIndent + 2));
+                selection.AppendLine($"{indent}}}");
+            }
+        }
+
         return selection.ToString();
+    }
+
+    private static bool IsScalar(JsonElement typeElement)
+    {
+        var kind = typeElement.GetProperty("kind").GetString();
+        if (kind == "ENUM")
+            return true;
+
+        var name = GetNamedType(typeElement);
+        return name is "Int" or "Float" or "String" or "Boolean" or "ID";
+    }
+
+    private static string GetNamedType(JsonElement typeElement)
+    {
+        var kind = typeElement.GetProperty("kind").GetString();
+        return kind switch
+        {
+            "NON_NULL" => typeElement.TryGetProperty("ofType", out var ofType) ? GetNamedType(ofType) : string.Empty,
+            "LIST" => typeElement.TryGetProperty("ofType", out var listType) ? GetNamedType(listType) : string.Empty,
+            _ => typeElement.TryGetProperty("name", out var name) ? name.GetString() ?? string.Empty : string.Empty
+        };
     }
 
     private class OperationInfo

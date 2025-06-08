@@ -2,7 +2,7 @@ using System.ComponentModel;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Server;
 
-namespace Graphql.Mcp.Tools;
+namespace Tools;
 
 [McpServerToolType]
 public static class EchoTool
