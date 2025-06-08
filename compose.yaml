@@ -1,6 +1,6 @@
-﻿services:
-  grapql-mcp:
-    image: grapql-mcp
+services:
+  graphql-mcp:
+    image: graphql-mcp
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: graphql-mcp/Dockerfile
