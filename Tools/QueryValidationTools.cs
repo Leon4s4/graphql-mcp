@@ -228,7 +228,7 @@ public static class QueryValidationTools
         }
 
         // Check variable definitions in the operation header
-        var operationMatch = Regex.Match(query, @"^(?:query|mutation|subscription)\b[^({]*\(([^)]*)\)");
+        var operationMatch = Regex.Match(query, @"^(?:query|mutation|subscription)\b\s*(\w+)?\s*(\(([^)]*)\))?\s*(?:@[\w]+)?\s*(?:\.\.\.[\w]+)?");
         if (operationMatch.Success)
         {
             var declarations = operationMatch.Groups[1].Value.Split(',');
