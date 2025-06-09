@@ -227,13 +227,18 @@ public static class QueryValidationTools
             errors.Add("Trailing comma in selection set");
         }
 
-        // Check variable syntax
-        var variableMatches = Regex.Matches(query, @"\$\w*[^:\w]");
-        foreach (Match match in variableMatches)
+        // Check variable definitions in the operation header
+        var operationMatch = Regex.Match(query, @"^(?:query|mutation|subscription)\b\s*(\w+)?\s*(\(([^)]*)\))?\s*(?:@[\w]+)?\s*(?:\.\.\.[\w]+)?");
+        if (operationMatch.Success)
         {
-            if (!match.Value.Contains(':'))
+            var declarations = operationMatch.Groups[1].Value.Split(',');
+            foreach (var decl in declarations)
             {
-                errors.Add($"Variable {match.Value.Trim()} is missing type definition");
+                var trimmed = decl.Trim();
+                if (!string.IsNullOrEmpty(trimmed) && !trimmed.Contains(':'))
+                {
+                    errors.Add($"Variable {trimmed} is missing type definition");
+                }
             }
         }
 

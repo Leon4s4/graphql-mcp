@@ -10,12 +10,14 @@ namespace Tools
 {
     public class QueryGraphQLTool
     {
+        private readonly HttpClient _httpClient;
         private readonly string _endpoint;
         private readonly Dictionary<string, string> _headers;
         private readonly bool _allowMutations;
 
-        public QueryGraphQLTool(string endpoint, Dictionary<string, string> headers, bool allowMutations)
+        public QueryGraphQLTool(HttpClient httpClient, string endpoint, Dictionary<string, string> headers, bool allowMutations)
         {
+            _httpClient = httpClient;
             _endpoint = endpoint;
             _headers = headers;
             _allowMutations = allowMutations;
@@ -38,18 +40,18 @@ namespace Tools
 
             try
             {
-                using var client = new HttpClient();
+                using var request = new HttpRequestMessage(HttpMethod.Post, _endpoint);
                 foreach (var header in _headers)
                 {
-                    client.DefaultRequestHeaders.Add(header.Key, header.Value);
+                    request.Headers.TryAddWithoutValidation(header.Key, header.Value);
                 }
                 var body = new
                 {
                     query,
                     variables = string.IsNullOrWhiteSpace(variables) ? null : JsonSerializer.Deserialize<object>(variables)
                 };
-                var content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-                var response = await client.PostAsync(_endpoint, content);
+                request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+                var response = await _httpClient.SendAsync(request);
                 var responseText = await response.Content.ReadAsStringAsync();
                 if (!response.IsSuccessStatusCode)
                 {
