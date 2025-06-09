@@ -1,0 +1,15 @@
+query TestQuery {
+  user(id: "123") {
+    id
+    name
+    email
+    posts {
+      id
+      title
+      content
+      author {
+        name
+      }
+    }
+  }
+}
