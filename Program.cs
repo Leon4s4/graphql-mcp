@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Net.Http;
 using Tools;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -27,7 +28,9 @@ catch
 }
 var allowMutations = (Environment.GetEnvironmentVariable("ALLOW_MUTATIONS") ?? "false").ToLower() == "true";
 
-builder.Services.AddSingleton(new QueryGraphQLTool(endpoint, headers, allowMutations));
+var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+builder.Services.AddSingleton<HttpClient>(httpClient);
+builder.Services.AddSingleton(provider => new QueryGraphQLTool(provider.GetRequiredService<HttpClient>(), endpoint, headers, allowMutations));
 
 var name = Environment.GetEnvironmentVariable("NAME") ?? "mcp-graphql";
 var schemaPath = Environment.GetEnvironmentVariable("SCHEMA");
