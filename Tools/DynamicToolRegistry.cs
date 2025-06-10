@@ -136,7 +136,8 @@ public static class DynamicToolRegistry
                 {
                     return $"Error parsing variables JSON: {ex.Message}";
                 }
-            }        // Execute the operation
+            }
+            // Execute the operation
         using var httpClient = new HttpClient();
         
         // Configure headers using the centralized helper with dictionary overload
