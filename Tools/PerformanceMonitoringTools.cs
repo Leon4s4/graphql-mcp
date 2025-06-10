@@ -27,15 +27,8 @@ public static class PerformanceMonitoringTools
 
             using var client = new HttpClient();
             
-            // Add headers if provided
-            if (!string.IsNullOrWhiteSpace(headers))
-            {
-                var headerDict = JsonSerializer.Deserialize<Dictionary<string, string>>(headers) ?? new();
-                foreach (var header in headerDict)
-                {
-                    client.DefaultRequestHeaders.Add(header.Key, header.Value);
-                }
-            }
+            // Configure headers using the centralized helper
+            HttpClientHelper.ConfigureHeaders(client, headers);
 
             var requestBody = new
             {
@@ -56,7 +49,7 @@ public static class PerformanceMonitoringTools
             results.AppendLine("## Executing Performance Tests...\n");
             try
             {
-                var warmupContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+                var warmupContent = HttpClientHelper.CreateGraphQLContent(requestBody);
                 await client.PostAsync(endpoint, warmupContent);
                 results.AppendLine("✅ Warmup run completed");
             }
@@ -71,7 +64,7 @@ public static class PerformanceMonitoringTools
                 var stopwatch = Stopwatch.StartNew();
                 try
                 {
-                    var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+                    var content = HttpClientHelper.CreateGraphQLContent(requestBody);
                     var response = await client.PostAsync(endpoint, content);
                     stopwatch.Stop();
                     

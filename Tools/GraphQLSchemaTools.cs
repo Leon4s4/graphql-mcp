@@ -385,25 +385,8 @@ public static class GraphQLSchemaTools
     {
         using var client = new HttpClient();
         
-        // Parse and add headers if provided
-        if (!string.IsNullOrEmpty(headers))
-        {
-            try
-            {
-                var headerDict = JsonSerializer.Deserialize<Dictionary<string, string>>(headers);
-                if (headerDict != null)
-                {
-                    foreach (var header in headerDict)
-                    {
-                        client.DefaultRequestHeaders.Add(header.Key, header.Value);
-                    }
-                }
-            }
-            catch
-            {
-                // Ignore header parsing errors
-            }
-        }
+        // Configure headers using the centralized helper
+        HttpClientHelper.ConfigureHeaders(client, headers);
 
         var requestBody = new
         {
@@ -411,8 +394,7 @@ public static class GraphQLSchemaTools
             variables = !string.IsNullOrEmpty(variables) ? JsonSerializer.Deserialize<object>(variables) : null
         };
 
-        var json = JsonSerializer.Serialize(requestBody);
-        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var content = HttpClientHelper.CreateGraphQLContent(requestBody);
 
         var response = await client.PostAsync(endpoint, content);
         return await response.Content.ReadAsStringAsync();

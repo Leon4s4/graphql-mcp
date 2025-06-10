@@ -17,18 +17,11 @@ public static class SchemaIntrospectionTools
         try
         {
             using var client = new HttpClient();
-            
-            // Add headers if provided
-            if (!string.IsNullOrWhiteSpace(headers))
-            {
-                var headerDict = JsonSerializer.Deserialize<Dictionary<string, string>>(headers) ?? new();
-                foreach (var header in headerDict)
-                {
-                    client.DefaultRequestHeaders.Add(header.Key, header.Value);
-                }
-            }
+        
+        // Configure headers using the centralized helper
+        HttpClientHelper.ConfigureHeaders(client, headers);
 
-            var introspectionQuery = @"
+        var introspectionQuery = @"
                 query IntrospectionQuery {
                   __schema {
                     queryType { name }
@@ -119,10 +112,8 @@ public static class SchemaIntrospectionTools
                       }
                     }
                   }
-                }";
-
-            var body = new { query = introspectionQuery };
-            var content = new StringContent(JsonSerializer.Serialize(body), System.Text.Encoding.UTF8, "application/json");
+                }";        var body = new { query = introspectionQuery };
+        var content = HttpClientHelper.CreateGraphQLContent(body);
             var response = await client.PostAsync(endpoint, content);
             var responseText = await response.Content.ReadAsStringAsync();
 
