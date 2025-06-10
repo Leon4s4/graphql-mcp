@@ -15,7 +15,8 @@ public static class SchemaIntrospectionTools
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
         try
-        {        using var client = new HttpClient();
+        {
+            using var client = new HttpClient();
         
         // Configure headers using the centralized helper
         HttpClientHelper.ConfigureHeaders(client, headers);
