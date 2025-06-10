@@ -23,12 +23,14 @@ echo ""
 echo "2️⃣  Register the Countries GraphQL API:"
 echo "   Tool: registerEndpoint"
 echo "   Parameters:"
-echo '   {
+cat <<EOF
+   {
      "endpoint": "https://countries.trevorblades.com/",
      "endpointName": "countries", 
      "allowMutations": false,
      "toolPrefix": "country"
-   }'
+   }
+EOF
 echo ""
 
 echo "3️⃣  List generated tools:"
