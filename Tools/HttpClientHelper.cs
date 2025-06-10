@@ -22,26 +22,39 @@ public static class HttpClientHelper
         try
         {
             var headerDict = JsonSerializer.Deserialize<Dictionary<string, string>>(headers) ?? new();
-            foreach (var header in headerDict)
-            {
-                // Skip content headers as they should be set on the content object, not request headers
-                if (IsContentHeader(header.Key))
-                    continue;
-                
-                try
-                {
-                    client.DefaultRequestHeaders.Add(header.Key, header.Value);
-                }
-                catch (InvalidOperationException)
-                {
-                    // Handle cases where header cannot be added to request headers
-                    // This can happen with certain restricted headers like User-Agent, Host, etc.
-                }
-            }
+            ConfigureHeaders(client, headerDict);
         }
         catch (JsonException)
         {
             // Ignore header parsing errors - malformed JSON headers
+        }
+    }
+
+    /// <summary>
+    /// Configures an HttpClient with headers, properly separating content headers from request headers
+    /// </summary>
+    /// <param name="client">The HttpClient to configure</param>
+    /// <param name="headers">Dictionary containing headers to add</param>
+    public static void ConfigureHeaders(HttpClient client, Dictionary<string, string>? headers)
+    {
+        if (headers == null || headers.Count == 0)
+            return;
+
+        foreach (var header in headers)
+        {
+            // Skip content headers as they should be set on the content object, not request headers
+            if (IsContentHeader(header.Key))
+                continue;
+            
+            try
+            {
+                client.DefaultRequestHeaders.Add(header.Key, header.Value);
+            }
+            catch (InvalidOperationException)
+            {
+                // Handle cases where header cannot be added to request headers
+                // This can happen with certain restricted headers like User-Agent, Host, etc.
+            }
         }
     }
 
@@ -63,6 +76,23 @@ public static class HttpClientHelper
     /// <param name="timeout">Optional timeout (defaults to 30 seconds)</param>
     /// <returns>Configured HttpClient</returns>
     public static HttpClient CreateGraphQLClient(string? headers = null, TimeSpan? timeout = null)
+    {
+        var client = new HttpClient
+        {
+            Timeout = timeout ?? TimeSpan.FromSeconds(30)
+        };
+        
+        ConfigureHeaders(client, headers);
+        return client;
+    }
+
+    /// <summary>
+    /// Creates a configured HttpClient for GraphQL requests
+    /// </summary>
+    /// <param name="headers">Optional headers to add</param>
+    /// <param name="timeout">Optional timeout (defaults to 30 seconds)</param>
+    /// <returns>Configured HttpClient</returns>
+    public static HttpClient CreateGraphQLClient(Dictionary<string, string>? headers, TimeSpan? timeout = null)
     {
         var client = new HttpClient
         {

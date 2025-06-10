@@ -139,8 +139,8 @@ public static class DynamicToolRegistry
             }        // Execute the operation
         using var httpClient = new HttpClient();
         
-        // Configure headers using the centralized helper
-        HttpClientHelper.ConfigureHeaders(httpClient, JsonSerializer.Serialize(endpointInfo.Headers));
+        // Configure headers using the centralized helper with dictionary overload
+        HttpClientHelper.ConfigureHeaders(httpClient, endpointInfo.Headers);
 
         var request = new
         {
