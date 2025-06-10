@@ -305,15 +305,8 @@ public static class QueryValidationTools
         {
             using var client = new HttpClient();
             
-            // Add headers if provided
-            if (!string.IsNullOrWhiteSpace(headers))
-            {
-                var headerDict = JsonSerializer.Deserialize<Dictionary<string, string>>(headers) ?? new();
-                foreach (var header in headerDict)
-                {
-                    client.DefaultRequestHeaders.Add(header.Key, header.Value);
-                }
-            }
+            // Configure headers using the centralized helper
+            HttpClientHelper.ConfigureHeaders(client, headers);
 
             var requestBody = new
             {
@@ -321,8 +314,7 @@ public static class QueryValidationTools
                 variables = string.IsNullOrWhiteSpace(variables) ? null : JsonSerializer.Deserialize<object>(variables)
             };
 
-            var jsonContent = JsonSerializer.Serialize(requestBody);
-            var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            var content = HttpClientHelper.CreateGraphQLContent(requestBody);
 
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var response = await client.PostAsync(endpoint, content);

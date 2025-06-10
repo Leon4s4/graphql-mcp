@@ -136,31 +136,20 @@ public static class DynamicToolRegistry
                 {
                     return $"Error parsing variables JSON: {ex.Message}";
                 }
-            }
+            }        // Execute the operation
+        using var httpClient = new HttpClient();
+        
+        // Configure headers using the centralized helper
+        HttpClientHelper.ConfigureHeaders(httpClient, JsonSerializer.Serialize(endpointInfo.Headers));
 
-            // Execute the operation
-            using var httpClient = new HttpClient();
-            
-            // Add headers
-            foreach (var header in endpointInfo.Headers)
-            {
-                httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
-            }
+        var request = new
+        {
+            query = toolInfo.Operation,
+            variables = variableDict.Count > 0 ? variableDict : null,
+            operationName = toolInfo.OperationName
+        };
 
-            var request = new
-            {
-                query = toolInfo.Operation,
-                variables = variableDict.Count > 0 ? variableDict : null,
-                operationName = toolInfo.OperationName
-            };
-
-            var requestJson = JsonSerializer.Serialize(request, new JsonSerializerOptions 
-            { 
-                WriteIndented = false,
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-            });
-
-            var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+        var content = HttpClientHelper.CreateGraphQLContent(request);
             var response = await httpClient.PostAsync(endpointInfo.Url, content);
 
             var responseContent = await response.Content.ReadAsStringAsync();
