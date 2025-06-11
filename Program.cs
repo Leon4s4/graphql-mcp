@@ -25,6 +25,9 @@ builder.Services.AddHttpClient("GraphQLClient", client =>
 // Register GraphQL HTTP client service
 builder.Services.AddSingleton<IGraphQLHttpClient, GraphQLHttpClient>();
 
+// Note: EndpointRegistryService uses static singleton pattern for MCP tool compatibility
+// No DI registration needed since tools access it via EndpointRegistryService.Instance
+
 var name = Environment.GetEnvironmentVariable("NAME") ?? "mcp-graphql";
 var schemaPath = Environment.GetEnvironmentVariable("SCHEMA");
 if (!string.IsNullOrWhiteSpace(schemaPath) && File.Exists(schemaPath))
