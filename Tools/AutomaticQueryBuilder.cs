@@ -86,7 +86,7 @@ public static class AutomaticQueryBuilder
             }
 
             // Build field selection
-            var fieldSelection = BuildFieldSelection(operationField.Value, schema, maxDepth, includeAllScalars, 1);
+            var fieldSelection = BuildOperationFieldSelection(operationField.Value, schema, maxDepth, includeAllScalars, operationName);
             
             queryBuilder.Append($"  {operationName}");
             
@@ -156,7 +156,7 @@ public static class AutomaticQueryBuilder
                 return $"Type '{typeName}' not found in schema";
             }
 
-            var selection = BuildNestedFieldSelection(type.Value, schema, maxDepth, currentDepth);
+            var selection = BuildNestedFieldSelection(type.Value, schema, maxDepth, currentDepth, true);
 
             var result = new StringBuilder();
             result.AppendLine($"# Nested Field Selection for {typeName}\n");
@@ -183,7 +183,7 @@ public static class AutomaticQueryBuilder
         }
 
         var selection = new StringBuilder();
-        var indent = new string(' ', currentDepth * 2 + 2);
+        var indent = new string(' ', currentDepth * 2);
 
         // Get the return type of this field
         if (!field.TryGetProperty("type", out var fieldType))
@@ -197,18 +197,27 @@ public static class AutomaticQueryBuilder
             return "";
         }
 
-        // Find the type definition
+        // Check if this is a scalar type
+        if (IsScalarType(typeName))
+        {
+            // For scalar types, we don't need to recurse - just return empty since
+            // the field name will be added by the caller
+            return "";
+        }
+
+        // Find the type definition for object/interface types
         var typeDefinition = FindTypeByName(schema, typeName);
         if (!typeDefinition.HasValue)
         {
             return "";
         }
 
-        var nestedSelection = BuildNestedFieldSelection(typeDefinition.Value, schema, maxDepth, currentDepth + 1);
+        // Build nested selections for the object/interface type
+        var nestedSelection = BuildNestedFieldSelection(typeDefinition.Value, schema, maxDepth, currentDepth, includeAllScalars);
         return nestedSelection;
     }
 
-    private static string BuildNestedFieldSelection(JsonElement type, JsonElement schema, int maxDepth, int currentDepth)
+    private static string BuildNestedFieldSelection(JsonElement type, JsonElement schema, int maxDepth, int currentDepth, bool includeAllScalars = true)
     {
         if (currentDepth > maxDepth)
         {
@@ -253,8 +262,11 @@ public static class AutomaticQueryBuilder
 
             if (isScalar)
             {
-                // Add scalar field directly
-                selection.AppendLine($"{indent}{fieldName}");
+                // Only include scalar fields if the flag is set
+                if (includeAllScalars)
+                {
+                    selection.AppendLine($"{indent}{fieldName}");
+                }
             }
             else
             {
@@ -264,7 +276,7 @@ public static class AutomaticQueryBuilder
                     var nestedType = FindTypeByName(schema, fieldTypeName);
                     if (nestedType.HasValue)
                     {
-                        var nestedSelection = BuildNestedFieldSelection(nestedType.Value, schema, maxDepth, currentDepth + 1);
+                        var nestedSelection = BuildNestedFieldSelection(nestedType.Value, schema, maxDepth, currentDepth + 1, includeAllScalars);
                         if (!string.IsNullOrEmpty(nestedSelection))
                         {
                             selection.AppendLine($"{indent}{fieldName} {{");
@@ -315,7 +327,11 @@ public static class AutomaticQueryBuilder
 
     private static bool IsScalarType(string typeName)
     {
-        var scalarTypes = new[] { "String", "Int", "Float", "Boolean", "ID" };
+        var scalarTypes = new[] { 
+            "String", "Int", "Float", "Boolean", "ID",
+            // Common custom scalars
+            "DateTime", "Date", "Time", "JSON", "Upload", "Long", "Decimal"
+        };
         return scalarTypes.Contains(typeName);
     }
 
@@ -360,5 +376,38 @@ public static class AutomaticQueryBuilder
             JsonValueKind.Object => JsonElementToDictionary(element),
             _ => element.ToString()
         };
+    }
+
+    private static string BuildOperationFieldSelection(JsonElement operationField, JsonElement schema, int maxDepth, bool includeAllScalars, string operationName)
+    {
+        // Get the return type of the operation field
+        if (!operationField.TryGetProperty("type", out var fieldType))
+        {
+            return "    # No return type found\n";
+        }
+
+        var typeName = GetNamedTypeName(fieldType);
+        if (string.IsNullOrEmpty(typeName))
+        {
+            return "    # Invalid return type\n";
+        }
+
+        // Check if this is a scalar type
+        if (IsScalarType(typeName))
+        {
+            // For scalar operations, no nested selection needed
+            return "";
+        }
+
+        // Find the type definition for object/interface types
+        var typeDefinition = FindTypeByName(schema, typeName);
+        if (!typeDefinition.HasValue)
+        {
+            return "    # Type definition not found\n";
+        }
+
+        // Build nested selections starting from depth 1 (inside the operation)
+        var nestedSelection = BuildNestedFieldSelection(typeDefinition.Value, schema, maxDepth, 1, includeAllScalars);
+        return nestedSelection;
     }
 }
