@@ -16,19 +16,6 @@ builder.Services
     .WithStdioServerTransport()
     .WithToolsFromAssembly();
 
-var endpoint = Environment.GetEnvironmentVariable("ENDPOINT") ?? "http://localhost:4000/graphql";
-var headersJson = Environment.GetEnvironmentVariable("HEADERS") ?? "{}";
-Dictionary<string, string> headers;
-try
-{
-    headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersJson) ?? new();
-}
-catch
-{
-    headers = new();
-}
-var allowMutations = (Environment.GetEnvironmentVariable("ALLOW_MUTATIONS") ?? "false").ToLower() == "true";
-
 // Register HttpClient with proper DI configuration
 builder.Services.AddHttpClient("GraphQLClient", client =>
 {
@@ -37,15 +24,6 @@ builder.Services.AddHttpClient("GraphQLClient", client =>
 
 // Register GraphQL HTTP client service
 builder.Services.AddSingleton<IGraphQLHttpClient, GraphQLHttpClient>();
-
-// Register QueryGraphQLTool with proper DI
-builder.Services.AddSingleton(provider => 
-{
-    var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
-    var httpClient = httpClientFactory.CreateClient("GraphQLClient");
-    HttpClientHelper.ConfigureHeaders(httpClient, headers);
-    return new QueryGraphQLTool(httpClient, endpoint, headers, allowMutations);
-});
 
 var name = Environment.GetEnvironmentVariable("NAME") ?? "mcp-graphql";
 var schemaPath = Environment.GetEnvironmentVariable("SCHEMA");
@@ -56,6 +34,8 @@ if (!string.IsNullOrWhiteSpace(schemaPath) && File.Exists(schemaPath))
 }
 
 Console.WriteLine($"Starting MCP server: {name}");
+Console.WriteLine("Use the RegisterEndpoint tool to configure GraphQL endpoints dynamically");
+Console.WriteLine("Available tools: RegisterEndpoint, ListDynamicTools, ExecuteDynamicOperation, RefreshEndpointTools, UnregisterEndpoint");
 
 var app = builder.Build();
 
