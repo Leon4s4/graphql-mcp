@@ -18,39 +18,24 @@ public static class QueryGraphQLMcpTool
         [Description("Name of the registered endpoint (use ListDynamicTools to see available endpoints)")] string endpointName,
         [Description("Variables for the query as JSON object (optional)")] string? variables = null)
     {
-      
-            // Get the endpoint from the dynamic registry
-            var endpointsField = typeof(DynamicToolRegistry).GetField("_endpoints", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-            
-            if (endpointsField?.GetValue(null) is not Dictionary<string, object> endpoints)
+        try
+        {
+            // Check if endpoint is registered using the new public method
+            if (!DynamicToolRegistry.IsEndpointRegistered(endpointName))
             {
-                return "Error: Could not access endpoint registry. Please ensure endpoints are registered using RegisterEndpoint.";
+                var registeredEndpoints = DynamicToolRegistry.GetRegisteredEndpointNames();
+                return $"Endpoint '{endpointName}' not found. Available endpoints: {string.Join(", ", registeredEndpoints)}. Use RegisterEndpoint to add new endpoints.";
             }
 
-            if (!endpoints.ContainsKey(endpointName))
+            // Get endpoint information using the new public method
+            var endpointInfo = DynamicToolRegistry.GetEndpointInfo(endpointName);
+            if (endpointInfo == null)
             {
-                return $"Endpoint '{endpointName}' not found. Available endpoints: {string.Join(", ", endpoints.Keys)}. Use RegisterEndpoint to add new endpoints.";
+                return "Error: Could not retrieve endpoint information.";
             }
-
-            // Use reflection to access the endpoint info
-            var endpointInfo = endpoints[endpointName];
-            var endpointType = endpointInfo.GetType();
-            
-            var urlProp = endpointType.GetProperty("Url");
-            var headersProp = endpointType.GetProperty("Headers");
-            var allowMutationsProp = endpointType.GetProperty("AllowMutations");
-
-            if (urlProp?.GetValue(endpointInfo) is not string url)
-            {
-                return "Error: Could not retrieve endpoint URL.";
-            }
-
-            var headers = headersProp?.GetValue(endpointInfo) as Dictionary<string, string> ?? new();
-            var allowMutations = allowMutationsProp?.GetValue(endpointInfo) as bool? ?? false;
 
             // Check if it's a mutation and if mutations are allowed
-            if (IsMutation(query) && !allowMutations)
+            if (IsMutation(query) && !endpointInfo.AllowMutations)
             {
                 return $"Mutations are not allowed for endpoint '{endpointName}'. Enable mutations when registering the endpoint to use mutation operations.";
             }
@@ -70,8 +55,6 @@ public static class QueryGraphQLMcpTool
                 }
             }
 
-            using var client = HttpClientHelper.CreateStaticClient(headers);
-
             var request = new
             {
                 query = query,
@@ -79,8 +62,13 @@ public static class QueryGraphQLMcpTool
             };
 
             // Use centralized HTTP execution with proper error handling
-            var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(url, request, headers);
+            var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(endpointInfo.Url, request, endpointInfo.Headers);
             return result.FormatForDisplay();
+        }
+        catch (Exception ex)
+        {
+            return $"Error executing GraphQL query: {ex.Message}";
+        }
       
     }
 
