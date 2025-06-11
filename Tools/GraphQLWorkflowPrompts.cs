@@ -463,4 +463,90 @@ public static class GraphQLWorkflowPrompts
         
         return prompt.ToString();
     }
+
+    [McpServerPrompt, Description("How to register endpoints and manage dynamic tools in this MCP server")]
+    public static string EndpointManagementGuide(
+        [Description("Level of detail (summary, detailed)")] string detailLevel = "summary")
+    {
+        var prompt = new StringBuilder();
+
+        prompt.AppendLine("# Endpoint Management Guide");
+        prompt.AppendLine();
+        prompt.AppendLine("This MCP server supports dynamic multi-endpoint configuration and automatic tool generation.");
+        prompt.AppendLine("Use the following tools to manage GraphQL endpoints at runtime:");
+        prompt.AppendLine();
+        prompt.AppendLine("- `RegisterEndpoint` – add a GraphQL endpoint and generate tools");
+        prompt.AppendLine("- `ListDynamicTools` – list all registered endpoints and generated tools");
+        prompt.AppendLine("- `ExecuteDynamicOperation` – run any generated query or mutation");
+        prompt.AppendLine("- `RefreshEndpointTools` – update tools after schema changes");
+        prompt.AppendLine("- `UnregisterEndpoint` – remove an endpoint and its tools");
+
+        if (detailLevel == "detailed")
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("## Typical Workflow");
+            prompt.AppendLine("1. Start the server with `dotnet run`.");
+            prompt.AppendLine("2. Call `RegisterEndpoint` with endpoint URL, name, and optional headers.");
+            prompt.AppendLine("3. Use `ListDynamicTools` to see newly created tools (e.g., `gh_query_viewer`).");
+            prompt.AppendLine("4. Execute operations with `ExecuteDynamicOperation` or the generated tools.");
+            prompt.AppendLine("5. When the schema updates, call `RefreshEndpointTools` to sync tools.");
+            prompt.AppendLine("6. Use `UnregisterEndpoint` to clean up when an API is no longer needed.");
+        }
+
+        prompt.AppendLine();
+        prompt.AppendLine("## Response Format:");
+        prompt.AppendLine("1. **Step-by-Step Instructions** for managing endpoints.");
+        prompt.AppendLine("2. **Tool Descriptions** with example payloads.");
+        prompt.AppendLine("3. **Best Practices** for multi-endpoint workflows.");
+
+        return prompt.ToString();
+    }
+
+    [McpServerPrompt, Description("Overview of available MCP server tools and capabilities")]
+    public static string ToolsOverview(
+        [Description("Focus area (all, query, schema, performance, security)")] string focus = "all")
+    {
+        var prompt = new StringBuilder();
+
+        prompt.AppendLine("# MCP Server Tools Overview");
+        prompt.AppendLine();
+        prompt.AppendLine("This server exposes a wide range of GraphQL development tools.");
+
+        if (focus == "all" || focus == "query")
+        {
+            prompt.AppendLine("## Query & Validation");
+            prompt.AppendLine("- `ValidateQuery`, `TestQuery`, `ExplainQuery`, `OptimizeQuery`");
+            prompt.AppendLine("- `QueryGraphQL` and auto-generated tools for endpoint operations");
+        }
+
+        if (focus == "all" || focus == "schema")
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("## Schema & Introspection");
+            prompt.AppendLine("- `GetSchema`, `DiffSchemas`, `IntrospectSchema`");
+            prompt.AppendLine("- `SchemaEvolutionReport` and resolver documentation helpers");
+        }
+
+        if (focus == "all" || focus == "performance")
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("## Performance & Analytics");
+            prompt.AppendLine("- `MeasureQueryPerformance`, field usage analytics, query analyzers");
+        }
+
+        if (focus == "all" || focus == "security")
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("## Security & Testing");
+            prompt.AppendLine("- `SecurityAnalysis`, testing helpers, mock data generation");
+        }
+
+        prompt.AppendLine();
+        prompt.AppendLine("Endpoint management tools are always available: `RegisterEndpoint`, `ListDynamicTools`, `ExecuteDynamicOperation`, `RefreshEndpointTools`, and `UnregisterEndpoint`.");
+
+        prompt.AppendLine();
+        prompt.AppendLine("Use this overview to discover which tool best fits your current task.");
+
+        return prompt.ToString();
+    }
 }

@@ -228,6 +228,12 @@ In addition to comprehensive tools, this MCP server provides **expert-level prom
 | `DebuggingAssistant` | Context-aware troubleshooting for GraphQL errors and performance issues |
 | `TestingStrategy` | Comprehensive testing strategies for unit, integration, performance, and security testing |
 
+### **Server & Endpoint Management**
+| Prompt | Description |
+|--------|-------------|
+| `EndpointManagementGuide` | How to register endpoints and manage dynamic tools |
+| `ToolsOverview` | Overview of available MCP server tools and capabilities |
+
 ### **Learning & Documentation**
 | Prompt | Description |
 |--------|-------------|
