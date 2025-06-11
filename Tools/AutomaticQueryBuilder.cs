@@ -71,18 +71,25 @@ public static class AutomaticQueryBuilder
 
             // Build the query
             var queryBuilder = new StringBuilder();
-            queryBuilder.AppendLine($"query Get{operationName} {{");
-
+            var parsedVars = new Dictionary<string, object>();
+            
             // Add variables to the operation if provided
             if (!string.IsNullOrEmpty(variables))
             {
-                var parsedVars = ParseVariables(variables);
+                parsedVars = ParseVariables(variables);
                 if (parsedVars.Count > 0)
                 {
                     var varDefs = string.Join(", ", parsedVars.Select(kvp => $"${kvp.Key}: {kvp.Value}"));
-                    queryBuilder.Clear();
                     queryBuilder.AppendLine($"query Get{operationName}({varDefs}) {{");
                 }
+                else
+                {
+                    queryBuilder.AppendLine($"query Get{operationName} {{");
+                }
+            }
+            else
+            {
+                queryBuilder.AppendLine($"query Get{operationName} {{");
             }
 
             // Build field selection
@@ -91,7 +98,7 @@ public static class AutomaticQueryBuilder
             queryBuilder.Append($"  {operationName}");
             
             // Add arguments if we have variables
-            if (parsedVars != null && parsedVars.Count > 0)
+            if (parsedVars.Count > 0)
             {
                 var args = string.Join(", ", parsedVars.Select(kvp => $"{kvp.Key}: ${kvp.Key}"));
                 queryBuilder.Append($"({args})");
