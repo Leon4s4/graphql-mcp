@@ -210,6 +210,63 @@ This MCP server is designed to integrate seamlessly into your GraphQL developmen
 5. **Testing**: Generate comprehensive test cases and mock data
 6. **Production Monitoring**: Track field usage and performance metrics
 
+## 💡 GraphQL Expert Prompts
+
+In addition to comprehensive tools, this MCP server provides **expert-level prompts** that act as GraphQL consultants and guides:
+
+### **Query & Schema Assistance**
+| Prompt | Description |
+|--------|-------------|
+| `GenerateQuery` | Expert GraphQL query generation with optimization and best practices |
+| `AnalyzeSchema` | Comprehensive schema analysis for structure, performance, security, or evolution |
+| `SchemaDesign` | Architecture guidance for designing, refactoring, or optimizing GraphQL schemas |
+
+### **Development & Workflow Guidance**
+| Prompt | Description |
+|--------|-------------|
+| `DevelopmentWorkflow` | Best practices for GraphQL development across all phases (planning to deployment) |
+| `DebuggingAssistant` | Context-aware troubleshooting for GraphQL errors and performance issues |
+| `TestingStrategy` | Comprehensive testing strategies for unit, integration, performance, and security testing |
+
+### **Learning & Documentation**
+| Prompt | Description |
+|--------|-------------|
+| `DocumentationGuide` | Create API documentation, guides, and migration materials |
+| `TrainingMaterial` | Generate training curricula and learning materials for teams |
+
+### **Prompt Features**
+- **Parameterized**: Customize guidance based on your specific context (team size, tech stack, domain)
+- **Expert-Level**: Advanced GraphQL knowledge and industry best practices
+- **Practical**: Actionable advice with implementation examples
+- **Comprehensive**: Cover all aspects from basic concepts to enterprise architecture
+
+### **Example Prompt Usage**
+
+```json
+// Generate an optimized query
+{
+  "dataRequirement": "Get user profiles with their recent posts and follower counts",
+  "performance": "fast",
+  "includeRelated": "yes"
+}
+
+// Get development workflow guidance
+{
+  "phase": "implementation",
+  "teamSize": "medium",
+  "techStack": "dotnet"
+}
+
+// Create testing strategy
+{
+  "testingType": "performance",
+  "operationType": "query",
+  "framework": "xunit"
+}
+```
+
+These prompts transform your MCP client into a GraphQL expert consultant, providing contextual guidance exactly when you need it.
+
 ## 🔒 Security Features
 
 - **Query complexity analysis** to prevent resource exhaustion
