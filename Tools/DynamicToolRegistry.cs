@@ -15,6 +15,7 @@ public static class DynamicToolRegistry
 {
     private static readonly Dictionary<string, DynamicToolInfo> _dynamicTools = new();
     private static readonly Dictionary<string, GraphQLEndpointInfo> _endpoints = new();
+    private static readonly Dictionary<string, List<string>> _endpointToTools = new();
 
     [McpServerTool, Description("Register a GraphQL endpoint for automatic tool generation")]
     public static async Task<string> RegisterEndpoint(
@@ -49,6 +50,12 @@ public static class DynamicToolRegistry
                 AllowMutations = allowMutations,
                 ToolPrefix = toolPrefix
             };
+
+            // If endpoint already exists, remove existing tools first
+            if (_endpoints.ContainsKey(endpointName))
+            {
+                RemoveToolsForEndpoint(endpointName);
+            }
 
             _endpoints[endpointName] = endpointInfo;
 
@@ -282,8 +289,8 @@ public static class DynamicToolRegistry
                 result.AppendLine("**Headers:** None");
             }
 
-            // Count tools for this endpoint
-            var toolCount = _dynamicTools.Values.Count(t => t.EndpointName == endpointName);
+            // Count tools for this endpoint using the lookup map
+            var toolCount = _endpointToTools.TryGetValue(endpointName, out var toolNames) ? toolNames.Count : 0;
             result.AppendLine($"**Generated Tools:** {toolCount}");
             result.AppendLine();
         }
@@ -370,6 +377,12 @@ public static class DynamicToolRegistry
         if (!type.TryGetProperty("fields", out var fields) || fields.ValueKind != JsonValueKind.Array)
             return 0;
 
+        // Ensure the endpoint has an entry in the lookup map
+        if (!_endpointToTools.ContainsKey(endpointInfo.Name))
+        {
+            _endpointToTools[endpointInfo.Name] = new List<string>();
+        }
+
         foreach (var field in fields.EnumerateArray())
         {
             if (!field.TryGetProperty("name", out var fieldName))
@@ -395,6 +408,7 @@ public static class DynamicToolRegistry
             };
 
             _dynamicTools[toolName] = toolInfo;
+            _endpointToTools[endpointInfo.Name].Add(toolName);
             toolsGenerated++;
         }
 
@@ -581,20 +595,25 @@ public static class DynamicToolRegistry
             return new EndpointRemovalResult { Success = false, ToolsRemoved = 0 };
         }
 
-        // Remove all tools for this endpoint
-        var keysToRemove = _dynamicTools.Where(kvp => kvp.Value.EndpointName == endpointName)
-                                      .Select(kvp => kvp.Key)
-                                      .ToList();
-        
-        foreach (var key in keysToRemove)
+        var toolsRemoved = 0;
+
+        // Use lookup map for efficient tool removal
+        if (_endpointToTools.TryGetValue(endpointName, out var toolNames))
         {
-            _dynamicTools.Remove(key);
+            foreach (var toolName in toolNames)
+            {
+                if (_dynamicTools.Remove(toolName))
+                {
+                    toolsRemoved++;
+                }
+            }
+            _endpointToTools.Remove(endpointName);
         }
 
         // Remove endpoint
         _endpoints.Remove(endpointName);
 
-        return new EndpointRemovalResult { Success = true, ToolsRemoved = keysToRemove.Count };
+        return new EndpointRemovalResult { Success = true, ToolsRemoved = toolsRemoved };
     }
 
     /// <summary>
@@ -604,16 +623,23 @@ public static class DynamicToolRegistry
     /// <returns>Number of tools removed</returns>
     private static int RemoveToolsForEndpoint(string endpointName)
     {
-        var keysToRemove = _dynamicTools.Where(kvp => kvp.Value.EndpointName == endpointName)
-                                      .Select(kvp => kvp.Key)
-                                      .ToList();
-        
-        foreach (var key in keysToRemove)
+        var toolsRemoved = 0;
+
+        // Use lookup map for efficient tool removal
+        if (_endpointToTools.TryGetValue(endpointName, out var toolNames))
         {
-            _dynamicTools.Remove(key);
+            foreach (var toolName in toolNames)
+            {
+                if (_dynamicTools.Remove(toolName))
+                {
+                    toolsRemoved++;
+                }
+            }
+            // Clear the tool list but keep the endpoint entry for future tool additions
+            toolNames.Clear();
         }
 
-        return keysToRemove.Count;
+        return toolsRemoved;
     }
 
     /// <summary>
