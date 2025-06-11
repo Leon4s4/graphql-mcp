@@ -213,6 +213,49 @@ public static class DynamicToolRegistry
      
     }
 
+    [McpServerTool, Description("List all registered GraphQL endpoints")]
+    public static string ListRegisteredEndpoints()
+    {
+        if (_endpoints.Count == 0)
+        {
+            return "No GraphQL endpoints are currently registered. Use RegisterEndpoint to add endpoints.";
+        }
+
+        var result = new StringBuilder();
+        result.AppendLine("# Registered GraphQL Endpoints\n");
+
+        foreach (var kvp in _endpoints)
+        {
+            var endpointName = kvp.Key;
+            var endpointInfo = kvp.Value;
+            
+            result.AppendLine($"## {endpointName}");
+            result.AppendLine($"**URL:** {endpointInfo.Url}");
+            result.AppendLine($"**Allow Mutations:** {(endpointInfo.AllowMutations ? "Yes" : "No")}");
+            result.AppendLine($"**Tool Prefix:** {(string.IsNullOrEmpty(endpointInfo.ToolPrefix) ? "(none)" : endpointInfo.ToolPrefix)}");
+            
+            if (endpointInfo.Headers.Count > 0)
+            {
+                result.AppendLine($"**Headers:** {endpointInfo.Headers.Count} configured");
+                foreach (var header in endpointInfo.Headers)
+                {
+                    result.AppendLine($"  - {header.Key}: {header.Value}");
+                }
+            }
+            else
+            {
+                result.AppendLine("**Headers:** None");
+            }
+
+            // Count tools for this endpoint
+            var toolCount = _dynamicTools.Values.Count(t => t.EndpointName == endpointName);
+            result.AppendLine($"**Generated Tools:** {toolCount}");
+            result.AppendLine();
+        }
+
+        return result.ToString();
+    }
+
     private static async Task<string> GenerateToolsFromSchema(GraphQLEndpointInfo endpointInfo)
     {
       
