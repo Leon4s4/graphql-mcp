@@ -20,15 +20,15 @@ public static class QueryGraphQLMcpTool
     {
         try
         {
-            // Check if endpoint is registered using the new public method
-            if (!DynamicToolRegistry.IsEndpointRegistered(endpointName))
+            // Check if endpoint is registered using EndpointRegistryService
+            if (!EndpointRegistryService.Instance.IsEndpointRegistered(endpointName))
             {
-                var registeredEndpoints = DynamicToolRegistry.GetRegisteredEndpointNames();
+                var registeredEndpoints = EndpointRegistryService.Instance.GetRegisteredEndpointNames();
                 return $"Endpoint '{endpointName}' not found. Available endpoints: {string.Join(", ", registeredEndpoints)}. Use RegisterEndpoint to add new endpoints.";
             }
 
-            // Get endpoint information using the new public method
-            var endpointInfo = DynamicToolRegistry.GetEndpointInfo(endpointName);
+            // Get endpoint information using EndpointRegistryService
+            var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
             if (endpointInfo == null)
             {
                 return "Error: Could not retrieve endpoint information.";

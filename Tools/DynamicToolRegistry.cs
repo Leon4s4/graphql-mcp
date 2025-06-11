@@ -14,8 +14,6 @@ namespace Tools;
 [McpServerToolType]
 public static class DynamicToolRegistry
 {
-    private static EndpointRegistryService Registry => EndpointRegistryService.Instance;
-
     [McpServerTool, Description("Register a GraphQL endpoint for automatic tool generation")]
     public static async Task<string> RegisterEndpoint(
         [Description("GraphQL endpoint URL")] string endpoint,
@@ -51,7 +49,7 @@ public static class DynamicToolRegistry
             };
 
             // Register endpoint using singleton service
-            Registry.RegisterEndpoint(endpointName, endpointInfo);
+            EndpointRegistryService.Instance.RegisterEndpoint(endpointName, endpointInfo);
 
             // Generate tools from schema
             var result = await GenerateToolsFromSchema(endpointInfo);
@@ -66,7 +64,7 @@ public static class DynamicToolRegistry
     [McpServerTool, Description("List all registered dynamic tools")]
     public static string ListDynamicTools()
     {
-        var dynamicTools = Registry.GetAllDynamicTools();
+        var dynamicTools = EndpointRegistryService.Instance.GetAllDynamicTools();
         
         if (dynamicTools.Count == 0)
         {
@@ -80,7 +78,7 @@ public static class DynamicToolRegistry
 
         foreach (var group in groupedByEndpoint)
         {
-            var endpoint = Registry.GetEndpointInfo(group.Key);
+            var endpoint = EndpointRegistryService.Instance.GetEndpointInfo(group.Key);
             if (endpoint == null) continue;
             
             result.AppendLine($"## Endpoint: {group.Key}");
@@ -122,13 +120,13 @@ public static class DynamicToolRegistry
     {
         try
         {
-            var toolInfo = Registry.GetDynamicTool(toolName);
+            var toolInfo = EndpointRegistryService.Instance.GetDynamicTool(toolName);
             if (toolInfo == null)
             {
                 return $"Dynamic tool '{toolName}' not found. Use ListDynamicTools to see available tools.";
             }
 
-            var endpointInfo = Registry.GetEndpointInfo(toolInfo.EndpointName);
+            var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(toolInfo.EndpointName);
             if (endpointInfo == null)
             {
                 return $"Endpoint '{toolInfo.EndpointName}' not found for tool '{toolName}'.";
@@ -180,161 +178,18 @@ public static class DynamicToolRegistry
     public static async Task<string> RefreshEndpointTools(
         [Description("Name of the endpoint to refresh")] string endpointName)
     {
-        var endpointInfo = Registry.GetEndpointInfo(endpointName);
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
         {
             return $"Endpoint '{endpointName}' not found. Use RegisterEndpoint first.";
         }
 
         // Remove existing tools for this endpoint (but keep the endpoint)
-        var toolsRemoved = Registry.RemoveToolsForEndpoint(endpointName);
+        var toolsRemoved = EndpointRegistryService.Instance.RemoveToolsForEndpoint(endpointName);
 
         // Re-generate tools
         var result = await GenerateToolsFromSchema(endpointInfo);
         return $"Refreshed tools for endpoint '{endpointName}'. Removed {toolsRemoved} existing tools. {result}";
-    }
-
-    [McpServerTool, Description("Remove all dynamic tools for an endpoint")]
-    public static string UnregisterEndpoint(
-        [Description("Name of the endpoint to unregister")] string endpointName)
-    {
-        if (Registry.RemoveEndpoint(endpointName, out var toolsRemoved))
-        {
-            return $"Unregistered endpoint '{endpointName}' and removed {toolsRemoved} dynamic tools.";
-        }
-        else
-        {
-            return $"Endpoint '{endpointName}' not found.";
-        }
-    }
-
-    [McpServerTool, Description("Remove multiple dynamic tools for multiple endpoints by name")]
-    public static string UnregisterMultipleEndpoints(
-        [Description("Comma-separated list of endpoint names to unregister")] string endpointNames)
-    {
-        if (string.IsNullOrWhiteSpace(endpointNames))
-        {
-            return "No endpoint names provided. Please specify a comma-separated list of endpoint names.";
-        }
-
-        var names = endpointNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                .Select(name => name.Trim())
-                                .Where(name => !string.IsNullOrEmpty(name))
-                                .ToList();
-
-        if (names.Count == 0)
-        {
-            return "No valid endpoint names found after parsing the input.";
-        }
-
-        var result = new StringBuilder();
-        result.AppendLine($"# Unregistering {names.Count} Endpoint(s)\n");
-
-        var totalToolsRemoved = 0;
-        var successCount = 0;
-        var failedEndpoints = new List<string>();
-
-        foreach (var endpointName in names)
-        {
-            if (Registry.RemoveEndpoint(endpointName, out var toolsRemoved))
-            {
-                result.AppendLine($"✅ **{endpointName}**: Removed {toolsRemoved} tools");
-                totalToolsRemoved += toolsRemoved;
-                successCount++;
-            }
-            else
-            {
-                result.AppendLine($"❌ **{endpointName}**: Endpoint not found");
-                failedEndpoints.Add(endpointName);
-            }
-        }
-
-        result.AppendLine();
-        result.AppendLine($"## Summary");
-        result.AppendLine($"- **Successfully unregistered:** {successCount} endpoint(s)");
-        result.AppendLine($"- **Failed to unregister:** {failedEndpoints.Count} endpoint(s)");
-        result.AppendLine($"- **Total tools removed:** {totalToolsRemoved}");
-
-        if (failedEndpoints.Count > 0)
-        {
-            result.AppendLine($"- **Failed endpoints:** {string.Join(", ", failedEndpoints)}");
-        }
-
-        return result.ToString();
-    }
-
-    [McpServerTool, Description("List all registered GraphQL endpoints")]
-    public static string ListRegisteredEndpoints()
-    {
-        var endpoints = Registry.GetAllEndpoints();
-        
-        if (endpoints.Count == 0)
-        {
-            return "No GraphQL endpoints are currently registered. Use RegisterEndpoint to add endpoints.";
-        }
-
-        var result = new StringBuilder();
-        result.AppendLine("# Registered GraphQL Endpoints\n");
-
-        foreach (var kvp in endpoints)
-        {
-            var endpointName = kvp.Key;
-            var endpointInfo = kvp.Value;
-            
-            result.AppendLine($"## {endpointName}");
-            result.AppendLine($"**URL:** {endpointInfo.Url}");
-            result.AppendLine($"**Allow Mutations:** {(endpointInfo.AllowMutations ? "Yes" : "No")}");
-            result.AppendLine($"**Tool Prefix:** {(string.IsNullOrEmpty(endpointInfo.ToolPrefix) ? "(none)" : endpointInfo.ToolPrefix)}");
-            
-            if (endpointInfo.Headers.Count > 0)
-            {
-                result.AppendLine($"**Headers:** {endpointInfo.Headers.Count} configured");
-                foreach (var header in endpointInfo.Headers)
-                {
-                    result.AppendLine($"  - {header.Key}: {header.Value}");
-                }
-            }
-            else
-            {
-                result.AppendLine("**Headers:** None");
-            }
-
-            // Count tools for this endpoint using the registry service
-            var toolCount = Registry.GetToolCountForEndpoint(endpointName);
-            result.AppendLine($"**Generated Tools:** {toolCount}");
-            result.AppendLine();
-        }
-
-        return result.ToString();
-    }
-
-    /// <summary>
-    /// Get endpoint information for a registered endpoint
-    /// </summary>
-    /// <param name="endpointName">Name of the endpoint</param>
-    /// <returns>Endpoint information if found, null otherwise</returns>
-    public static GraphQLEndpointInfo? GetEndpointInfo(string endpointName)
-    {
-        return Registry.GetEndpointInfo(endpointName);
-    }
-
-    /// <summary>
-    /// Check if an endpoint is registered
-    /// </summary>
-    /// <param name="endpointName">Name of the endpoint</param>
-    /// <returns>True if endpoint is registered, false otherwise</returns>
-    public static bool IsEndpointRegistered(string endpointName)
-    {
-        return Registry.IsEndpointRegistered(endpointName);
-    }
-
-    /// <summary>
-    /// Get all registered endpoint names
-    /// </summary>
-    /// <returns>Collection of endpoint names</returns>
-    public static IEnumerable<string> GetRegisteredEndpointNames()
-    {
-        return Registry.GetRegisteredEndpointNames();
     }
 
     private static async Task<string> GenerateToolsFromSchema(GraphQLEndpointInfo endpointInfo)
@@ -441,7 +296,7 @@ public static class DynamicToolRegistry
             };
 
             // Register the tool using the singleton service
-            Registry.RegisterDynamicTool(toolName, toolInfo);
+            EndpointRegistryService.Instance.RegisterDynamicTool(toolName, toolInfo);
             toolsGenerated++;
         }
 
