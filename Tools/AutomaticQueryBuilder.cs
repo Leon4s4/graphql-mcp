@@ -91,14 +91,10 @@ public static class AutomaticQueryBuilder
             queryBuilder.Append($"  {operationName}");
             
             // Add arguments if we have variables
-            if (!string.IsNullOrEmpty(variables))
+            if (parsedVars != null && parsedVars.Count > 0)
             {
-                var parsedVars = ParseVariables(variables);
-                if (parsedVars.Count > 0)
-                {
-                    var args = string.Join(", ", parsedVars.Select(kvp => $"{kvp.Key}: ${kvp.Key}"));
-                    queryBuilder.Append($"({args})");
-                }
+                var args = string.Join(", ", parsedVars.Select(kvp => $"{kvp.Key}: ${kvp.Key}"));
+                queryBuilder.Append($"({args})");
             }
 
             queryBuilder.AppendLine(" {");
