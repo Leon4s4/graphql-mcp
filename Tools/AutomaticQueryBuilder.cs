@@ -79,7 +79,7 @@ public static class AutomaticQueryBuilder
                 var parsedVars = ParseVariables(variables);
                 if (parsedVars.Count > 0)
                 {
-                    var varDefs = string.Join(", ", parsedVars.Select(kvp => $"${kvp.Key}: String"));
+                    var varDefs = string.Join(", ", parsedVars.Select(kvp => $"${kvp.Key}: {kvp.Value}"));
                     queryBuilder.Clear();
                     queryBuilder.AppendLine($"query Get{operationName}({varDefs}) {{");
                 }
@@ -91,14 +91,10 @@ public static class AutomaticQueryBuilder
             queryBuilder.Append($"  {operationName}");
             
             // Add arguments if we have variables
-            if (!string.IsNullOrEmpty(variables))
+            if (parsedVars != null && parsedVars.Count > 0)
             {
-                var parsedVars = ParseVariables(variables);
-                if (parsedVars.Count > 0)
-                {
-                    var args = string.Join(", ", parsedVars.Select(kvp => $"{kvp.Key}: ${kvp.Key}"));
-                    queryBuilder.Append($"({args})");
-                }
+                var args = string.Join(", ", parsedVars.Select(kvp => $"{kvp.Key}: ${kvp.Key}"));
+                queryBuilder.Append($"({args})");
             }
 
             queryBuilder.AppendLine(" {");
