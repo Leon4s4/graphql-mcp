@@ -143,27 +143,26 @@ public static class DynamicToolRegistry
                     return $"Error parsing variables JSON: {ex.Message}";
                 }
             }
-            // Execute the operation
-        using var httpClient = HttpClientHelper.CreateStaticClient(endpointInfo.Headers);
-
-        var request = new
-        {
-            query = toolInfo.Operation,
-            variables = variableDict.Count > 0 ? variableDict : null,
-            operationName = toolInfo.OperationName
-        };
-
-        var content = HttpClientHelper.CreateGraphQLContent(request);
-            var response = await httpClient.PostAsync(endpointInfo.Url, content);
-
-            var responseContent = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
+            // Execute the operation using centralized HTTP helper
+            var request = new
             {
-                return $"HTTP Error {response.StatusCode}: {responseContent}";
+                query = toolInfo.Operation,
+                variables = variableDict.Count > 0 ? variableDict : null,
+                operationName = toolInfo.OperationName
+            };
+
+            var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(
+                endpointInfo.Url,
+                request,
+                endpointInfo.Headers);
+
+            if (!result.IsSuccess)
+            {
+                // Format the error using HttpClientHelper's response formatting
+                return result.FormatForDisplay();
             }
 
-            return FormatGraphQLResponse(responseContent);
+            return FormatGraphQLResponse(result.Content!);
         
     }
 
