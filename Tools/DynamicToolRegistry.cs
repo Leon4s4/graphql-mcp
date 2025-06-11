@@ -136,7 +136,7 @@ public static class DynamicToolRegistry
                 try
                 {
                     using var document = JsonDocument.Parse(variables);
-                    variableDict = JsonElementToDictionary(document.RootElement);
+                    variableDict = JsonHelpers.JsonElementToDictionary(document.RootElement);
                 }
                 catch (JsonException ex)
                 {
@@ -522,32 +522,6 @@ public static class DynamicToolRegistry
         return description.ToString();
     }
 
-    private static Dictionary<string, object> JsonElementToDictionary(JsonElement element)
-    {
-        var dictionary = new Dictionary<string, object>();
-
-        foreach (var property in element.EnumerateObject())
-        {
-            dictionary[property.Name] = JsonElementToObject(property.Value);
-        }
-
-        return dictionary;
-    }
-
-    private static object JsonElementToObject(JsonElement element)
-    {
-        return element.ValueKind switch
-        {
-            JsonValueKind.String => element.GetString() ?? "",
-            JsonValueKind.Number => element.TryGetInt32(out var intValue) ? intValue : element.GetDouble(),
-            JsonValueKind.True => true,
-            JsonValueKind.False => false,
-            JsonValueKind.Null => null!,
-            JsonValueKind.Array => element.EnumerateArray().Select(JsonElementToObject).ToArray(),
-            JsonValueKind.Object => JsonElementToDictionary(element),
-            _ => element.ToString()
-        };
-    }
 
     private static string FormatGraphQLResponse(string responseContent)
     {
