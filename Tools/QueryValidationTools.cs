@@ -51,7 +51,7 @@ public static class QueryValidationTools
             try
             {
                 var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
-                var schemaErrors = await ValidateQueryAgainstSchema(query, schemaJson);
+                var schemaErrors = ValidateQueryAgainstSchema(query, schemaJson);
                 
                 if (schemaErrors.Any())
                 {
@@ -234,7 +234,7 @@ public static class QueryValidationTools
         return errors;
     }
 
-    private static async Task<List<string>> ValidateQueryAgainstSchema(string query, string schemaJson)
+    private static List<string> ValidateQueryAgainstSchema(string query, string schemaJson)
     {
         var errors = new List<string>();
         
@@ -292,59 +292,53 @@ public static class QueryValidationTools
     {
         try
         {
-            using var client = HttpClientHelper.CreateStaticClient(headers);
-            
             var requestBody = new
             {
                 query,
                 variables = string.IsNullOrWhiteSpace(variables) ? null : JsonSerializer.Deserialize<object>(variables)
             };
 
-            var content = HttpClientHelper.CreateGraphQLContent(requestBody);
-
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            var response = await client.PostAsync(endpoint, content);
+            var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(endpoint, requestBody, headers);
             stopwatch.Stop();
 
-            var responseContent = await response.Content.ReadAsStringAsync();
-            var responseData = JsonSerializer.Deserialize<JsonElement>(responseContent);
-
-            var result = new StringBuilder();
+            var response = new StringBuilder();
             
-            if (response.IsSuccessStatusCode)
+            if (result.IsSuccess)
             {
-                result.AppendLine($"✅ **Status:** Execution successful ({stopwatch.ElapsedMilliseconds}ms)");
+                response.AppendLine($"✅ **Status:** Execution successful ({stopwatch.ElapsedMilliseconds}ms)");
                 
+                var responseData = JsonSerializer.Deserialize<JsonElement>(result.Content!);
                 if (responseData.TryGetProperty("errors", out var errors) && 
                     errors.ValueKind == JsonValueKind.Array && 
                     errors.GetArrayLength() > 0)
                 {
-                    result.AppendLine("\n⚠️ **GraphQL Errors:**");
+                    response.AppendLine("\n⚠️ **GraphQL Errors:**");
                     foreach (var error in errors.EnumerateArray())
                     {
                         if (error.TryGetProperty("message", out var message))
                         {
-                            result.AppendLine($"- {message.GetString()}");
+                            response.AppendLine($"- {message.GetString()}");
                         }
                     }
                 }
                 else
                 {
-                    result.AppendLine("\n✅ **Result:** Query executed without errors");
+                    response.AppendLine("\n✅ **Result:** Query executed without errors");
                 }
 
                 if (responseData.TryGetProperty("data", out var data))
                 {
-                    result.AppendLine($"\n**Data:** {GetDataSummary(data)}");
+                    response.AppendLine($"\n**Data:** {GetDataSummary(data)}");
                 }
             }
             else
             {
-                result.AppendLine($"❌ **Status:** HTTP {response.StatusCode} - {response.ReasonPhrase}");
-                result.AppendLine($"**Response:** {responseContent}");
+                // Return the detailed error message from centralized handling
+                response.AppendLine(result.FormatForDisplay());
             }
 
-            return result.ToString();
+            return response.ToString();
         }
         catch (Exception ex)
         {

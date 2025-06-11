@@ -78,34 +78,9 @@ public static class QueryGraphQLMcpTool
                 variables = variableDict.Count > 0 ? variableDict : null
             };
 
-            var content = HttpClientHelper.CreateGraphQLContent(request);
-            var response = await client.PostAsync(url, content);
-            var responseContent = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                return FormatErrorResponse($"HTTP Error {response.StatusCode}", responseContent);
-            }
-
-            // Parse and format the response
-            try
-            {
-                using var responseDoc = JsonDocument.Parse(responseContent);
-                var hasErrors = responseDoc.RootElement.TryGetProperty("errors", out var errors) && 
-                               errors.ValueKind == JsonValueKind.Array && 
-                               errors.GetArrayLength() > 0;
-
-                if (hasErrors)
-                {
-                    return FormatErrorResponse("GraphQL Errors", responseContent);
-                }
-
-                return FormatSuccessResponse(responseContent);
-            }
-            catch (JsonException)
-            {
-                return FormatSuccessResponse(responseContent);
-            }
+            // Use centralized HTTP execution with proper error handling
+            var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(url, request, headers);
+            return result.FormatForDisplay();
       
     }
 
@@ -140,51 +115,5 @@ public static class QueryGraphQLMcpTool
             JsonValueKind.Object => JsonElementToDictionary(element),
             _ => element.ToString()
         };
-    }
-
-    private static string FormatSuccessResponse(string responseContent)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(responseContent);
-            var formatted = JsonSerializer.Serialize(document, new JsonSerializerOptions { WriteIndented = true });
-            
-            var result = new StringBuilder();
-            result.AppendLine("# GraphQL Query Result\n");
-            result.AppendLine("✅ **Status:** Success\n");
-            result.AppendLine("## Response");
-            result.AppendLine("```json");
-            result.AppendLine(formatted);
-            result.AppendLine("```");
-            
-            return result.ToString();
-        }
-        catch
-        {
-            return $"# GraphQL Query Result\n\n✅ **Status:** Success\n\n## Response\n{responseContent}";
-        }
-    }
-
-    private static string FormatErrorResponse(string errorType, string responseContent)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(responseContent);
-            var formatted = JsonSerializer.Serialize(document, new JsonSerializerOptions { WriteIndented = true });
-            
-            var result = new StringBuilder();
-            result.AppendLine("# GraphQL Query Result\n");
-            result.AppendLine($"❌ **Status:** {errorType}\n");
-            result.AppendLine("## Error Details");
-            result.AppendLine("```json");
-            result.AppendLine(formatted);
-            result.AppendLine("```");
-            
-            return result.ToString();
-        }
-        catch
-        {
-            return $"# GraphQL Query Result\n\n❌ **Status:** {errorType}\n\n## Error Details\n{responseContent}";
-        }
     }
 }

@@ -366,18 +366,21 @@ public static class GraphQLSchemaTools
 
     private static async Task<string> ExecuteGraphQLRequest(string endpoint, string query, string? variables, string? headers)
     {
-        using var client = HttpClientHelper.CreateStaticClient(headers);
-        
         var requestBody = new
         {
             query = query,
             variables = !string.IsNullOrEmpty(variables) ? JsonSerializer.Deserialize<object>(variables) : null
         };
 
-        var content = HttpClientHelper.CreateGraphQLContent(requestBody);
-
-        var response = await client.PostAsync(endpoint, content);
-        return await response.Content.ReadAsStringAsync();
+        var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(endpoint, requestBody, headers);
+        
+        if (!result.IsSuccess)
+        {
+            // Return formatted error for debugging - this will show connection issues clearly
+            return result.FormatForDisplay();
+        }
+        
+        return result.Content ?? "";
     }
 
     private static List<string> FindJsonDifferences(JsonElement json1, JsonElement json2, string path = "")

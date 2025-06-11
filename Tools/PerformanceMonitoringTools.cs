@@ -25,8 +25,6 @@ public static class PerformanceMonitoringTools
             var results = new StringBuilder();
             results.AppendLine("# GraphQL Query Performance Report\n");
 
-            using var client = HttpClientHelper.CreateStaticClient(headers);
-
             var requestBody = new
             {
                 query,
@@ -46,8 +44,7 @@ public static class PerformanceMonitoringTools
             results.AppendLine("## Executing Performance Tests...\n");
             try
             {
-                var warmupContent = HttpClientHelper.CreateGraphQLContent(requestBody);
-                await client.PostAsync(endpoint, warmupContent);
+                await HttpClientHelper.ExecuteGraphQLRequestAsync(endpoint, requestBody, headers);
                 results.AppendLine("✅ Warmup run completed");
             }
             catch
@@ -61,18 +58,17 @@ public static class PerformanceMonitoringTools
                 var stopwatch = Stopwatch.StartNew();
                 try
                 {
-                    var content = HttpClientHelper.CreateGraphQLContent(requestBody);
-                    var response = await client.PostAsync(endpoint, content);
+                    var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(endpoint, requestBody, headers);
                     stopwatch.Stop();
                     
-                    if (response.IsSuccessStatusCode)
+                    if (result.IsSuccess)
                     {
                         measurements.Add(stopwatch.Elapsed);
                         results.AppendLine($"Run {i + 1}: {stopwatch.Elapsed.TotalMilliseconds:F2}ms ✅");
                     }
                     else
                     {
-                        results.AppendLine($"Run {i + 1}: Failed ({response.StatusCode}) ❌");
+                        results.AppendLine($"Run {i + 1}: Failed - {result.ErrorMessage} ❌");
                     }
                 }
                 catch (Exception ex)
