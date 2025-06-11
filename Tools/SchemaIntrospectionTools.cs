@@ -15,9 +15,7 @@ public static class SchemaIntrospectionTools
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
        
-            using var client = HttpClientHelper.CreateStaticClient(headers);
-        
-        var introspectionQuery = @"
+            var introspectionQuery = @"
                 query IntrospectionQuery {
                   __schema {
                     queryType { name }
@@ -108,23 +106,26 @@ public static class SchemaIntrospectionTools
                       }
                     }
                   }
-                }";        var body = new { query = introspectionQuery };
-        var content = HttpClientHelper.CreateGraphQLContent(body);
-            var response = await client.PostAsync(endpoint, content);
-            var responseText = await response.Content.ReadAsStringAsync();
+                }";        
+                
+        var body = new { query = introspectionQuery };
+        
+        // Use centralized HTTP execution with proper connection error handling
+        var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(endpoint, body, headers);
+        
+        if (!result.IsSuccess)
+        {
+            return result.FormatForDisplay();
+        }
 
-            if (!response.IsSuccessStatusCode)
-            {
-                return $"Failed to introspect schema: {response.ReasonPhrase}\n{responseText}";
-            }
+        // Check for GraphQL errors in the introspection response
+        var data = JsonSerializer.Deserialize<JsonElement>(result.Content!);
+        if (data.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array && errors.GetArrayLength() > 0)
+        {
+            return $"Schema introspection failed with errors:\n{JsonSerializer.Serialize(errors, new JsonSerializerOptions { WriteIndented = true })}";
+        }
 
-            var data = JsonSerializer.Deserialize<JsonElement>(responseText);
-            if (data.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array && errors.GetArrayLength() > 0)
-            {
-                return $"Schema introspection failed with errors:\n{JsonSerializer.Serialize(errors, new JsonSerializerOptions { WriteIndented = true })}";
-            }
-
-            return JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
     }
 
     [McpServerTool, Description("Extract and format schema documentation and field descriptions")]
