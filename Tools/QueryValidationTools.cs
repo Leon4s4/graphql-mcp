@@ -303,8 +303,7 @@ public static class QueryValidationTools
     {
         try
         {
-            var graphQLHttpClient = ServiceProvider.GetRequiredService<IGraphQLHttpClient>();
-            using var client = graphQLHttpClient.CreateClient(headers);
+            using var client = HttpClientHelper.CreateStaticClient(headers);
             
             var requestBody = new
             {

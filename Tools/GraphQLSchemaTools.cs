@@ -383,8 +383,7 @@ public static class GraphQLSchemaTools
 
     private static async Task<string> ExecuteGraphQLRequest(string endpoint, string query, string? variables, string? headers)
     {
-        var graphQLHttpClient = ServiceProvider.GetRequiredService<IGraphQLHttpClient>();
-        using var client = graphQLHttpClient.CreateClient(headers);
+        using var client = HttpClientHelper.CreateStaticClient(headers);
         
         var requestBody = new
         {

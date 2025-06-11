@@ -9,6 +9,48 @@ namespace Tools;
 /// </summary>
 public static class HttpClientHelper
 {
+    private static readonly Lazy<HttpClient> _staticHttpClient = new Lazy<HttpClient>(() => new HttpClient());
+
+    /// <summary>
+    /// Creates a configured HttpClient for GraphQL operations that can be used in static contexts
+    /// </summary>
+    /// <param name="headers">Optional headers to add (as JSON string)</param>
+    /// <param name="timeout">Optional timeout override</param>
+    /// <returns>Configured HttpClient</returns>
+    public static HttpClient CreateStaticClient(string? headers = null, TimeSpan? timeout = null)
+    {
+        // Create a new HttpClient that will be properly disposed by the caller
+        var client = new HttpClient();
+        
+        if (timeout.HasValue)
+        {
+            client.Timeout = timeout.Value;
+        }
+        
+        ConfigureHeaders(client, headers);
+        return client;
+    }
+
+    /// <summary>
+    /// Creates a configured HttpClient for GraphQL operations that can be used in static contexts
+    /// </summary>
+    /// <param name="headers">Optional headers to add (as dictionary)</param>
+    /// <param name="timeout">Optional timeout override</param>
+    /// <returns>Configured HttpClient</returns>
+    public static HttpClient CreateStaticClient(Dictionary<string, string>? headers, TimeSpan? timeout = null)
+    {
+        // Create a new HttpClient that will be properly disposed by the caller
+        var client = new HttpClient();
+        
+        if (timeout.HasValue)
+        {
+            client.Timeout = timeout.Value;
+        }
+        
+        ConfigureHeaders(client, headers);
+        return client;
+    }
+
     /// <summary>
     /// Configures an HttpClient with headers, properly separating content headers from request headers
     /// </summary>

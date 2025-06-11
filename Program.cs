@@ -39,7 +39,4 @@ Console.WriteLine("Available tools: RegisterEndpoint, ListDynamicTools, ExecuteD
 
 var app = builder.Build();
 
-// Initialize the service provider for static tools
-Tools.ServiceProvider.Initialize(app.Services);
-
 await app.RunAsync();

@@ -138,8 +138,7 @@ public static class DynamicToolRegistry
                 }
             }
             // Execute the operation
-        var graphQLHttpClient = ServiceProvider.GetRequiredService<IGraphQLHttpClient>();
-        using var httpClient = graphQLHttpClient.CreateClient(endpointInfo.Headers);
+        using var httpClient = HttpClientHelper.CreateStaticClient(endpointInfo.Headers);
 
         var request = new
         {

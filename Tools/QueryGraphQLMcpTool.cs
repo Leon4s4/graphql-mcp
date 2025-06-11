@@ -71,9 +71,7 @@ public static class QueryGraphQLMcpTool
                 }
             }
 
-            // Execute the query
-            var graphQLHttpClient = ServiceProvider.GetRequiredService<IGraphQLHttpClient>();
-            using var httpClient = graphQLHttpClient.CreateClient(headers);
+            using var client = HttpClientHelper.CreateStaticClient(headers);
 
             var request = new
             {
@@ -82,7 +80,7 @@ public static class QueryGraphQLMcpTool
             };
 
             var content = HttpClientHelper.CreateGraphQLContent(request);
-            var response = await httpClient.PostAsync(url, content);
+            var response = await client.PostAsync(url, content);
             var responseContent = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)

@@ -25,8 +25,7 @@ public static class PerformanceMonitoringTools
             var results = new StringBuilder();
             results.AppendLine("# GraphQL Query Performance Report\n");
 
-            var graphQLHttpClient = ServiceProvider.GetRequiredService<IGraphQLHttpClient>();
-            using var client = graphQLHttpClient.CreateClient(headers);
+            using var client = HttpClientHelper.CreateStaticClient(headers);
 
             var requestBody = new
             {
