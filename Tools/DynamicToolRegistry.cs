@@ -15,6 +15,7 @@ public static class DynamicToolRegistry
 {
     private static readonly Dictionary<string, DynamicToolInfo> _dynamicTools = new();
     private static readonly Dictionary<string, GraphQLEndpointInfo> _endpoints = new();
+    private static readonly Dictionary<string, List<string>> _endpointToTools = new();
 
     [McpServerTool, Description("Register a GraphQL endpoint for automatic tool generation")]
     public static async Task<string> RegisterEndpoint(
@@ -49,6 +50,12 @@ public static class DynamicToolRegistry
                 AllowMutations = allowMutations,
                 ToolPrefix = toolPrefix
             };
+
+            // If endpoint already exists, remove existing tools first
+            if (_endpoints.ContainsKey(endpointName))
+            {
+                RemoveToolsForEndpoint(endpointName);
+            }
 
             _endpoints[endpointName] = endpointInfo;
 
@@ -164,53 +171,131 @@ public static class DynamicToolRegistry
     public static async Task<string> RefreshEndpointTools(
         [Description("Name of the endpoint to refresh")] string endpointName)
     {
-        
-            if (!_endpoints.TryGetValue(endpointName, out var endpointInfo))
-            {
-                return $"Endpoint '{endpointName}' not found. Use RegisterEndpoint first.";
-            }
+        if (!_endpoints.TryGetValue(endpointName, out var endpointInfo))
+        {
+            return $"Endpoint '{endpointName}' not found. Use RegisterEndpoint first.";
+        }
 
-            // Remove existing tools for this endpoint
-            var keysToRemove = _dynamicTools.Where(kvp => kvp.Value.EndpointName == endpointName)
-                                          .Select(kvp => kvp.Key)
-                                          .ToList();
-            
-            foreach (var key in keysToRemove)
-            {
-                _dynamicTools.Remove(key);
-            }
+        // Remove existing tools for this endpoint (but keep the endpoint)
+        var toolsRemoved = RemoveToolsForEndpoint(endpointName);
 
-            // Re-generate tools
-            var result = await GenerateToolsFromSchema(endpointInfo);
-            return $"Refreshed tools for endpoint '{endpointName}'. {result}";
-        
+        // Re-generate tools
+        var result = await GenerateToolsFromSchema(endpointInfo);
+        return $"Refreshed tools for endpoint '{endpointName}'. Removed {toolsRemoved} existing tools. {result}";
     }
 
     [McpServerTool, Description("Remove all dynamic tools for an endpoint")]
     public static string UnregisterEndpoint(
         [Description("Name of the endpoint to unregister")] string endpointName)
     {
-        
-            if (!_endpoints.TryGetValue(endpointName, out var endpointInfo))
-            {
-                return $"Endpoint '{endpointName}' not found.";
-            }
+        var result = RemoveEndpointInternal(endpointName);
+        if (result.Success)
+        {
+            return $"Unregistered endpoint '{endpointName}' and removed {result.ToolsRemoved} dynamic tools.";
+        }
+        else
+        {
+            return $"Endpoint '{endpointName}' not found.";
+        }
+    }
 
-            // Remove all tools for this endpoint
-            var keysToRemove = _dynamicTools.Where(kvp => kvp.Value.EndpointName == endpointName)
-                                          .Select(kvp => kvp.Key)
-                                          .ToList();
+    [McpServerTool, Description("Remove multiple dynamic tools for multiple endpoints by name")]
+    public static string UnregisterMultipleEndpoints(
+        [Description("Comma-separated list of endpoint names to unregister")] string endpointNames)
+    {
+        if (string.IsNullOrWhiteSpace(endpointNames))
+        {
+            return "No endpoint names provided. Please specify a comma-separated list of endpoint names.";
+        }
+
+        var names = endpointNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(name => name.Trim())
+                                .Where(name => !string.IsNullOrEmpty(name))
+                                .ToList();
+
+        if (names.Count == 0)
+        {
+            return "No valid endpoint names found after parsing the input.";
+        }
+
+        var result = new StringBuilder();
+        result.AppendLine($"# Unregistering {names.Count} Endpoint(s)\n");
+
+        var totalToolsRemoved = 0;
+        var successCount = 0;
+        var failedEndpoints = new List<string>();
+
+        foreach (var endpointName in names)
+        {
+            var removalResult = RemoveEndpointInternal(endpointName);
+            if (removalResult.Success)
+            {
+                result.AppendLine($"✅ **{endpointName}**: Removed {removalResult.ToolsRemoved} tools");
+                totalToolsRemoved += removalResult.ToolsRemoved;
+                successCount++;
+            }
+            else
+            {
+                result.AppendLine($"❌ **{endpointName}**: Endpoint not found");
+                failedEndpoints.Add(endpointName);
+            }
+        }
+
+        result.AppendLine();
+        result.AppendLine($"## Summary");
+        result.AppendLine($"- **Successfully unregistered:** {successCount} endpoint(s)");
+        result.AppendLine($"- **Failed to unregister:** {failedEndpoints.Count} endpoint(s)");
+        result.AppendLine($"- **Total tools removed:** {totalToolsRemoved}");
+
+        if (failedEndpoints.Count > 0)
+        {
+            result.AppendLine($"- **Failed endpoints:** {string.Join(", ", failedEndpoints)}");
+        }
+
+        return result.ToString();
+    }
+
+    [McpServerTool, Description("List all registered GraphQL endpoints")]
+    public static string ListRegisteredEndpoints()
+    {
+        if (_endpoints.Count == 0)
+        {
+            return "No GraphQL endpoints are currently registered. Use RegisterEndpoint to add endpoints.";
+        }
+
+        var result = new StringBuilder();
+        result.AppendLine("# Registered GraphQL Endpoints\n");
+
+        foreach (var kvp in _endpoints)
+        {
+            var endpointName = kvp.Key;
+            var endpointInfo = kvp.Value;
             
-            foreach (var key in keysToRemove)
+            result.AppendLine($"## {endpointName}");
+            result.AppendLine($"**URL:** {endpointInfo.Url}");
+            result.AppendLine($"**Allow Mutations:** {(endpointInfo.AllowMutations ? "Yes" : "No")}");
+            result.AppendLine($"**Tool Prefix:** {(string.IsNullOrEmpty(endpointInfo.ToolPrefix) ? "(none)" : endpointInfo.ToolPrefix)}");
+            
+            if (endpointInfo.Headers.Count > 0)
             {
-                _dynamicTools.Remove(key);
+                result.AppendLine($"**Headers:** {endpointInfo.Headers.Count} configured");
+                foreach (var header in endpointInfo.Headers)
+                {
+                    result.AppendLine($"  - {header.Key}: {header.Value}");
+                }
+            }
+            else
+            {
+                result.AppendLine("**Headers:** None");
             }
 
-            // Remove endpoint
-            _endpoints.Remove(endpointName);
+            // Count tools for this endpoint using the lookup map
+            var toolCount = _endpointToTools.TryGetValue(endpointName, out var toolNames) ? toolNames.Count : 0;
+            result.AppendLine($"**Generated Tools:** {toolCount}");
+            result.AppendLine();
+        }
 
-            return $"Unregistered endpoint '{endpointName}' and removed {keysToRemove.Count} dynamic tools.";
-     
+        return result.ToString();
     }
 
     private static async Task<string> GenerateToolsFromSchema(GraphQLEndpointInfo endpointInfo)
@@ -292,6 +377,12 @@ public static class DynamicToolRegistry
         if (!type.TryGetProperty("fields", out var fields) || fields.ValueKind != JsonValueKind.Array)
             return 0;
 
+        // Ensure the endpoint has an entry in the lookup map
+        if (!_endpointToTools.ContainsKey(endpointInfo.Name))
+        {
+            _endpointToTools[endpointInfo.Name] = new List<string>();
+        }
+
         foreach (var field in fields.EnumerateArray())
         {
             if (!field.TryGetProperty("name", out var fieldName))
@@ -317,6 +408,7 @@ public static class DynamicToolRegistry
             };
 
             _dynamicTools[toolName] = toolInfo;
+            _endpointToTools[endpointInfo.Name].Add(toolName);
             toolsGenerated++;
         }
 
@@ -489,5 +581,73 @@ public static class DynamicToolRegistry
         public string Operation { get; set; } = "";
         public string Description { get; set; } = "";
         public JsonElement Field { get; set; }
+    }
+
+    /// <summary>
+    /// Internal helper method to remove an endpoint and its associated tools
+    /// </summary>
+    /// <param name="endpointName">Name of the endpoint to remove</param>
+    /// <returns>Result containing success status and number of tools removed</returns>
+    private static EndpointRemovalResult RemoveEndpointInternal(string endpointName)
+    {
+        if (!_endpoints.TryGetValue(endpointName, out var endpointInfo))
+        {
+            return new EndpointRemovalResult { Success = false, ToolsRemoved = 0 };
+        }
+
+        var toolsRemoved = 0;
+
+        // Use lookup map for efficient tool removal
+        if (_endpointToTools.TryGetValue(endpointName, out var toolNames))
+        {
+            foreach (var toolName in toolNames)
+            {
+                if (_dynamicTools.Remove(toolName))
+                {
+                    toolsRemoved++;
+                }
+            }
+            _endpointToTools.Remove(endpointName);
+        }
+
+        // Remove endpoint
+        _endpoints.Remove(endpointName);
+
+        return new EndpointRemovalResult { Success = true, ToolsRemoved = toolsRemoved };
+    }
+
+    /// <summary>
+    /// Remove all tools for a specific endpoint (but keep the endpoint registration)
+    /// </summary>
+    /// <param name="endpointName">Name of the endpoint</param>
+    /// <returns>Number of tools removed</returns>
+    private static int RemoveToolsForEndpoint(string endpointName)
+    {
+        var toolsRemoved = 0;
+
+        // Use lookup map for efficient tool removal
+        if (_endpointToTools.TryGetValue(endpointName, out var toolNames))
+        {
+            foreach (var toolName in toolNames)
+            {
+                if (_dynamicTools.Remove(toolName))
+                {
+                    toolsRemoved++;
+                }
+            }
+            // Clear the tool list but keep the endpoint entry for future tool additions
+            toolNames.Clear();
+        }
+
+        return toolsRemoved;
+    }
+
+    /// <summary>
+    /// Result of endpoint removal operation
+    /// </summary>
+    private struct EndpointRemovalResult
+    {
+        public bool Success { get; set; }
+        public int ToolsRemoved { get; set; }
     }
 }
