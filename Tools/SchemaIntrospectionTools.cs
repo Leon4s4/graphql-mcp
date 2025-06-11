@@ -16,11 +16,9 @@ public static class SchemaIntrospectionTools
     {
         try
         {
-            using var client = new HttpClient();
+            var graphQLHttpClient = ServiceProvider.GetRequiredService<IGraphQLHttpClient>();
+            using var client = graphQLHttpClient.CreateClient(headers);
         
-        // Configure headers using the centralized helper
-        HttpClientHelper.ConfigureHeaders(client, headers);
-
         var introspectionQuery = @"
                 query IntrospectionQuery {
                   __schema {

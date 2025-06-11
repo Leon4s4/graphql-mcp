@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Http;
 using System.Text.Json;
 using System.Net.Http;
 using Tools;
@@ -28,9 +29,23 @@ catch
 }
 var allowMutations = (Environment.GetEnvironmentVariable("ALLOW_MUTATIONS") ?? "false").ToLower() == "true";
 
-var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-builder.Services.AddSingleton<HttpClient>(httpClient);
-builder.Services.AddSingleton(provider => new QueryGraphQLTool(provider.GetRequiredService<HttpClient>(), endpoint, headers, allowMutations));
+// Register HttpClient with proper DI configuration
+builder.Services.AddHttpClient("GraphQLClient", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+// Register GraphQL HTTP client service
+builder.Services.AddSingleton<IGraphQLHttpClient, GraphQLHttpClient>();
+
+// Register QueryGraphQLTool with proper DI
+builder.Services.AddSingleton(provider => 
+{
+    var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
+    var httpClient = httpClientFactory.CreateClient("GraphQLClient");
+    HttpClientHelper.ConfigureHeaders(httpClient, headers);
+    return new QueryGraphQLTool(httpClient, endpoint, headers, allowMutations);
+});
 
 var name = Environment.GetEnvironmentVariable("NAME") ?? "mcp-graphql";
 var schemaPath = Environment.GetEnvironmentVariable("SCHEMA");
@@ -42,4 +57,9 @@ if (!string.IsNullOrWhiteSpace(schemaPath) && File.Exists(schemaPath))
 
 Console.WriteLine($"Starting MCP server: {name}");
 
-await builder.Build().RunAsync();
+var app = builder.Build();
+
+// Initialize the service provider for static tools
+Tools.ServiceProvider.Initialize(app.Services);
+
+await app.RunAsync();

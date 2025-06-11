@@ -138,10 +138,8 @@ public static class DynamicToolRegistry
                 }
             }
             // Execute the operation
-        using var httpClient = new HttpClient();
-        
-        // Configure headers using the centralized helper with dictionary overload
-        HttpClientHelper.ConfigureHeaders(httpClient, endpointInfo.Headers);
+        var graphQLHttpClient = ServiceProvider.GetRequiredService<IGraphQLHttpClient>();
+        using var httpClient = graphQLHttpClient.CreateClient(endpointInfo.Headers);
 
         var request = new
         {

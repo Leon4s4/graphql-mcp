@@ -70,40 +70,6 @@ public static class HttpClientHelper
     }
 
     /// <summary>
-    /// Creates a configured HttpClient for GraphQL requests
-    /// </summary>
-    /// <param name="headers">Optional headers to add</param>
-    /// <param name="timeout">Optional timeout (defaults to 30 seconds)</param>
-    /// <returns>Configured HttpClient</returns>
-    public static HttpClient CreateGraphQLClient(string? headers = null, TimeSpan? timeout = null)
-    {
-        var client = new HttpClient
-        {
-            Timeout = timeout ?? TimeSpan.FromSeconds(30)
-        };
-        
-        ConfigureHeaders(client, headers);
-        return client;
-    }
-
-    /// <summary>
-    /// Creates a configured HttpClient for GraphQL requests
-    /// </summary>
-    /// <param name="headers">Optional headers to add</param>
-    /// <param name="timeout">Optional timeout (defaults to 30 seconds)</param>
-    /// <returns>Configured HttpClient</returns>
-    public static HttpClient CreateGraphQLClient(Dictionary<string, string>? headers, TimeSpan? timeout = null)
-    {
-        var client = new HttpClient
-        {
-            Timeout = timeout ?? TimeSpan.FromSeconds(30)
-        };
-        
-        ConfigureHeaders(client, headers);
-        return client;
-    }
-
-    /// <summary>
     /// Determines if a header name is a content header that should be set on HttpContent rather than HttpRequestMessage
     /// </summary>
     /// <param name="headerName">The header name to check</param>

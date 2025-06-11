@@ -461,29 +461,33 @@ public static class TestingMockingTools
                 testCode.AppendLine("        private readonly HttpClient _httpClient;");
                 testCode.AppendLine("        private readonly string _endpoint = \"https://api.example.com/graphql\";");
                 testCode.AppendLine();
-                testCode.AppendLine("        public GraphQLQueryTests()");
+                testCode.AppendLine("        public GraphQLQueryTests(IHttpClientFactory httpClientFactory)");
                 testCode.AppendLine("        {");
-                testCode.AppendLine("            _httpClient = new HttpClient();");
+                testCode.AppendLine("            _httpClient = httpClientFactory.CreateClient();");
                 testCode.AppendLine("        }");
                 break;
             case "nunit":
                 testCode.AppendLine("        private HttpClient _httpClient;");
                 testCode.AppendLine("        private string _endpoint = \"https://api.example.com/graphql\";");
+                testCode.AppendLine("        private IHttpClientFactory _httpClientFactory;");
                 testCode.AppendLine();
                 testCode.AppendLine("        [SetUp]");
                 testCode.AppendLine("        public void Setup()");
                 testCode.AppendLine("        {");
-                testCode.AppendLine("            _httpClient = new HttpClient();");
+                testCode.AppendLine("            // In real test, inject IHttpClientFactory through DI");
+                testCode.AppendLine("            _httpClient = _httpClientFactory.CreateClient();");
                 testCode.AppendLine("        }");
                 break;
             case "mstest":
                 testCode.AppendLine("        private HttpClient _httpClient;");
                 testCode.AppendLine("        private string _endpoint = \"https://api.example.com/graphql\";");
+                testCode.AppendLine("        private IHttpClientFactory _httpClientFactory;");
                 testCode.AppendLine();
                 testCode.AppendLine("        [TestInitialize]");
                 testCode.AppendLine("        public void TestInitialize()");
                 testCode.AppendLine("        {");
-                testCode.AppendLine("            _httpClient = new HttpClient();");
+                testCode.AppendLine("            // In real test, inject IHttpClientFactory through DI");
+                testCode.AppendLine("            _httpClient = _httpClientFactory.CreateClient();");
                 testCode.AppendLine("        }");
                 break;
         }
@@ -881,6 +885,7 @@ public static class TestingMockingTools
         tests.AppendLine("using System.Text;");
         tests.AppendLine("using System.Text.Json;");
         tests.AppendLine("using System.Threading.Tasks;");
+        tests.AppendLine("using Microsoft.Extensions.DependencyInjection;");
         tests.AppendLine("using Xunit;");
         tests.AppendLine();
         tests.AppendLine($"public class {operationInfo.Name}Tests");
@@ -888,9 +893,9 @@ public static class TestingMockingTools
         tests.AppendLine("    private readonly HttpClient _httpClient;");
         tests.AppendLine("    private readonly string _endpoint = \"https://api.example.com/graphql\";");
         tests.AppendLine();
-        tests.AppendLine($"    public {operationInfo.Name}Tests()");
+        tests.AppendLine($"    public {operationInfo.Name}Tests(IHttpClientFactory httpClientFactory)");
         tests.AppendLine("    {");
-        tests.AppendLine("        _httpClient = new HttpClient();");
+        tests.AppendLine("        _httpClient = httpClientFactory.CreateClient();");
         tests.AppendLine("    }");
         tests.AppendLine();
         tests.AppendLine("    [Fact]");
@@ -954,11 +959,13 @@ public static class TestingMockingTools
         tests.AppendLine("{");
         tests.AppendLine("    private HttpClient _httpClient;");
         tests.AppendLine("    private readonly string _endpoint = \"https://api.example.com/graphql\";");
+        tests.AppendLine("    private IHttpClientFactory _httpClientFactory;");
         tests.AppendLine();
         tests.AppendLine("    [SetUp]");
         tests.AppendLine("    public void SetUp()");
         tests.AppendLine("    {");
-        tests.AppendLine("        _httpClient = new HttpClient();");
+        tests.AppendLine("        // In real test, inject IHttpClientFactory through DI");
+        tests.AppendLine("        _httpClient = _httpClientFactory.CreateClient();");
         tests.AppendLine("    }");
         tests.AppendLine();
         tests.AppendLine("    [TearDown]");
