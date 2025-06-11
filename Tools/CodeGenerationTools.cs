@@ -16,8 +16,7 @@ public static class CodeGenerationTools
         [Description("Namespace for generated classes")] string namespaceName = "Generated.GraphQL",
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
+       
             // Get schema introspection
             var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
             var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
@@ -64,11 +63,6 @@ public static class CodeGenerationTools
 
             generatedCode.AppendLine("}");
             return generatedCode.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating types: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Generate strongly-typed client code for specific queries")]
@@ -77,8 +71,7 @@ public static class CodeGenerationTools
         [Description("Class name for the generated client")] string className = "GraphQLClient",
         [Description("Namespace for generated client")] string namespaceName = "Generated.GraphQL")
     {
-        try
-        {
+        
             var generatedCode = new StringBuilder();
             generatedCode.AppendLine("using System;");
             generatedCode.AppendLine("using System.Net.Http;");
@@ -167,11 +160,6 @@ public static class CodeGenerationTools
             generatedCode.AppendLine("}");
 
             return generatedCode.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating client code: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Create fluent query builders for common operations")]
@@ -180,8 +168,6 @@ public static class CodeGenerationTools
         [Description("Root type to generate builder for (Query/Mutation)")] string rootType = "Query",
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
             // Get schema to understand available fields
             var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
             var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
@@ -298,11 +284,6 @@ public static class CodeGenerationTools
             generatedCode.AppendLine("}");
 
             return generatedCode.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating query builder: {ex.Message}";
-        }
     }
 
     private static string GenerateClass(JsonElement type, bool isInput)

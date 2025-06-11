@@ -19,8 +19,7 @@ public static class ResolverDocumentationTools
         [Description("Include return type information")] bool includeReturnTypes = true,
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
+      
             // Get schema introspection
             var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
             var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
@@ -80,11 +79,6 @@ public static class ResolverDocumentationTools
             documentation.AppendLine(GenerateImplementationGuidance());
 
             return documentation.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating resolver documentation: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Generate resolver implementation templates for specific types")]
@@ -95,8 +89,7 @@ public static class ResolverDocumentationTools
         [Description("Include error handling")] bool includeErrorHandling = true,
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
+      
             // Get schema introspection
             var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
             var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
@@ -140,11 +133,6 @@ public static class ResolverDocumentationTools
             }
 
             return templates.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating resolver templates: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Document resolver performance characteristics and optimization tips")]
@@ -153,8 +141,7 @@ public static class ResolverDocumentationTools
         [Description("Type name to analyze (optional)")] string? typeName = null,
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
+       
             var performanceDoc = new StringBuilder();
             performanceDoc.AppendLine("# GraphQL Resolver Performance Guide\n");
 
@@ -207,11 +194,7 @@ public static class ResolverDocumentationTools
             performanceDoc.AppendLine("- Use APM tools for production monitoring");
 
             return performanceDoc.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating performance documentation: {ex.Message}";
-        }
+       
     }
 
     private static string GenerateTypeResolverDoc(JsonElement type, bool includeDescriptions, 

@@ -114,8 +114,7 @@ public static class DynamicToolRegistry
         [Description("Name of the dynamic tool to execute")] string toolName,
         [Description("Variables for the operation as JSON object")] string? variables = null)
     {
-        try
-        {
+       
             if (!_dynamicTools.TryGetValue(toolName, out var toolInfo))
             {
                 return $"Dynamic tool '{toolName}' not found. Use ListDynamicTools to see available tools.";
@@ -158,19 +157,14 @@ public static class DynamicToolRegistry
             }
 
             return FormatGraphQLResponse(responseContent);
-        }
-        catch (Exception ex)
-        {
-            return $"Error executing dynamic operation: {ex.Message}";
-        }
+        
     }
 
     [McpServerTool, Description("Refresh tools for a registered endpoint (re-introspect schema)")]
     public static async Task<string> RefreshEndpointTools(
         [Description("Name of the endpoint to refresh")] string endpointName)
     {
-        try
-        {
+        
             if (!_endpoints.TryGetValue(endpointName, out var endpointInfo))
             {
                 return $"Endpoint '{endpointName}' not found. Use RegisterEndpoint first.";
@@ -189,19 +183,14 @@ public static class DynamicToolRegistry
             // Re-generate tools
             var result = await GenerateToolsFromSchema(endpointInfo);
             return $"Refreshed tools for endpoint '{endpointName}'. {result}";
-        }
-        catch (Exception ex)
-        {
-            return $"Error refreshing endpoint tools: {ex.Message}";
-        }
+        
     }
 
     [McpServerTool, Description("Remove all dynamic tools for an endpoint")]
     public static string UnregisterEndpoint(
         [Description("Name of the endpoint to unregister")] string endpointName)
     {
-        try
-        {
+        
             if (!_endpoints.TryGetValue(endpointName, out var endpointInfo))
             {
                 return $"Endpoint '{endpointName}' not found.";
@@ -221,17 +210,12 @@ public static class DynamicToolRegistry
             _endpoints.Remove(endpointName);
 
             return $"Unregistered endpoint '{endpointName}' and removed {keysToRemove.Count} dynamic tools.";
-        }
-        catch (Exception ex)
-        {
-            return $"Error unregistering endpoint: {ex.Message}";
-        }
+     
     }
 
     private static async Task<string> GenerateToolsFromSchema(GraphQLEndpointInfo endpointInfo)
     {
-        try
-        {
+      
             // Introspect the schema
             var headersJson = endpointInfo.Headers.Count > 0 
                 ? JsonSerializer.Serialize(endpointInfo.Headers)
@@ -282,11 +266,7 @@ public static class DynamicToolRegistry
             }
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating tools from schema: {ex.Message}";
-        }
+       
     }
 
     private static JsonElement? FindTypeByName(JsonElement schema, string typeName)

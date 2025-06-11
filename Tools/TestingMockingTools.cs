@@ -17,8 +17,7 @@ public static class TestingMockingTools
         [Description("Number of mock instances to generate")] int count = 1,
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
+      
             // Get schema introspection
             var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
             var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
@@ -62,11 +61,6 @@ public static class TestingMockingTools
             };
 
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating mock data: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Generate unit tests for GraphQL queries")]
@@ -75,8 +69,6 @@ public static class TestingMockingTools
         [Description("Test class name")] string testClassName = "GraphQLQueryTests",
         [Description("Testing framework (NUnit/xUnit/MSTest)")] string framework = "xUnit")
     {
-        try
-        {
             var testCode = new StringBuilder();
             
             // Add using statements based on framework
@@ -150,11 +142,7 @@ public static class TestingMockingTools
             testCode.AppendLine("}");
 
             return testCode.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating tests: {ex.Message}";
-        }
+       
     }
 
     [McpServerTool, Description("Compare different versions of GraphQL schemas for breaking changes")]
@@ -164,8 +152,6 @@ public static class TestingMockingTools
         [Description("HTTP headers for original endpoint (optional)")] string? originalHeaders = null,
         [Description("HTTP headers for new endpoint (optional)")] string? newHeaders = null)
     {
-        try
-        {
             // Get both schemas
             var originalSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(originalEndpoint, originalHeaders);
             var newSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(newEndpoint, newHeaders);
@@ -247,11 +233,6 @@ public static class TestingMockingTools
             }
 
             return comparison.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error comparing schemas: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Generate comprehensive test suites for GraphQL queries and mutations")]
@@ -264,8 +245,6 @@ public static class TestingMockingTools
         [Description("Include performance tests")] bool includePerformance = false,
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
             var testSuite = new StringBuilder();
             testSuite.AppendLine("# Generated Test Suite\n");
 
@@ -295,11 +274,7 @@ public static class TestingMockingTools
             }
 
             return testSuite.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating test suite: {ex.Message}";
-        }
+        
     }
 
     [McpServerTool, Description("Generate load testing scenarios for GraphQL endpoints")]
@@ -310,8 +285,7 @@ public static class TestingMockingTools
         [Description("Test duration in seconds")] int duration = 60,
         [Description("Target requests per second")] int rps = 100)
     {
-        try
-        {
+      
             var loadTest = new StringBuilder();
             loadTest.AppendLine("# GraphQL Load Test Configuration\n");
 
@@ -332,11 +306,6 @@ public static class TestingMockingTools
             }
 
             return loadTest.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating load tests: {ex.Message}";
-        }
     }
 
     private static object GenerateMockInstance(JsonElement type, JsonElement allTypes, int index)

@@ -14,8 +14,7 @@ public static class SchemaIntrospectionTools
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
+       
             using var client = HttpClientHelper.CreateStaticClient(headers);
         
         var introspectionQuery = @"
@@ -126,11 +125,6 @@ public static class SchemaIntrospectionTools
             }
 
             return JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
-        }
-        catch (Exception ex)
-        {
-            return $"Error during schema introspection: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Extract and format schema documentation and field descriptions")]
@@ -139,8 +133,7 @@ public static class SchemaIntrospectionTools
         [Description("Specific type name to get documentation for (optional)")] string? typeName = null,
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
+       
             var schemaJson = await IntrospectSchema(endpoint, headers);
             var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
@@ -234,11 +227,7 @@ public static class SchemaIntrospectionTools
             }
 
             return string.Join("\n\n", docs);
-        }
-        catch (Exception ex)
-        {
-            return $"Error extracting schema documentation: {ex.Message}";
-        }
+       
     }
 
     [McpServerTool, Description("Validate GraphQL queries against the schema without executing them")]
@@ -247,8 +236,7 @@ public static class SchemaIntrospectionTools
         [Description("GraphQL query to validate")] string query,
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
+      
             // First get the schema
             var schemaJson = await IntrospectSchema(endpoint, headers);
             var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
@@ -300,11 +288,6 @@ public static class SchemaIntrospectionTools
             }
 
             return "Query passed basic validation checks. For full validation, consider executing the query against the server.";
-        }
-        catch (Exception ex)
-        {
-            return $"Error validating query: {ex.Message}";
-        }
     }
 
     private static string FormatType(JsonElement typeElement)

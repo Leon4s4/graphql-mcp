@@ -18,8 +18,7 @@ public static class QueryGraphQLMcpTool
         [Description("Name of the registered endpoint (use ListDynamicTools to see available endpoints)")] string endpointName,
         [Description("Variables for the query as JSON object (optional)")] string? variables = null)
     {
-        try
-        {
+      
             // Get the endpoint from the dynamic registry
             var endpointsField = typeof(DynamicToolRegistry).GetField("_endpoints", 
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
@@ -107,11 +106,7 @@ public static class QueryGraphQLMcpTool
             {
                 return FormatSuccessResponse(responseContent);
             }
-        }
-        catch (Exception ex)
-        {
-            return $"Error executing GraphQL query: {ex.Message}";
-        }
+      
     }
 
     private static bool IsMutation(string query)

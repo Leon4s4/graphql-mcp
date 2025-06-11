@@ -18,8 +18,6 @@ public static class SecurityAnalysisTools
         [Description("Max query complexity")] int maxComplexity = 1000,
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
             var result = new StringBuilder();
             result.AppendLine("# GraphQL Security Analysis Report\n");
 
@@ -121,11 +119,7 @@ public static class SecurityAnalysisTools
             result.AppendLine($"**Recommendation:** {securityScore.Recommendation}");
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error analyzing query security: {ex.Message}";
-        }
+        
     }
 
     [McpServerTool, Description("Detect potential DoS attacks in GraphQL queries")]
@@ -133,8 +127,6 @@ public static class SecurityAnalysisTools
         [Description("GraphQL query to analyze")] string query,
         [Description("Include detailed analysis")] bool includeDetails = true)
     {
-        try
-        {
             var result = new StringBuilder();
             result.AppendLine("# DoS Attack Pattern Detection\n");
 
@@ -183,11 +175,7 @@ public static class SecurityAnalysisTools
             }
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error detecting DoS patterns: {ex.Message}";
-        }
+       
     }
 
     private static ComplexityAnalysis AnalyzeQueryComplexity(string query, int maxComplexity)

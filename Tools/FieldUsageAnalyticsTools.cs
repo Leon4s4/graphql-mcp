@@ -17,8 +17,7 @@ public static class FieldUsageAnalyticsTools
         [Description("Show unused fields")] bool showUnused = true,
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
+     
             var result = new StringBuilder();
             result.AppendLine("# Field Usage Analytics Report\n");
 
@@ -112,11 +111,6 @@ public static class FieldUsageAnalyticsTools
             }
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error analyzing field usage: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Generate field usage report from query patterns")]
@@ -124,8 +118,6 @@ public static class FieldUsageAnalyticsTools
         [Description("GraphQL query to analyze usage patterns")] string query,
         [Description("Include field complexity analysis")] bool includeComplexity = true)
     {
-        try
-        {
             var result = new StringBuilder();
             result.AppendLine("# Query Field Usage Report\n");
 
@@ -183,11 +175,6 @@ public static class FieldUsageAnalyticsTools
             }
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating usage report: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Compare field usage patterns between different queries")]
@@ -196,8 +183,7 @@ public static class FieldUsageAnalyticsTools
         [Description("Second GraphQL query")] string query2,
         [Description("Include optimization suggestions")] bool includeOptimizations = true)
     {
-        try
-        {
+       
             var result = new StringBuilder();
             result.AppendLine("# Field Usage Comparison Report\n");
 
@@ -269,11 +255,6 @@ public static class FieldUsageAnalyticsTools
             }
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error comparing field usage: {ex.Message}";
-        }
     }
 
     private static async Task<List<SchemaField>> ExtractSchemaFields(string schemaJson)

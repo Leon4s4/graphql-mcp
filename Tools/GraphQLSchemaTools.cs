@@ -18,8 +18,6 @@ public static class GraphQLSchemaTools
         [Description("Include only mutation types")] bool mutationOnly = false,
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
             // Get full schema introspection
             var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
             var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
@@ -82,11 +80,7 @@ public static class GraphQLSchemaTools
             }
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error retrieving schema: {ex.Message}";
-        }
+        
     }
 
     [McpServerTool, Description("Compare two GraphQL schemas and show differences")]
@@ -96,8 +90,7 @@ public static class GraphQLSchemaTools
         [Description("HTTP headers for first endpoint as JSON (optional)")] string? headers1 = null,
         [Description("HTTP headers for second endpoint as JSON (optional)")] string? headers2 = null)
     {
-        try
-        {
+      
             // Get both schemas
             var schema1Json = await SchemaIntrospectionTools.IntrospectSchema(endpoint1, headers1);
             var schema2Json = await SchemaIntrospectionTools.IntrospectSchema(endpoint2, headers2);
@@ -154,11 +147,7 @@ public static class GraphQLSchemaTools
             result.AppendLine($"- **Removed types:** {removedTypes.Count}");
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error comparing schemas: {ex.Message}";
-        }
+       
     }
 
     [McpServerTool, Description("Compare the same GraphQL request across two different services")]
@@ -172,8 +161,6 @@ public static class GraphQLSchemaTools
         [Description("Include response timing comparison")] bool includeTiming = true,
         [Description("Show detailed diff of response data")] bool detailedDiff = true)
     {
-        try
-        {
             var result = new StringBuilder();
             result.AppendLine("# GraphQL Request Comparison Report\n");
             result.AppendLine($"**Query:**\n```graphql\n{query}\n```\n");
@@ -374,11 +361,7 @@ public static class GraphQLSchemaTools
             }
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error comparing requests: {ex.Message}";
-        }
+       
     }
 
     private static async Task<string> ExecuteGraphQLRequest(string endpoint, string query, string? variables, string? headers)

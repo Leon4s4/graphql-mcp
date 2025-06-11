@@ -18,8 +18,7 @@ public static class QueryValidationTools
         [Description("HTTP headers as JSON object (optional)")] string? headers = null,
         [Description("Validate query syntax only")] bool syntaxCheckOnly = false)
     {
-        try
-        {
+        
             var result = new StringBuilder();
             result.AppendLine("# GraphQL Query Test Report\n");
 
@@ -104,18 +103,13 @@ public static class QueryValidationTools
             }
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error testing query: {ex.Message}";
-        }
+       
     }
 
     [McpServerTool, Description("Validate GraphQL query syntax and structure")]
     public static string ValidateQuery([Description("GraphQL query to validate")] string query)
     {
-        try
-        {
+       
             var result = new StringBuilder();
             result.AppendLine("# GraphQL Query Validation Report\n");
 
@@ -153,11 +147,6 @@ public static class QueryValidationTools
             }
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error validating query: {ex.Message}";
-        }
     }
 
     private static List<string> ValidateQuerySyntax(string query)

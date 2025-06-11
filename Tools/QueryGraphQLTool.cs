@@ -38,8 +38,7 @@ namespace Tools
                 };
             }
 
-            try
-            {
+           
                 using var request = new HttpRequestMessage(HttpMethod.Post, _endpoint);
                 foreach (var header in _headers)
                 {
@@ -83,18 +82,7 @@ namespace Tools
                         new { type = "text", text = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }) }
                     }
                 };
-            }
-            catch (Exception ex)
-            {
-                return new
-                {
-                    isError = true,
-                    content = new[]
-                    {
-                        new { type = "text", text = $"Failed to execute GraphQL query: {ex.Message}" }
-                    }
-                };
-            }
+           
         }
 
         private bool IsMutation(string query)

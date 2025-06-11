@@ -12,8 +12,6 @@ public static class DevelopmentDebuggingTools
     [McpServerTool, Description("Analyze and explain what a GraphQL query does, including nested selections")]
     public static string ExplainQuery([Description("GraphQL query to analyze")] string query)
     {
-        try
-        {
             var explanation = new List<string>();
             explanation.Add("# GraphQL Query Analysis\n");
 
@@ -84,18 +82,11 @@ public static class DevelopmentDebuggingTools
             explanation.Add($"- Max nesting level: {nestingLevel}");
 
             return string.Join("\n", explanation);
-        }
-        catch (Exception ex)
-        {
-            return $"Error analyzing query: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Suggest optimizations for GraphQL queries (field selection, avoiding over-fetching)")]
     public static string OptimizeQuery([Description("GraphQL query to optimize")] string query)
     {
-        try
-        {
             var suggestions = new List<string>();
             suggestions.Add("# GraphQL Query Optimization Suggestions\n");
 
@@ -170,18 +161,11 @@ public static class DevelopmentDebuggingTools
             }
 
             return string.Join("\n", suggestions);
-        }
-        catch (Exception ex)
-        {
-            return $"Error optimizing query: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Extract reusable fragments from complex queries")]
     public static string ExtractFragments([Description("GraphQL query to extract fragments from")] string query)
     {
-        try
-        {
             var result = new List<string>();
             result.Add("# Fragment Extraction Results\n");
 
@@ -278,18 +262,11 @@ public static class DevelopmentDebuggingTools
             }
 
             return string.Join("\n", result);
-        }
-        catch (Exception ex)
-        {
-            return $"Error extracting fragments: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Calculate and report query complexity scores")]
     public static string AnalyzeQueryComplexity([Description("GraphQL query to analyze")] string query)
     {
-        try
-        {
             var analysis = new List<string>();
             analysis.Add("# GraphQL Query Complexity Analysis\n");
 
@@ -346,11 +323,6 @@ public static class DevelopmentDebuggingTools
             }
 
             return string.Join("\n", analysis);
-        }
-        catch (Exception ex)
-        {
-            return $"Error analyzing query complexity: {ex.Message}";
-        }
     }
 
     private static List<string> ExtractFieldSelections(string query)

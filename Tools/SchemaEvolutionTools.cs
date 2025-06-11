@@ -15,8 +15,7 @@ public static class SchemaEvolutionTools
         [Description("New schema endpoint or SDL")] string newSchema,
         [Description("Severity level filter (all, critical, major, minor)")] string severityFilter = "all")
     {
-        try
-        {
+       
             var result = new StringBuilder();
             result.AppendLine("# Schema Evolution Analysis\n");
 
@@ -87,11 +86,6 @@ public static class SchemaEvolutionTools
             result.AppendLine(GetCompatibilityRecommendation(compatibilityScore));
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error detecting breaking changes: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Track schema evolution metrics and trends")]
@@ -99,8 +93,7 @@ public static class SchemaEvolutionTools
         [Description("List of schema endpoints or versions as JSON array")] string schemaVersions,
         [Description("Include detailed change history")] bool includeHistory = true)
     {
-        try
-        {
+       
             var result = new StringBuilder();
             result.AppendLine("# Schema Evolution Tracking\n");
 
@@ -152,11 +145,7 @@ public static class SchemaEvolutionTools
             }
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error tracking schema evolution: {ex.Message}";
-        }
+       
     }
 
     private static async Task<JsonElement?> GetSchemaData(string schemaSource)

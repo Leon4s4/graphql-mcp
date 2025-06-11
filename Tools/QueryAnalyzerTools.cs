@@ -17,8 +17,7 @@ public static class QueryAnalyzerTools
         [Description("Include performance recommendations")] bool includePerformance = true,
         [Description("Include security analysis")] bool includeSecurity = true)
     {
-        try
-        {
+        
             var analysis = new StringBuilder();
             analysis.AppendLine("# GraphQL Query Analysis Report\n");
 
@@ -104,11 +103,6 @@ public static class QueryAnalyzerTools
             }
 
             return analysis.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error analyzing query: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Automatically build GraphQL queries based on schema and requirements")]
@@ -120,8 +114,7 @@ public static class QueryAnalyzerTools
         [Description("Maximum depth for nested objects")] int maxDepth = 3,
         [Description("HTTP headers as JSON object (optional)")] string? headers = null)
     {
-        try
-        {
+        
             // Get schema to understand available fields
             var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
             var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
@@ -174,11 +167,6 @@ public static class QueryAnalyzerTools
             result.AppendLine($"- **Max Depth:** {maxDepth}");
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error building query: {ex.Message}";
-        }
     }
 
     private static OperationInfo AnalyzeOperation(string query)

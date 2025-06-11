@@ -12,8 +12,7 @@ public static class UtilityTools
     [McpServerTool, Description("Format and prettify GraphQL queries")]
     public static string FormatQuery([Description("GraphQL query to format")] string query)
     {
-        try
-        {
+        
             var formatted = new StringBuilder();
             var lines = query.Split('\n');
             var indentLevel = 0;
@@ -57,18 +56,13 @@ public static class UtilityTools
             }
 
             return formatted.ToString().TrimEnd();
-        }
-        catch (Exception ex)
-        {
-            return $"Error formatting query: {ex.Message}";
-        }
+       
     }
 
     [McpServerTool, Description("Minify GraphQL queries for production use")]
     public static string MinifyQuery([Description("GraphQL query to minify")] string query)
     {
-        try
-        {
+       
             // Remove comments
             var minified = Regex.Replace(query, @"#.*$", "", RegexOptions.Multiline);
             
@@ -110,18 +104,13 @@ public static class UtilityTools
             cleaned = Regex.Replace(cleaned, @"\s+", " ");
             
             return cleaned.Trim();
-        }
-        catch (Exception ex)
-        {
-            return $"Error minifying query: {ex.Message}";
-        }
+        
     }
 
     [McpServerTool, Description("Extract hardcoded values into variables")]
     public static string ExtractVariables([Description("GraphQL query to extract variables from")] string query)
     {
-        try
-        {
+        
             var result = new StringBuilder();
             var variables = new List<(string name, string type, string value)>();
             var variableCounter = 1;
@@ -216,18 +205,13 @@ public static class UtilityTools
             result.AppendLine("```");
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error extracting variables: {ex.Message}";
-        }
+        
     }
 
     [McpServerTool, Description("Generate field aliases to avoid conflicts in complex queries")]
     public static string GenerateAliases([Description("GraphQL query to generate aliases for")] string query)
     {
-        try
-        {
+        
             var result = new StringBuilder();
             result.AppendLine("# GraphQL Query with Generated Aliases\n");
 
@@ -299,11 +283,7 @@ public static class UtilityTools
             }
 
             return result.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error generating aliases: {ex.Message}";
-        }
+       
     }
 
     private static int CountChars(string input, char target)

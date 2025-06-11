@@ -16,8 +16,7 @@ public static class ErrorExplainerTools
         [Description("Original query that caused the error (optional)")] string? query = null,
         [Description("Include solution suggestions")] bool includeSolutions = true)
     {
-        try
-        {
+       
             var explanation = new StringBuilder();
             explanation.AppendLine("# GraphQL Error Analysis\n");
 
@@ -96,18 +95,11 @@ public static class ErrorExplainerTools
             }
 
             return explanation.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error analyzing GraphQL error: {ex.Message}";
-        }
     }
 
     [McpServerTool, Description("Validate GraphQL query syntax and structure")]
     public static string ValidateQuery([Description("GraphQL query to validate")] string query)
     {
-        try
-        {
             var validation = new StringBuilder();
             validation.AppendLine("# GraphQL Query Validation Report\n");
 
@@ -185,11 +177,7 @@ public static class ErrorExplainerTools
             }
 
             return validation.ToString();
-        }
-        catch (Exception ex)
-        {
-            return $"Error validating query: {ex.Message}";
-        }
+      
     }
 
     private static ErrorResponse ParseErrorResponse(string errorText)
