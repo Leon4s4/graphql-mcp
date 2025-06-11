@@ -79,7 +79,7 @@ public static class AutomaticQueryBuilder
                 var parsedVars = ParseVariables(variables);
                 if (parsedVars.Count > 0)
                 {
-                    var varDefs = string.Join(", ", parsedVars.Select(kvp => $"${kvp.Key}: String"));
+                    var varDefs = string.Join(", ", parsedVars.Select(kvp => $"${kvp.Key}: {kvp.Value}"));
                     queryBuilder.Clear();
                     queryBuilder.AppendLine($"query Get{operationName}({varDefs}) {{");
                 }
