@@ -213,6 +213,73 @@ public static class DynamicToolRegistry
      
     }
 
+    [McpServerTool, Description("Remove multiple dynamic tools for multiple endpoints by name")]
+    public static string UnregisterMultipleEndpoints(
+        [Description("Comma-separated list of endpoint names to unregister")] string endpointNames)
+    {
+        if (string.IsNullOrWhiteSpace(endpointNames))
+        {
+            return "No endpoint names provided. Please specify a comma-separated list of endpoint names.";
+        }
+
+        var names = endpointNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(name => name.Trim())
+                                .Where(name => !string.IsNullOrEmpty(name))
+                                .ToList();
+
+        if (names.Count == 0)
+        {
+            return "No valid endpoint names found after parsing the input.";
+        }
+
+        var result = new StringBuilder();
+        result.AppendLine($"# Unregistering {names.Count} Endpoint(s)\n");
+
+        var totalToolsRemoved = 0;
+        var successCount = 0;
+        var failedEndpoints = new List<string>();
+
+        foreach (var endpointName in names)
+        {
+            if (!_endpoints.TryGetValue(endpointName, out var endpointInfo))
+            {
+                result.AppendLine($"❌ **{endpointName}**: Endpoint not found");
+                failedEndpoints.Add(endpointName);
+                continue;
+            }
+
+            // Remove all tools for this endpoint
+            var keysToRemove = _dynamicTools.Where(kvp => kvp.Value.EndpointName == endpointName)
+                                          .Select(kvp => kvp.Key)
+                                          .ToList();
+            
+            foreach (var key in keysToRemove)
+            {
+                _dynamicTools.Remove(key);
+            }
+
+            // Remove endpoint
+            _endpoints.Remove(endpointName);
+
+            result.AppendLine($"✅ **{endpointName}**: Removed {keysToRemove.Count} tools");
+            totalToolsRemoved += keysToRemove.Count;
+            successCount++;
+        }
+
+        result.AppendLine();
+        result.AppendLine($"## Summary");
+        result.AppendLine($"- **Successfully unregistered:** {successCount} endpoint(s)");
+        result.AppendLine($"- **Failed to unregister:** {failedEndpoints.Count} endpoint(s)");
+        result.AppendLine($"- **Total tools removed:** {totalToolsRemoved}");
+
+        if (failedEndpoints.Count > 0)
+        {
+            result.AppendLine($"- **Failed endpoints:** {string.Join(", ", failedEndpoints)}");
+        }
+
+        return result.ToString();
+    }
+
     [McpServerTool, Description("List all registered GraphQL endpoints")]
     public static string ListRegisteredEndpoints()
     {
