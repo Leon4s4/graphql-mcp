@@ -1,12 +1,61 @@
 using System.ComponentModel;
+using System.Text.Json;
+using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
 
+/// <summary>
+/// Tools for managing GraphQL endpoint registration and configuration
+/// </summary>
 [McpServerToolType]
 public static class EndpointManagementTools
 {
+    [McpServerTool, Description("Register a GraphQL endpoint for automatic tool generation")]
+    public static async Task<string> RegisterEndpoint(
+        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Unique name for this endpoint")]
+        string endpointName,
+        [Description("HTTP headers as JSON object (optional)")]
+        string? headers = null,
+        [Description("Allow mutations to be registered as tools")]
+        bool allowMutations = false,
+        [Description("Tool prefix for generated tools")]
+        string toolPrefix = "")
+    {
+        if (string.IsNullOrEmpty(endpoint))
+            return "Error: GraphQL endpoint URL cannot be null or empty.";
+
+        if (string.IsNullOrEmpty(endpointName))
+            return "Error: Endpoint name cannot be null or empty.";
+
+        try
+        {
+            var (requestHeaders, headerError) = JsonHelpers.ParseHeadersJson(headers);
+
+            if (headerError != null)
+                return headerError;
+
+            var endpointInfo = new GraphQlEndpointInfo
+            {
+                Name = endpointName,
+                Url = endpoint,
+                Headers = requestHeaders,
+                AllowMutations = allowMutations,
+                ToolPrefix = toolPrefix
+            };
+
+            EndpointRegistryService.Instance.RegisterEndpoint(endpointName, endpointInfo);
+
+            return await GraphQlSchemaHelper.GenerateToolsFromSchema(endpointInfo);
+        }
+        catch (Exception ex)
+        {
+            return $"Error registering endpoint: {ex.Message}";
+        }
+    }
+
     [McpServerTool, Description("List all registered GraphQL endpoints")]
     public static string GetAllEndpoints()
     {
@@ -43,5 +92,43 @@ public static class EndpointManagementTools
         }
 
         return result.ToString();
+    }
+
+    [McpServerTool, Description("Refresh tools for a registered endpoint (re-introspect schema)")]
+    public static async Task<string> RefreshEndpointTools(
+        [Description("Name of the endpoint to refresh")]
+        string endpointName)
+    {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Endpoint '{endpointName}' not found. Use RegisterEndpoint first.";
+        }
+
+        var toolsRemoved = EndpointRegistryService.Instance.RemoveToolsForEndpoint(endpointName);
+
+        var result = await GraphQlSchemaHelper.GenerateToolsFromSchema(endpointInfo);
+
+        return $"Refreshed tools for endpoint '{endpointName}'. Removed {toolsRemoved} existing tools. {result}";
+    }
+
+    [McpServerTool, Description("Remove all dynamic tools for an endpoint")]
+    public static string UnregisterEndpoint(
+        [Description("Name of the endpoint to unregister")]
+        string endpointName)
+    {
+        if (string.IsNullOrEmpty(endpointName))
+            return "Error: Endpoint name cannot be null or empty.";
+
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Endpoint '{endpointName}' not found.";
+        }
+
+        var toolsRemoved = EndpointRegistryService.Instance.RemoveToolsForEndpoint(endpointName);
+        EndpointRegistryService.Instance.RemoveEndpoint(endpointName, out _);
+
+        return $"Unregistered endpoint '{endpointName}' and removed {toolsRemoved} associated tools.";
     }
 }
