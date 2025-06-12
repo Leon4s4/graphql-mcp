@@ -38,7 +38,7 @@ public static class GraphQLToolGenerator
                 OperationName = operationName,
                 Operation = operation,
                 Description = description,
-                Field = field
+                SchemaFieldDefinition = field
             };
 
             EndpointRegistryService.Instance.RegisterDynamicTool(toolName, toolInfo);

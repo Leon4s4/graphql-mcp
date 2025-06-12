@@ -13,5 +13,5 @@ public class DynamicToolInfo
     public string OperationName { get; set; } = "";
     public string Operation { get; set; } = "";
     public string Description { get; set; } = "";
-    public JsonElement Field { get; set; }
+    public JsonElement SchemaFieldDefinition { get; set; }
 }
