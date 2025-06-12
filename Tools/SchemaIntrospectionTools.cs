@@ -9,23 +9,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class SchemaIntrospectionTools
 {
-    [McpServerTool, Description("Retrieve complete GraphQL schema information including types, fields, directives, and relationships")]
-    public static async Task<string> IntrospectSchema(
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
-    {
-        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
-        if (endpointInfo == null)
-        {
-            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
-        }
-
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
-
-        var introspectionQuery = @"
+    private const string IntrospectionQuery = @"
                 query IntrospectionQuery {
                   __schema {
                     queryType { name }
@@ -118,7 +102,23 @@ public static class SchemaIntrospectionTools
                   }
                 }";
 
-        var body = new { query = introspectionQuery };
+    [McpServerTool, Description("Retrieve complete GraphQL schema information including types, fields, directives, and relationships")]
+    public static async Task<string> IntrospectSchema(
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
+        string? headers = null)
+    {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
+
+        var body = new { query = IntrospectionQuery };
 
         var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo.Url, body, requestHeaders);
 
