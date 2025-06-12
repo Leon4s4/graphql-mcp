@@ -19,7 +19,6 @@ public static class ErrorExplainerTools
             var explanation = new StringBuilder();
             explanation.AppendLine("# GraphQL Error Analysis\n");
 
-            // Parse error if it's JSON
             var errorInfo = ParseErrorResponse(errorText);
             
             if (errorInfo.IsGraphQlError)

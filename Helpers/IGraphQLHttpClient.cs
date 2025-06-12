@@ -1,4 +1,4 @@
-namespace Graphql.Mcp.Tools;
+namespace Graphql.Mcp.Helpers;
 
 /// <summary>
 /// Interface for creating properly configured HttpClient instances for GraphQL operations

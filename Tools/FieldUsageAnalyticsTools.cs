@@ -2,6 +2,8 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Graphql.Mcp.DTO;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
@@ -384,9 +386,9 @@ public static class FieldUsageAnalyticsTools
     {
         var patterns = new List<string>();
 
-        var highUsageFields = usageStats.Where(s => s.UsageCount > totalQueries * 0.8).Count();
-        var mediumUsageFields = usageStats.Where(s => s.UsageCount > totalQueries * 0.2 && s.UsageCount <= totalQueries * 0.8).Count();
-        var lowUsageFields = usageStats.Where(s => s.UsageCount > 0 && s.UsageCount <= totalQueries * 0.2).Count();
+        var highUsageFields = usageStats.Count(s => s.UsageCount > totalQueries * 0.8);
+        var mediumUsageFields = usageStats.Count(s => s.UsageCount > totalQueries * 0.2 && s.UsageCount <= totalQueries * 0.8);
+        var lowUsageFields = usageStats.Count(s => s.UsageCount > 0 && s.UsageCount <= totalQueries * 0.2);
 
         patterns.Add($"High usage fields (>80%): {highUsageFields}");
         patterns.Add($"Medium usage fields (20-80%): {mediumUsageFields}");
@@ -478,35 +480,5 @@ public static class FieldUsageAnalyticsTools
     {
         var keywords = new[] { "query", "mutation", "subscription", "fragment", "on", "true", "false", "null" };
         return keywords.Contains(word.ToLower());
-    }
-
-    private class SchemaField
-    {
-        public string TypeName { get; set; } = "";
-        public string FieldName { get; set; } = "";
-        public string FieldType { get; set; } = "";
-    }
-
-    private class FieldUsageStats
-    {
-        public string TypeName { get; set; } = "";
-        public string FieldName { get; set; } = "";
-        public string FieldType { get; set; } = "";
-        public int UsageCount { get; set; }
-    }
-
-    private class FieldUsage
-    {
-        public string FieldName { get; set; } = "";
-        public string ParentType { get; set; } = "";
-        public int Depth { get; set; }
-    }
-
-    private class ComplexityAnalysis
-    {
-        public int TotalComplexity { get; set; }
-        public double AverageComplexity { get; set; }
-        public string MostComplexField { get; set; } = "";
-        public List<string> HighComplexityFields { get; set; } = [];
     }
 }

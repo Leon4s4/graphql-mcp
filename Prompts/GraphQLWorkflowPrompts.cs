@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Text;
 using ModelContextProtocol.Server;
 
-namespace Graphql.Mcp.Tools;
+namespace Graphql.Mcp.Prompts;
 
 [McpServerPromptType]
 public static class GraphQlWorkflowPrompts

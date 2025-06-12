@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;

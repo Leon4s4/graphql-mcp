@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Graphql.Mcp.Tools;
+namespace Graphql.Mcp.Helpers;
 
 public static class GraphQlTypeHelpers
 {

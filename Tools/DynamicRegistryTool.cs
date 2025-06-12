@@ -12,7 +12,7 @@ namespace Graphql.Mcp.Tools;
 /// Uses EndpointRegistryService singleton to persist data across MCP tool calls
 /// </summary>
 [McpServerToolType]
-public static class DynamicToolRegistry
+public static class DynamicRegistryTool
 {
     [McpServerTool, Description("Register a GraphQL endpoint for automatic tool generation")]
     public static async Task<string> RegisterEndpoint(
@@ -31,6 +31,7 @@ public static class DynamicToolRegistry
         try
         {
             var (requestHeaders, headerError) = JsonHelpers.ParseHeadersJson(headers);
+            
             if (headerError != null)
                 return headerError;
 
@@ -56,35 +57,35 @@ public static class DynamicToolRegistry
     [McpServerTool, Description("List all registered dynamic tools")]
     public static string ListDynamicTools()
     {
-        var tools = EndpointRegistryService.Instance.GetAllDynamicTools().Values;
+        var tools = EndpointRegistryService.Instance.GetAllDynamicTools().Values.ToList();
 
-        if (!tools.Any())
+        if (tools.Count == 0)
             return "No dynamic tools are currently registered. Use RegisterEndpoint to generate tools from a GraphQL schema.";
 
-        string Format(string title, IEnumerable<DynamicToolInfo> items) =>
-            items.Any()
-                ? $"### {title}{Environment.NewLine}" +
-                  string.Join(Environment.NewLine, items.Select(i => $"- **{i.ToolName}**: {i.Description}")) +
-                  Environment.NewLine + Environment.NewLine
-                : string.Empty;
+        var result = new StringBuilder();
+        result.AppendLine("# Registered Dynamic Tools");
+        result.AppendLine();
+        
+        var endpointGroups = tools.GroupBy(t => t.EndpointName).ToList();
+        
+        foreach (var group in endpointGroups)
+        {
+            var endpoint = EndpointRegistryService.Instance.GetEndpointInfo(group.Key);
+            if (endpoint is null) continue;
 
-        var sections = tools
-            .GroupBy(t => t.EndpointName)
-            .Select(g =>
-            {
-                var endpoint = EndpointRegistryService.Instance.GetEndpointInfo(g.Key);
-                if (endpoint is null) return null;
+            result.AppendLine($"## Endpoint: {group.Key}");
+            result.AppendLine($"**URL:** {endpoint.Url}");
+            result.AppendLine($"**Operations:** {group.Count()}");
+            result.AppendLine();
+            
+            var queries = group.Where(t => t.OperationType == "Query").ToList();
+            result.Append(MarkdownFormatHelpers.FormatToolSection("Queries", queries));
+            
+            var mutations = group.Where(t => t.OperationType == "Mutation").ToList();
+            result.Append(MarkdownFormatHelpers.FormatToolSection("Mutations", mutations));
+        }
 
-                return
-                    $"## Endpoint: {g.Key}{Environment.NewLine}" +
-                    $"**URL:** {endpoint.Url}{Environment.NewLine}" +
-                    $"**Operations:** {g.Count()}{Environment.NewLine}{Environment.NewLine}" +
-                    Format("Queries",   g.Where(t => t.OperationType == "Query")) +
-                    Format("Mutations", g.Where(t => t.OperationType == "Mutation"));
-            })
-            .Where(s => s is not null);
-
-        return $"# Registered Dynamic Tools{Environment.NewLine}{Environment.NewLine}{string.Concat(sections)}";
+        return result.ToString();
     }
 
     [McpServerTool, Description("Execute a dynamically generated GraphQL operation")]
@@ -96,17 +97,12 @@ public static class DynamicToolRegistry
         {
             var toolInfo = EndpointRegistryService.Instance.GetDynamicTool(toolName);
             if (toolInfo == null)
-            {
                 return $"Dynamic tool '{toolName}' not found. Use ListDynamicTools to see available tools.";
-            }
 
             var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(toolInfo.EndpointName);
             if (endpointInfo == null)
-            {
                 return $"Endpoint '{toolInfo.EndpointName}' not found for tool '{toolName}'.";
-            }
 
-            // Parse variables
             var variableDict = new Dictionary<string, object>();
             if (!string.IsNullOrEmpty(variables))
             {
@@ -121,7 +117,6 @@ public static class DynamicToolRegistry
                 }
             }
             
-            // Execute the operation using centralized HTTP helper
             var request = new
             {
                 query = toolInfo.Operation,
@@ -134,13 +129,8 @@ public static class DynamicToolRegistry
                 request,
                 endpointInfo.Headers);
 
-            if (!result.IsSuccess)
-            {
-                // Format the error using HttpClientHelper's response formatting
-                return result.FormatForDisplay();
-            }
-
-            return FormatGraphQlResponse(result.Content!);
+            return !result.IsSuccess ?
+                result.FormatForDisplay() : FormatGraphQlResponse(result.Content!);
         }
         catch (Exception ex)
         {
@@ -158,68 +148,62 @@ public static class DynamicToolRegistry
             return $"Endpoint '{endpointName}' not found. Use RegisterEndpoint first.";
         }
 
-        // Remove existing tools for this endpoint (but keep the endpoint)
         var toolsRemoved = EndpointRegistryService.Instance.RemoveToolsForEndpoint(endpointName);
 
-        // Re-generate tools
         var result = await GenerateToolsFromSchema(endpointInfo);
+        
         return $"Refreshed tools for endpoint '{endpointName}'. Removed {toolsRemoved} existing tools. {result}";
     }
 
     private static async Task<string> GenerateToolsFromSchema(GraphQlEndpointInfo endpointInfo)
     {
-      
-            // Introspect the schema
-            var headersJson = endpointInfo.Headers.Count > 0 
-                ? JsonSerializer.Serialize(endpointInfo.Headers)
-                : null;
+        var headersJson = endpointInfo.Headers.Count > 0
+            ? JsonSerializer.Serialize(endpointInfo.Headers)
+            : null;
 
-            var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo.Url, headersJson);
-            var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo.Url, headersJson);
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
-            if (!schemaData.TryGetProperty("data", out var data) ||
-                !data.TryGetProperty("__schema", out var schema))
+        if (!schemaData.TryGetProperty("data", out var data) ||
+            !data.TryGetProperty("__schema", out var schema))
+        {
+            return "Failed to parse schema introspection data";
+        }
+
+        var toolsGenerated = 0;
+
+        if (schema.TryGetProperty("queryType", out var queryTypeRef) &&
+            queryTypeRef.TryGetProperty("name", out var queryTypeName))
+        {
+            var queryType = FindTypeByName(schema, queryTypeName.GetString() ?? "Query");
+            if (queryType.HasValue)
             {
-                return "Failed to parse schema introspection data";
+                var queryTools = GenerateToolsForType(queryType.Value, "Query", endpointInfo);
+                toolsGenerated += queryTools;
             }
+        }
 
-            var toolsGenerated = 0;
-
-            // Find Query type
-            if (schema.TryGetProperty("queryType", out var queryTypeRef) &&
-                queryTypeRef.TryGetProperty("name", out var queryTypeName))
+        if (endpointInfo.AllowMutations &&
+            schema.TryGetProperty("mutationType", out var mutationTypeRef) &&
+            mutationTypeRef.TryGetProperty("name", out var mutationTypeName))
+        {
+            var mutationType = FindTypeByName(schema, mutationTypeName.GetString() ?? "Mutation");
+            if (mutationType.HasValue)
             {
-                var queryType = FindTypeByName(schema, queryTypeName.GetString() ?? "Query");
-                if (queryType.HasValue)
-                {
-                    var queryTools = GenerateToolsForType(queryType.Value, "Query", endpointInfo);
-                    toolsGenerated += queryTools;
-                }
+                var mutationTools = GenerateToolsForType(mutationType.Value, "Mutation", endpointInfo);
+                toolsGenerated += mutationTools;
             }
+        }
 
-            // Find Mutation type (if allowed)
-            if (endpointInfo.AllowMutations &&
-                schema.TryGetProperty("mutationType", out var mutationTypeRef) &&
-                mutationTypeRef.TryGetProperty("name", out var mutationTypeName))
-            {
-                var mutationType = FindTypeByName(schema, mutationTypeName.GetString() ?? "Mutation");
-                if (mutationType.HasValue)
-                {
-                    var mutationTools = GenerateToolsForType(mutationType.Value, "Mutation", endpointInfo);
-                    toolsGenerated += mutationTools;
-                }
-            }
+        var result = new StringBuilder();
+        result.AppendLine($"Generated {toolsGenerated} dynamic tools for endpoint '{endpointInfo.Name}'");
 
-            var result = new StringBuilder();
-            result.AppendLine($"Generated {toolsGenerated} dynamic tools for endpoint '{endpointInfo.Name}'");
-            
-            if (!endpointInfo.AllowMutations)
-            {
-                result.AppendLine("Note: Mutations were not enabled for this endpoint");
-            }
+        if (!endpointInfo.AllowMutations)
+        {
+            result.AppendLine("Note: Mutations were not enabled for this endpoint");
+        }
 
-            return result.ToString();
-       
+        return result.ToString();
     }
 
     private static JsonElement? FindTypeByName(JsonElement schema, string typeName)
@@ -253,7 +237,6 @@ public static class DynamicToolRegistry
             var fieldNameStr = fieldName.GetString() ?? "";
             var toolName = GenerateToolName(endpointInfo.ToolPrefix, operationType, fieldNameStr);
 
-            // Generate the GraphQL operation
             var operation = GenerateOperationString(field, operationType, fieldNameStr);
             var description = GetFieldDescription(field, operationType, fieldNameStr);
             var operationName = $"{operationType}_{fieldNameStr}";
@@ -269,7 +252,6 @@ public static class DynamicToolRegistry
                 Field = field
             };
 
-            // Register the tool using the singleton service
             EndpointRegistryService.Instance.RegisterDynamicTool(toolName, toolInfo);
             toolsGenerated++;
         }

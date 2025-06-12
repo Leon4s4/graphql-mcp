@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Graphql.Mcp.DTO;
 
-namespace Graphql.Mcp.Tools;
+namespace Graphql.Mcp.Helpers;
 
 /// <summary>
 /// Singleton service to manage GraphQL endpoint registrations and dynamic tools

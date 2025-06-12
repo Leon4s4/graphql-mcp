@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
