@@ -26,7 +26,7 @@ public static class GraphQlSchemaTools
         }
 
         var headers = endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null;
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo.Url, headers);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo, headers);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
@@ -117,8 +117,8 @@ public static class GraphQlSchemaTools
         var headers2 = endpointInfo2.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo2.Headers) : null;
 
         // Get both schemas
-        var schema1Json = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo1.Url, headers1);
-        var schema2Json = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo2.Url, headers2);
+        var schema1Json = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo1, headers1);
+        var schema2Json = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo2, headers2);
 
         var schema1Data = JsonSerializer.Deserialize<JsonElement>(schema1Json);
         var schema2Data = JsonSerializer.Deserialize<JsonElement>(schema2Json);
