@@ -110,7 +110,6 @@ public static class SchemaIntrospectionTools
 
         var body = new { query = introspectionQuery };
 
-        // Use centralized HTTP execution with proper connection error handling
         var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpoint, body, headers);
 
         if (!result.IsSuccess)
@@ -118,7 +117,6 @@ public static class SchemaIntrospectionTools
             return result.FormatForDisplay();
         }
 
-        // Check for GraphQL errors in the introspection response
         var data = JsonSerializer.Deserialize<JsonElement>(result.Content!);
         if (data.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array && errors.GetArrayLength() > 0)
         {

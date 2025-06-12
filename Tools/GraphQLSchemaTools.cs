@@ -21,7 +21,6 @@ public static class GraphQlSchemaTools
         [Description("HTTP headers as JSON object (optional)")]
         string? headers = null)
     {
-        // Get full schema introspection
         var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
@@ -34,7 +33,6 @@ public static class GraphQlSchemaTools
         var result = new StringBuilder();
         result.AppendLine("# GraphQL Schema\n");
 
-        // Get root types
         var queryType = schema.TryGetProperty("queryType", out var qt)
             ? qt.GetProperty("name")
                 .GetString()
@@ -58,7 +56,6 @@ public static class GraphQlSchemaTools
             return result.ToString() + "No types found in schema";
         }
 
-        // Filter types based on parameters
         var filteredTypes = new List<JsonElement>();
         foreach (var type in types.EnumerateArray())
         {
@@ -69,7 +66,6 @@ public static class GraphQlSchemaTools
             if (currentTypeName?.StartsWith("__") == true)
                 continue;
 
-            // Apply filters
             if (!string.IsNullOrEmpty(typeName) &&
                 !currentTypeName.Equals(typeName, StringComparison.OrdinalIgnoreCase))
                 continue;
@@ -83,7 +79,6 @@ public static class GraphQlSchemaTools
             filteredTypes.Add(type);
         }
 
-        // Display types
         result.AppendLine("## Types\n");
         foreach (var type in filteredTypes)
         {

@@ -23,21 +23,17 @@ public static class FieldUsageAnalyticsTools
         var result = new StringBuilder();
         result.AppendLine("# Field Usage Analytics Report\n");
 
-        // Parse query log
         var queries = JsonSerializer.Deserialize<string[]>(queryLog);
         if (queries == null || queries.Length == 0)
         {
             return "Error: No queries found in log";
         }
 
-        // Get schema information
         var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
         var schemaFields = await ExtractSchemaFields(schemaJson);
 
-        // Analyze field usage
         var usageStats = AnalyzeFieldUsageFromQueries(queries, schemaFields);
 
-        // Generate usage summary
         result.AppendLine("## Usage Summary");
         result.AppendLine($"- **Total Queries Analyzed:** {queries.Length}");
         result.AppendLine($"- **Total Schema Fields:** {schemaFields.Count}");
@@ -45,7 +41,6 @@ public static class FieldUsageAnalyticsTools
         result.AppendLine($"- **Unused Fields:** {usageStats.Count(s => s.UsageCount == 0)}");
         result.AppendLine($"- **Usage Rate:** {(usageStats.Count(s => s.UsageCount > 0) / (double)schemaFields.Count):P1}\n");
 
-        // Top used fields
         var topUsedFields = usageStats
             .Where(s => s.UsageCount > 0)
             .OrderByDescending(s => s.UsageCount)
@@ -62,7 +57,6 @@ public static class FieldUsageAnalyticsTools
 
         result.AppendLine();
 
-        // Unused fields (if requested)
         if (showUnused)
         {
             var unusedFields = usageStats
@@ -89,9 +83,8 @@ public static class FieldUsageAnalyticsTools
             }
         }
 
-        // Field deprecation candidates
         var deprecationCandidates = usageStats
-            .Where(s => s.UsageCount > 0 && s.UsageCount < queries.Length * 0.05) // Less than 5% usage
+            .Where(s => s.UsageCount > 0 && s.UsageCount < queries.Length * 0.05)
             .OrderBy(s => s.UsageCount);
 
         if (deprecationCandidates.Any())
@@ -103,11 +96,9 @@ public static class FieldUsageAnalyticsTools
                 var usagePercent = (field.UsageCount / (double)queries.Length) * 100;
                 result.AppendLine($"- `{field.TypeName}.{field.FieldName}` - {usagePercent:F1}% usage ({field.UsageCount}/{queries.Length})");
             }
-
             result.AppendLine();
         }
 
-        // Usage patterns
         result.AppendLine("## Usage Patterns");
         var patterns = AnalyzeUsagePatterns(usageStats, queries.Length);
         foreach (var pattern in patterns)

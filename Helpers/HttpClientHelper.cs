@@ -19,7 +19,6 @@ public static class HttpClientHelper
     /// <returns>Configured HttpClient</returns>
     public static HttpClient CreateStaticClient(string? headers = null, TimeSpan? timeout = null)
     {
-        // Create a new HttpClient that will be properly disposed by the caller
         var client = new HttpClient();
 
         if (timeout.HasValue)
@@ -39,7 +38,6 @@ public static class HttpClientHelper
     /// <returns>Configured HttpClient</returns>
     public static HttpClient CreateStaticClient(Dictionary<string, string>? headers, TimeSpan? timeout = null)
     {
-        // Create a new HttpClient that will be properly disposed by the caller
         var client = new HttpClient();
 
         if (timeout.HasValue)
@@ -68,7 +66,6 @@ public static class HttpClientHelper
         }
         catch (JsonException)
         {
-            // Ignore header parsing errors - malformed JSON headers
         }
     }
 
@@ -84,7 +81,6 @@ public static class HttpClientHelper
 
         foreach (var header in headers)
         {
-            // Skip content headers as they should be set on the content object, not request headers
             if (IsContentHeader(header.Key))
                 continue;
 
@@ -94,8 +90,6 @@ public static class HttpClientHelper
             }
             catch (InvalidOperationException)
             {
-                // Handle cases where header cannot be added to request headers
-                // This can happen with certain restricted headers like User-Agent, Host, etc.
             }
         }
     }
@@ -184,7 +178,6 @@ public static class HttpClientHelper
             }
             catch
             {
-                // Ignore errors when reading error content
             }
 
             return GraphQlResponse.HttpError(response.StatusCode, response.ReasonPhrase ?? "Unknown error", errorContent);

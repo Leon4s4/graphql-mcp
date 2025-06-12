@@ -23,7 +23,6 @@ public static class SecurityAnalysisTools
         var result = new StringBuilder();
         result.AppendLine("# GraphQL Security Analysis Report\n");
 
-        // 1. Query Complexity Analysis
         var complexityAnalysis = AnalyzeQueryComplexity(query, maxComplexity);
         result.AppendLine("## Query Complexity Analysis");
         result.AppendLine($"- **Estimated Complexity:** {complexityAnalysis.Score}");
@@ -37,7 +36,6 @@ public static class SecurityAnalysisTools
 
         result.AppendLine();
 
-        // 2. Query Depth Analysis
         var depthAnalysis = AnalyzeQueryDepth(query, maxDepth);
         result.AppendLine("## Query Depth Analysis");
         result.AppendLine($"- **Actual Depth:** {depthAnalysis.ActualDepth}");
@@ -51,7 +49,6 @@ public static class SecurityAnalysisTools
 
         result.AppendLine();
 
-        // 3. Introspection Detection
         var introspectionRisks = DetectIntrospectionQueries(query);
         result.AppendLine("## Introspection Analysis");
         if (introspectionRisks.Any())
@@ -71,7 +68,6 @@ public static class SecurityAnalysisTools
 
         result.AppendLine();
 
-        // 4. Potential Injection Vulnerabilities
         var injectionRisks = DetectInjectionRisks(query);
         result.AppendLine("## Injection Risk Analysis");
         if (injectionRisks.Any())
@@ -89,7 +85,6 @@ public static class SecurityAnalysisTools
 
         result.AppendLine();
 
-        // 5. Resource Consumption Analysis
         var resourceRisks = AnalyzeResourceConsumption(query);
         result.AppendLine("## Resource Consumption Analysis");
         if (resourceRisks.Any())

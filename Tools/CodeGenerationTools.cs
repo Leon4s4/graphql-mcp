@@ -18,7 +18,6 @@ public static class CodeGenerationTools
         [Description("HTTP headers as JSON object (optional)")]
         string? headers = null)
     {
-        // Get schema introspection
         var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
@@ -88,7 +87,6 @@ public static class CodeGenerationTools
         generatedCode.AppendLine($"namespace {namespaceName}");
         generatedCode.AppendLine("{");
 
-        // Extract operation details
         var operationMatch = Regex.Match(query, @"^\s*(query|mutation|subscription)\s+(\w+)?", RegexOptions.IgnoreCase);
         var operationType = operationMatch.Success
             ? operationMatch.Groups[1]
@@ -96,7 +94,6 @@ public static class CodeGenerationTools
             : "query";
         var operationName = operationMatch.Success && operationMatch.Groups[2].Success ? operationMatch.Groups[2].Value : "AnonymousOperation";
 
-        // Generate client class
         generatedCode.AppendLine($"    public class {className}");
         generatedCode.AppendLine("    {");
         generatedCode.AppendLine("        private readonly HttpClient _httpClient;");
@@ -109,7 +106,6 @@ public static class CodeGenerationTools
         generatedCode.AppendLine("        }");
         generatedCode.AppendLine();
 
-        // Extract variables
         var variableMatches = Regex.Matches(query, @"\$(\w+):\s*([^,\)]+)", RegexOptions.IgnoreCase);
         var methodParams = new List<string>();
         var variableDict = new Dictionary<string, string>();
@@ -125,7 +121,6 @@ public static class CodeGenerationTools
 
         var methodParamString = methodParams.Count > 0 ? string.Join(", ", methodParams) : "";
 
-        // Generate method
         generatedCode.AppendLine($"        public async Task<JsonElement> {operationName}Async({methodParamString})");
         generatedCode.AppendLine("        {");
         generatedCode.AppendLine("            var query = @\"");

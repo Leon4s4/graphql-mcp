@@ -23,7 +23,6 @@ public static class QueryAnalyzerTools
         var analysis = new StringBuilder();
         analysis.AppendLine("# GraphQL Query Analysis Report\n");
 
-        // Basic query information
         var operationInfo = AnalyzeOperation(query);
         analysis.AppendLine("## Operation Information");
         analysis.AppendLine($"- **Type:** {operationInfo.Type}");
@@ -32,7 +31,6 @@ public static class QueryAnalyzerTools
         analysis.AppendLine($"- **Has Fragments:** {operationInfo.HasFragments}");
         analysis.AppendLine($"- **Has Directives:** {operationInfo.HasDirectives}\n");
 
-        // Field analysis
         var fieldAnalysis = AnalyzeFields(query);
         analysis.AppendLine("## Field Analysis");
         analysis.AppendLine($"- **Total Fields:** {fieldAnalysis.TotalFields}");

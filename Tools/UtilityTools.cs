@@ -19,37 +19,31 @@ public static class UtilityTools
         foreach (var line in lines)
         {
             var trimmedLine = line.Trim();
-
-            // Skip empty lines
+            
             if (string.IsNullOrWhiteSpace(trimmedLine))
             {
                 formatted.AppendLine();
                 continue;
             }
 
-            // Handle comments
             if (trimmedLine.StartsWith("#"))
             {
                 formatted.AppendLine(new string(' ', indentLevel * 2) + trimmedLine);
                 continue;
             }
 
-            // Adjust indentation for closing braces
             if (trimmedLine.Contains("}") && !inString)
             {
                 indentLevel = Math.Max(0, indentLevel - 1);
             }
 
-            // Add the line with proper indentation
             formatted.AppendLine(new string(' ', indentLevel * 2) + trimmedLine);
 
-            // Adjust indentation for opening braces
             if (trimmedLine.Contains("{") && !inString)
             {
                 indentLevel++;
             }
 
-            // Track string literals (simplified)
             inString = CountChars(trimmedLine, '"') % 2 != 0;
         }
 
@@ -60,10 +54,8 @@ public static class UtilityTools
     [McpServerTool, Description("Minify GraphQL queries for production use")]
     public static string MinifyQuery([Description("GraphQL query to minify")] string query)
     {
-        // Remove comments
         var minified = Regex.Replace(query, @"#.*$", "", RegexOptions.Multiline);
 
-        // Remove unnecessary whitespace while preserving string literals
         var result = new StringBuilder();
         var inString = false;
         var prevChar = ' ';
@@ -81,7 +73,6 @@ public static class UtilityTools
             }
             else if (char.IsWhiteSpace(ch))
             {
-                // Only add one space if the previous character wasn't already whitespace
                 if (!char.IsWhiteSpace(prevChar))
                 {
                     result.Append(' ');
@@ -95,7 +86,6 @@ public static class UtilityTools
             prevChar = ch;
         }
 
-        // Clean up extra spaces around punctuation
         var cleaned = result.ToString();
         cleaned = Regex.Replace(cleaned, @"\s*([{}(),:=])\s*", "$1");
         cleaned = Regex.Replace(cleaned, @"\s+", " ");
@@ -110,7 +100,6 @@ public static class UtilityTools
         var variables = new List<(string name, string type, string value)>();
         var variableCounter = 1;
 
-        // Find string literals
         var stringMatches = Regex.Matches(query, @":\s*""([^""]+)""");
         foreach (Match match in stringMatches)
         {
@@ -119,7 +108,6 @@ public static class UtilityTools
             variables.Add((variableName, "String", $"\"{value}\""));
         }
 
-        // Find number literals
         var numberMatches = Regex.Matches(query, @":\s*(\d+(?:\.\d+)?)(?!\w)");
         foreach (Match match in numberMatches)
         {
@@ -129,7 +117,6 @@ public static class UtilityTools
             variables.Add((variableName, type, value));
         }
 
-        // Find boolean literals
         var boolMatches = Regex.Matches(query, @":\s*(true|false)(?!\w)", RegexOptions.IgnoreCase);
         foreach (Match match in boolMatches)
         {
@@ -147,7 +134,6 @@ public static class UtilityTools
         result.AppendLine("# Original Query with Variables");
         result.AppendLine();
 
-        // Generate the query with variables
         var modifiedQuery = query;
 
         foreach (Match stringMatch in stringMatches)
@@ -168,7 +154,6 @@ public static class UtilityTools
             modifiedQuery = modifiedQuery.Replace(boolMatch.Value, $": {variableName}");
         }
 
-        // Add variable declarations to query
         var operationMatch = Regex.Match(modifiedQuery, @"^\s*(query|mutation|subscription)(\s+\w+)?", RegexOptions.IgnoreCase);
         if (operationMatch.Success)
         {
@@ -178,7 +163,6 @@ public static class UtilityTools
         }
         else
         {
-            // Anonymous query - need to add query wrapper
             var variableDeclarations = string.Join(", ", variables.Select(v => $"${v.name}: {v.type}"));
             modifiedQuery = $"query({variableDeclarations}) {modifiedQuery}";
         }
@@ -210,19 +194,16 @@ public static class UtilityTools
         var result = new StringBuilder();
         result.AppendLine("# GraphQL Query with Generated Aliases\n");
 
-        // Find field calls with arguments that might need aliases
         var fieldMatches = Regex.Matches(query, @"(\w+)\s*\([^)]+\)", RegexOptions.IgnoreCase);
         var fieldCounts = new Dictionary<string, int>();
         var aliasedQuery = query;
 
-        // Count field occurrences
         foreach (Match match in fieldMatches)
         {
             var fieldName = match.Groups[1].Value;
             fieldCounts[fieldName] = fieldCounts.GetValueOrDefault(fieldName, 0) + 1;
         }
 
-        // Generate aliases for fields that appear multiple times
         var aliasCounter = new Dictionary<string, int>();
         foreach (Match match in fieldMatches)
         {
@@ -236,7 +217,6 @@ public static class UtilityTools
             }
         }
 
-        // Also look for potential conflicts in selections without arguments
         var selectionMatches = Regex.Matches(aliasedQuery, @"^\s*(\w+)(?:\s|$)", RegexOptions.Multiline);
         var selectionCounts = new Dictionary<string, int>();
 

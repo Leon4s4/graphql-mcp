@@ -21,7 +21,6 @@ namespace Graphql.Mcp.Tools
 
         public async Task<object> QueryAsync(string query, string? variables = null)
         {
-            // Basic mutation detection (not a full parser)
             if (IsMutation(query) && !_allowMutations)
             {
                 return new
@@ -85,7 +84,6 @@ namespace Graphql.Mcp.Tools
 
         private bool IsMutation(string query)
         {
-            // Very basic check for mutation operation
             var match = Regex.Match(query, @"\bmutation\b", RegexOptions.IgnoreCase);
             return match.Success;
         }

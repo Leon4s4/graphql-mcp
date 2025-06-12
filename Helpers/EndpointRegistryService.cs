@@ -112,10 +112,7 @@ public sealed class EndpointRegistryService
             });
     }
 
-    public DynamicToolInfo? GetDynamicTool(string toolName)
-    {
-        return _dynamicTools.GetValueOrDefault(toolName);
-    }
+    public DynamicToolInfo? GetDynamicTool(string toolName) => _dynamicTools.GetValueOrDefault(toolName);
 
     public IReadOnlyDictionary<string, DynamicToolInfo> GetAllDynamicTools() => _dynamicTools;
 
@@ -131,7 +128,13 @@ public sealed class EndpointRegistryService
         {
             lock (toolNames)
             {
-                toolsRemoved += toolNames.Count(toolName => _dynamicTools.TryRemove(toolName, out _));
+                foreach (var toolName in toolNames.ToList())
+                {
+                    if (_dynamicTools.TryRemove(toolName, out _))
+                    {
+                        toolsRemoved++;
+                    }
+                }
 
                 toolNames.Clear();
             }
