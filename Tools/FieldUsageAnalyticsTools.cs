@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class FieldUsageAnalyticsTools
@@ -284,7 +284,7 @@ public static class FieldUsageAnalyticsTools
                                     {
                                         TypeName = typeName,
                                         FieldName = fieldNameElement.GetString() ?? "",
-                                        FieldType = GraphQLTypeHelpers.GetTypeName(fieldTypeElement)
+                                        FieldType = GraphQlTypeHelpers.GetTypeName(fieldTypeElement)
                                     });
                                 }
                             }
@@ -341,7 +341,7 @@ public static class FieldUsageAnalyticsTools
         var typeStack = new Stack<string>();
         typeStack.Push("Query"); // Default root type
 
-        foreach (char c in query)
+        foreach (var c in query)
         {
             if (c == '{')
             {
@@ -366,7 +366,7 @@ public static class FieldUsageAnalyticsTools
         foreach (Match match in fieldMatches2)
         {
             var fieldName = match.Groups[1].Value;
-            if (!IsGraphQLKeyword(fieldName))
+            if (!IsGraphQlKeyword(fieldName))
             {
                 fieldUsages.Add(new FieldUsage
                 {
@@ -474,7 +474,7 @@ public static class FieldUsageAnalyticsTools
         return suggestions;
     }
 
-    private static bool IsGraphQLKeyword(string word)
+    private static bool IsGraphQlKeyword(string word)
     {
         var keywords = new[] { "query", "mutation", "subscription", "fragment", "on", "true", "false", "null" };
         return keywords.Contains(word.ToLower());

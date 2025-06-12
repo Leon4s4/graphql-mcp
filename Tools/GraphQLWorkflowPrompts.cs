@@ -2,10 +2,10 @@ using System.ComponentModel;
 using System.Text;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerPromptType]
-public static class GraphQLWorkflowPrompts
+public static class GraphQlWorkflowPrompts
 {
     [McpServerPrompt, Description("Guide for implementing GraphQL best practices in development workflows")]
     public static string DevelopmentWorkflow(

@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class QueryAnalyzerTools
@@ -316,10 +316,10 @@ public static class QueryAnalyzerTools
 
     private static int CalculateMaxDepth(string query)
     {
-        int maxDepth = 0;
-        int currentDepth = 0;
+        var maxDepth = 0;
+        var currentDepth = 0;
         
-        foreach (char c in query)
+        foreach (var c in query)
         {
             if (c == '{')
             {

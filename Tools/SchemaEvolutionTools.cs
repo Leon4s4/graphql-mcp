@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class SchemaEvolutionTools
@@ -105,7 +105,7 @@ public static class SchemaEvolutionTools
             var evolutionData = new List<EvolutionMetrics>();
 
             // Analyze each version transition
-            for (int i = 1; i < versions.Length; i++)
+            for (var i = 1; i < versions.Length; i++)
             {
                 var oldSchema = await GetSchemaData(versions[i - 1]);
                 var newSchema = await GetSchemaData(versions[i]);
@@ -313,7 +313,7 @@ public static class SchemaEvolutionTools
                                     typeInfo.Fields.Add(new FieldInfo
                                     {
                                         Name = fieldNameElement.GetString() ?? "",
-                                        TypeName = GraphQLTypeHelpers.GetTypeName(fieldTypeElement)
+                                        TypeName = GraphQlTypeHelpers.GetTypeName(fieldTypeElement)
                                     });
                                 }
                             }

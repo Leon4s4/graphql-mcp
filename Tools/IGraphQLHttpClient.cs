@@ -1,9 +1,9 @@
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 /// <summary>
 /// Interface for creating properly configured HttpClient instances for GraphQL operations
 /// </summary>
-public interface IGraphQLHttpClient
+public interface IGraphQlHttpClient
 {
     /// <summary>
     /// Creates a configured HttpClient for GraphQL operations

@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class ErrorExplainerTools
@@ -22,7 +22,7 @@ public static class ErrorExplainerTools
             // Parse error if it's JSON
             var errorInfo = ParseErrorResponse(errorText);
             
-            if (errorInfo.IsGraphQLError)
+            if (errorInfo.IsGraphQlError)
             {
                 explanation.AppendLine("## Error Details");
                 foreach (var error in errorInfo.Errors)
@@ -187,11 +187,11 @@ public static class ErrorExplainerTools
             
             if (jsonElement.TryGetProperty("errors", out var errorsElement))
             {
-                var errors = new List<GraphQLError>();
+                var errors = new List<GraphQlError>();
                 
                 foreach (var error in errorsElement.EnumerateArray())
                 {
-                    var graphqlError = new GraphQLError
+                    var graphqlError = new GraphQlError
                     {
                         Message = error.TryGetProperty("message", out var msg) ? msg.GetString() ?? "" : "",
                         Type = DetermineErrorType(error.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "")
@@ -221,7 +221,7 @@ public static class ErrorExplainerTools
                     errors.Add(graphqlError);
                 }
                 
-                return new ErrorResponse { IsGraphQLError = true, Errors = errors };
+                return new ErrorResponse { IsGraphQlError = true, Errors = errors };
             }
         }
         catch
@@ -231,10 +231,10 @@ public static class ErrorExplainerTools
         
         return new ErrorResponse 
         { 
-            IsGraphQLError = false, 
-            Errors = new List<GraphQLError> 
+            IsGraphQlError = false, 
+            Errors = new List<GraphQlError> 
             { 
-                new GraphQLError 
+                new()
                 { 
                     Message = errorText, 
                     Type = DetermineErrorType(errorText) 
@@ -321,8 +321,8 @@ public static class ErrorExplainerTools
         var issues = new List<string>();
         
         // Check for unmatched braces
-        int braceCount = 0;
-        foreach (char c in query)
+        var braceCount = 0;
+        foreach (var c in query)
         {
             if (c == '{') braceCount++;
             else if (c == '}') braceCount--;
@@ -351,11 +351,11 @@ public static class ErrorExplainerTools
         var issues = new List<ValidationIssue>();
         
         // Check for balanced braces
-        int braceCount = 0;
-        int line = 1;
-        int column = 1;
+        var braceCount = 0;
+        var line = 1;
+        var column = 1;
         
-        foreach (char c in query)
+        foreach (var c in query)
         {
             if (c == '{')
             {
@@ -445,7 +445,7 @@ public static class ErrorExplainerTools
         var maxDepth = 0;
         var currentDepth = 0;
         
-        foreach (char c in query)
+        foreach (var c in query)
         {
             if (c == '{')
             {
@@ -485,11 +485,11 @@ public static class ErrorExplainerTools
 
     private class ErrorResponse
     {
-        public bool IsGraphQLError { get; set; }
-        public List<GraphQLError> Errors { get; set; } = new();
+        public bool IsGraphQlError { get; set; }
+        public List<GraphQlError> Errors { get; set; } = new();
     }
 
-    private class GraphQLError
+    private class GraphQlError
     {
         public string Message { get; set; } = "";
         public string Type { get; set; } = "";

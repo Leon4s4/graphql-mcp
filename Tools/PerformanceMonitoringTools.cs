@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class PerformanceMonitoringTools
@@ -43,7 +43,7 @@ public static class PerformanceMonitoringTools
             results.AppendLine("## Executing Performance Tests...\n");
             try
             {
-                await HttpClientHelper.ExecuteGraphQLRequestAsync(endpoint, requestBody, headers);
+                await HttpClientHelper.ExecuteGraphQlRequestAsync(endpoint, requestBody, headers);
                 results.AppendLine("✅ Warmup run completed");
             }
             catch
@@ -52,12 +52,12 @@ public static class PerformanceMonitoringTools
             }
 
             // Performance test runs
-            for (int i = 0; i < runs; i++)
+            for (var i = 0; i < runs; i++)
             {
                 var stopwatch = Stopwatch.StartNew();
                 try
                 {
-                    var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(endpoint, requestBody, headers);
+                    var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpoint, requestBody, headers);
                     stopwatch.Stop();
                     
                     if (result.IsSuccess)
@@ -253,7 +253,7 @@ public static class PerformanceMonitoringTools
         foreach (Match match in matches)
         {
             var fieldName = match.Groups[1].Value;
-            if (!IsGraphQLKeyword(fieldName))
+            if (!IsGraphQlKeyword(fieldName))
             {
                 currentPath.Add(fieldName);
                 currentNesting++;
@@ -277,7 +277,7 @@ public static class PerformanceMonitoringTools
         foreach (Match match in fieldMatches)
         {
             var fieldName = match.Groups[1].Value;
-            if (!IsGraphQLKeyword(fieldName))
+            if (!IsGraphQlKeyword(fieldName))
             {
                 fields.Add(fieldName);
             }
@@ -346,7 +346,7 @@ public static class PerformanceMonitoringTools
         foreach (Match match in fieldMatches)
         {
             var fieldName = match.Groups[1].Value;
-            if (!IsGraphQLKeyword(fieldName))
+            if (!IsGraphQlKeyword(fieldName))
             {
                 path.Add(fieldName);
                 nestingLevel++;
@@ -383,7 +383,7 @@ public static class PerformanceMonitoringTools
         };
     }
 
-    private static bool IsGraphQLKeyword(string word)
+    private static bool IsGraphQlKeyword(string word)
     {
         var keywords = new[] { "query", "mutation", "subscription", "fragment", "on", "true", "false", "null" };
         return keywords.Contains(word.ToLower());

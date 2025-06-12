@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 /// <summary>
 /// Automatic GraphQL query builder with smart field selection and depth control

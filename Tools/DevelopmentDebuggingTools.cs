@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class DevelopmentDebuggingTools
@@ -218,7 +218,7 @@ public static class DevelopmentDebuggingTools
             {
                 result.Add("## Suggested Fragments:\n");
                 
-                int fragmentCounter = 1;
+                var fragmentCounter = 1;
                 foreach (var candidate in candidatesForFragments)
                 {
                     var fields = candidate.Key.Split(',').Select(f => f.Trim()).ToList();
@@ -331,7 +331,7 @@ public static class DevelopmentDebuggingTools
         foreach (Match match in matches)
         {
             var fieldName = match.Groups[1].Value;
-            if (!IsGraphQLKeyword(fieldName))
+            if (!IsGraphQlKeyword(fieldName))
             {
                 fields.Add(fieldName);
             }
@@ -340,7 +340,7 @@ public static class DevelopmentDebuggingTools
         return fields;
     }
 
-    private static bool IsGraphQLKeyword(string word)
+    private static bool IsGraphQlKeyword(string word)
     {
         var keywords = new[] { "query", "mutation", "subscription", "fragment", "on", "true", "false", "null" };
         return keywords.Contains(word.ToLower());
@@ -348,10 +348,10 @@ public static class DevelopmentDebuggingTools
 
     private static int AnalyzeNestingLevel(string query)
     {
-        int maxLevel = 0;
-        int currentLevel = 0;
+        var maxLevel = 0;
+        var currentLevel = 0;
         
-        foreach (char c in query)
+        foreach (var c in query)
         {
             if (c == '{')
             {

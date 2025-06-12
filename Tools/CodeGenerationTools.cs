@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class CodeGenerationTools
@@ -109,7 +109,7 @@ public static class CodeGenerationTools
             foreach (Match match in variableMatches)
             {
                 var varName = match.Groups[1].Value;
-                var varType = GraphQLTypeHelpers.ConvertGraphQLTypeToCSharp(match.Groups[2].Value.Trim());
+                var varType = GraphQlTypeHelpers.ConvertGraphQlTypeToCSharp(match.Groups[2].Value.Trim());
                 methodParams.Add($"{varType} {varName}");
                 variableDict[varName] = varName;
             }
@@ -401,7 +401,7 @@ public static class CodeGenerationTools
     {
         var fieldName = field.GetProperty("name").GetString() ?? "";
         var propertyName = ToPascalCase(fieldName);
-        var fieldType = GraphQLTypeHelpers.ConvertGraphQLTypeToCSharp(FormatGraphQLType(field.GetProperty("type")));
+        var fieldType = GraphQlTypeHelpers.ConvertGraphQlTypeToCSharp(FormatGraphQlType(field.GetProperty("type")));
         var description = field.TryGetProperty("description", out var desc) && desc.ValueKind == JsonValueKind.String 
             ? desc.GetString() : null;
 
@@ -419,7 +419,7 @@ public static class CodeGenerationTools
     {
         var fieldName = field.GetProperty("name").GetString() ?? "";
         var propertyName = ToPascalCase(fieldName);
-        var fieldType = GraphQLTypeHelpers.ConvertGraphQLTypeToCSharp(FormatGraphQLType(field.GetProperty("type")));
+        var fieldType = GraphQlTypeHelpers.ConvertGraphQlTypeToCSharp(FormatGraphQlType(field.GetProperty("type")));
         var description = field.TryGetProperty("description", out var desc) && desc.ValueKind == JsonValueKind.String 
             ? desc.GetString() : null;
 
@@ -437,7 +437,7 @@ public static class CodeGenerationTools
     {
         var fieldName = field.GetProperty("name").GetString() ?? "";
         var propertyName = ToPascalCase(fieldName);
-        var fieldType = GraphQLTypeHelpers.ConvertGraphQLTypeToCSharp(FormatGraphQLType(field.GetProperty("type")));
+        var fieldType = GraphQlTypeHelpers.ConvertGraphQlTypeToCSharp(FormatGraphQlType(field.GetProperty("type")));
         var description = field.TryGetProperty("description", out var desc) && desc.ValueKind == JsonValueKind.String 
             ? desc.GetString() : null;
 
@@ -450,7 +450,7 @@ public static class CodeGenerationTools
         sb.AppendLine();
     }
 
-    private static string FormatGraphQLType(JsonElement typeElement)
+    private static string FormatGraphQlType(JsonElement typeElement)
     {
         if (!typeElement.TryGetProperty("kind", out var kind))
             return "object";
@@ -462,13 +462,13 @@ public static class CodeGenerationTools
             case "NON_NULL":
                 if (typeElement.TryGetProperty("ofType", out var ofType))
                 {
-                    return FormatGraphQLType(ofType) + "!";
+                    return FormatGraphQlType(ofType) + "!";
                 }
                 break;
             case "LIST":
                 if (typeElement.TryGetProperty("ofType", out var listOfType))
                 {
-                    return "[" + FormatGraphQLType(listOfType) + "]";
+                    return "[" + FormatGraphQlType(listOfType) + "]";
                 }
                 break;
             default:

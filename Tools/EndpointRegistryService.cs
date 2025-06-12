@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 /// <summary>
 /// Singleton service to manage GraphQL endpoint registrations and dynamic tools
@@ -8,38 +8,45 @@ namespace Tools;
 /// </summary>
 public sealed class EndpointRegistryService
 {
-    private static readonly Lazy<EndpointRegistryService> _instance = new(() => new EndpointRegistryService());
+    private static readonly Lazy<EndpointRegistryService> EndpointRegistryServiceInstance = new(() => new EndpointRegistryService());
     
     private readonly Dictionary<string, DynamicToolInfo> _dynamicTools = new();
-    private readonly Dictionary<string, GraphQLEndpointInfo> _endpoints = new();
+    private readonly Dictionary<string, GraphQlEndpointInfo> _endpoints = new();
     private readonly Dictionary<string, List<string>> _endpointToTools = new();
-    private readonly object _lock = new object();
+    private readonly Lock _lock = new();
 
-    public static EndpointRegistryService Instance => _instance.Value;
+    public static EndpointRegistryService Instance => EndpointRegistryServiceInstance.Value;
 
     private EndpointRegistryService() { }
 
     #region Endpoint Management
 
-    public void RegisterEndpoint(string endpointName, GraphQLEndpointInfo endpointInfo)
+    public void RegisterEndpoint(string endpointName, GraphQlEndpointInfo endpointInfo)
     {
         lock (_lock)
         {
-            // If endpoint already exists, remove existing tools first
-            if (_endpoints.ContainsKey(endpointName))
-            {
-                RemoveToolsForEndpointInternal(endpointName);
-            }
+            if (_endpoints.ContainsKey(endpointName)) RemoveToolsForEndpointInternal(endpointName);
+            
+            endpointInfo.SchemaContent = LoadSchemaContentFromFile();
 
             _endpoints[endpointName] = endpointInfo;
         }
     }
 
-    public GraphQLEndpointInfo? GetEndpointInfo(string endpointName)
+    private static string? LoadSchemaContentFromFile()
+    {
+        var schemaPath = Environment.GetEnvironmentVariable("SCHEMA");
+        if (!string.IsNullOrWhiteSpace(schemaPath) && File.Exists(schemaPath))
+            return File.ReadAllText(schemaPath);
+        
+        return null;
+    }
+
+    public GraphQlEndpointInfo? GetEndpointInfo(string endpointName)
     {
         lock (_lock)
         {
-            return _endpoints.TryGetValue(endpointName, out var endpointInfo) ? endpointInfo : null;
+            return _endpoints.GetValueOrDefault(endpointName);
         }
     }
 
@@ -59,11 +66,11 @@ public sealed class EndpointRegistryService
         }
     }
 
-    public Dictionary<string, GraphQLEndpointInfo> GetAllEndpoints()
+    public Dictionary<string, GraphQlEndpointInfo> GetAllEndpoints()
     {
         lock (_lock)
         {
-            return new Dictionary<string, GraphQLEndpointInfo>(_endpoints);
+            return new Dictionary<string, GraphQlEndpointInfo>(_endpoints);
         }
     }
 
@@ -185,13 +192,14 @@ public sealed class EndpointRegistryService
 /// <summary>
 /// Information about a GraphQL endpoint
 /// </summary>
-public class GraphQLEndpointInfo
+public class GraphQlEndpointInfo
 {
     public string Name { get; set; } = "";
     public string Url { get; set; } = "";
     public Dictionary<string, string> Headers { get; set; } = new();
     public bool AllowMutations { get; set; }
     public string ToolPrefix { get; set; } = "";
+    public string? SchemaContent { get; set; } = "";
 }
 
 /// <summary>

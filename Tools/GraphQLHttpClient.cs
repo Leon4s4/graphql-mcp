@@ -1,13 +1,13 @@
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 /// <summary>
 /// Implementation of IGraphQLHttpClient that uses IHttpClientFactory for proper HttpClient lifecycle management
 /// </summary>
-public class GraphQLHttpClient : IGraphQLHttpClient
+public class GraphQlHttpClient : IGraphQlHttpClient
 {
     private readonly IHttpClientFactory _httpClientFactory;
 
-    public GraphQLHttpClient(IHttpClientFactory httpClientFactory)
+    public GraphQlHttpClient(IHttpClientFactory httpClientFactory)
     {
         _httpClientFactory = httpClientFactory;
     }

@@ -1,8 +1,8 @@
 using System.Text.Json;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
-public static class GraphQLTypeHelpers
+public static class GraphQlTypeHelpers
 {
     public static string GetTypeName(JsonElement typeElement)
     {
@@ -16,7 +16,7 @@ public static class GraphQLTypeHelpers
         };
     }
 
-    public static string ConvertGraphQLTypeToCSharp(string graphqlType, bool useIEnumerable = false)
+    public static string ConvertGraphQlTypeToCSharp(string graphqlType, bool useIEnumerable = false)
     {
         var isNonNull = graphqlType.EndsWith("!");
         var isList = graphqlType.Contains("[");

@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class ResolverDocumentationTools
@@ -217,7 +217,7 @@ public static class ResolverDocumentationTools
             {
                 var fieldName = field.GetProperty("name").GetString();
                 var fieldDesc = field.TryGetProperty("description", out var fd) ? fd.GetString() : null;
-                var fieldType = GraphQLTypeHelpers.GetTypeName(field.GetProperty("type"));
+                var fieldType = GraphQlTypeHelpers.GetTypeName(field.GetProperty("type"));
 
                 doc.AppendLine($"#### `{fieldName}`");
                 
@@ -237,7 +237,7 @@ public static class ResolverDocumentationTools
                     foreach (var arg in args.EnumerateArray())
                     {
                         var argName = arg.GetProperty("name").GetString();
-                        var argType = GraphQLTypeHelpers.GetTypeName(arg.GetProperty("type"));
+                        var argType = GraphQlTypeHelpers.GetTypeName(arg.GetProperty("type"));
                         var argDesc = arg.TryGetProperty("description", out var ad) ? ad.GetString() : "";
                         
                         doc.AppendLine($"- `{argName}`: {argType}" + 
@@ -247,7 +247,7 @@ public static class ResolverDocumentationTools
 
                 doc.AppendLine($"**Resolver Implementation:**");
                 doc.AppendLine("```csharp");
-                doc.AppendLine($"public async Task<{GraphQLTypeHelpers.ConvertGraphQLTypeToCSharp(fieldType, true)}> {fieldName}Async(");
+                doc.AppendLine($"public async Task<{GraphQlTypeHelpers.ConvertGraphQlTypeToCSharp(fieldType, true)}> {fieldName}Async(");
                 
                 if (field.TryGetProperty("args", out var resolverArgs) && resolverArgs.GetArrayLength() > 0)
                 {
@@ -255,8 +255,8 @@ public static class ResolverDocumentationTools
                     foreach (var arg in resolverArgs.EnumerateArray())
                     {
                         var argName = arg.GetProperty("name").GetString();
-                        var argType = GraphQLTypeHelpers.GetTypeName(arg.GetProperty("type"));
-                        argsList.Add($"    {GraphQLTypeHelpers.ConvertGraphQLTypeToCSharp(argType, true)} {argName}");
+                        var argType = GraphQlTypeHelpers.GetTypeName(arg.GetProperty("type"));
+                        argsList.Add($"    {GraphQlTypeHelpers.ConvertGraphQlTypeToCSharp(argType, true)} {argName}");
                     }
                     doc.AppendLine(string.Join(",\n", argsList));
                 }
@@ -306,8 +306,8 @@ public static class ResolverDocumentationTools
             foreach (var field in fields.EnumerateArray())
             {
                 var fieldName = field.GetProperty("name").GetString();
-                var fieldType = GraphQLTypeHelpers.GetTypeName(field.GetProperty("type"));
-                var csharpType = GraphQLTypeHelpers.ConvertGraphQLTypeToCSharp(fieldType, true);
+                var fieldType = GraphQlTypeHelpers.GetTypeName(field.GetProperty("type"));
+                var csharpType = GraphQlTypeHelpers.ConvertGraphQlTypeToCSharp(fieldType, true);
 
                 template.AppendLine($"    public async Task<{csharpType}> Get{fieldName}Async()");
                 template.AppendLine("    {");
@@ -410,8 +410,8 @@ public static class ResolverDocumentationTools
             foreach (var field in fields.EnumerateArray())
             {
                 var fieldName = field.GetProperty("name").GetString();
-                var fieldType = GraphQLTypeHelpers.GetTypeName(field.GetProperty("type"));
-                var tsType = ConvertGraphQLTypeToTypeScript(fieldType);
+                var fieldType = GraphQlTypeHelpers.GetTypeName(field.GetProperty("type"));
+                var tsType = ConvertGraphQlTypeToTypeScript(fieldType);
                 
                 template.AppendLine($"  {fieldName}: Resolver<{tsType}>;");
             }
@@ -527,7 +527,7 @@ public static class ResolverDocumentationTools
             
             foreach (var field in fields.EnumerateArray())
             {
-                var fieldType = GraphQLTypeHelpers.GetTypeName(field.GetProperty("type"));
+                var fieldType = GraphQlTypeHelpers.GetTypeName(field.GetProperty("type"));
                 
                 if (fieldType.Contains("["))
                 {
@@ -574,7 +574,7 @@ public static class ResolverDocumentationTools
     }
 
 
-    private static string ConvertGraphQLTypeToTypeScript(string graphqlType)
+    private static string ConvertGraphQlTypeToTypeScript(string graphqlType)
     {
         var isNonNull = graphqlType.EndsWith("!");
         var isList = graphqlType.Contains("[");

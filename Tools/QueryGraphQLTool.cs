@@ -2,16 +2,16 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace Tools
+namespace Graphql.Mcp.Tools
 {
-    public class QueryGraphQLTool
+    public class QueryGraphQlTool
     {
         private readonly HttpClient _httpClient;
         private readonly string _endpoint;
         private readonly Dictionary<string, string> _headers;
         private readonly bool _allowMutations;
 
-        public QueryGraphQLTool(HttpClient httpClient, string endpoint, Dictionary<string, string> headers, bool allowMutations)
+        public QueryGraphQlTool(HttpClient httpClient, string endpoint, Dictionary<string, string> headers, bool allowMutations)
         {
             _httpClient = httpClient;
             _endpoint = endpoint;

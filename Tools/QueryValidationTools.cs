@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class QueryValidationTools
@@ -162,7 +162,7 @@ public static class QueryValidationTools
         var braceCount = 0;
         var parenCount = 0;
         
-        foreach (char c in query)
+        foreach (var c in query)
         {
             switch (c)
             {
@@ -298,7 +298,7 @@ public static class QueryValidationTools
             };
 
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(endpoint, requestBody, headers);
+            var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpoint, requestBody, headers);
             stopwatch.Stop();
 
             var response = new StringBuilder();
@@ -430,7 +430,7 @@ public static class QueryValidationTools
         foreach (Match match in matches)
         {
             var fieldName = match.Groups[1].Value;
-            if (!IsGraphQLKeyword(fieldName))
+            if (!IsGraphQlKeyword(fieldName))
             {
                 fieldNames.Add(fieldName);
             }
@@ -447,7 +447,7 @@ public static class QueryValidationTools
                fieldName == "typename";
     }
 
-    private static bool IsGraphQLKeyword(string word)
+    private static bool IsGraphQlKeyword(string word)
     {
         var keywords = new[] { "query", "mutation", "subscription", "fragment", "on", "true", "false", "null" };
         return keywords.Contains(word.ToLower());
@@ -455,10 +455,10 @@ public static class QueryValidationTools
 
     private static int CalculateMaxDepth(string query)
     {
-        int maxDepth = 0;
-        int currentDepth = 0;
+        var maxDepth = 0;
+        var currentDepth = 0;
 
-        foreach (char c in query)
+        foreach (var c in query)
         {
             if (c == '{')
             {

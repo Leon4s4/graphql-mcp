@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class SchemaIntrospectionTools
@@ -110,7 +110,7 @@ public static class SchemaIntrospectionTools
         var body = new { query = introspectionQuery };
         
         // Use centralized HTTP execution with proper connection error handling
-        var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(endpoint, body, headers);
+        var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpoint, body, headers);
         
         if (!result.IsSuccess)
         {

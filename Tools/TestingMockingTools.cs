@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class TestingMockingTools
@@ -46,7 +46,7 @@ public static class TestingMockingTools
             }
 
             var mockData = new List<object>();
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
             {
                 var mockInstance = GenerateMockInstance(targetType.Value, types, i);
                 mockData.Add(mockInstance);

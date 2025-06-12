@@ -3,10 +3,10 @@ using System.Text;
 using System.Text.Json;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
-public static class GraphQLSchemaTools
+public static class GraphQlSchemaTools
 {
     [McpServerTool, Description("Get a focused view of the GraphQL schema with specific type information")]
     public static async Task<string> GetSchema(
@@ -172,11 +172,11 @@ public static class GraphQLSchemaTools
 
             // Execute request on both services with timing
             var stopwatch1 = System.Diagnostics.Stopwatch.StartNew();
-            var response1 = await ExecuteGraphQLRequest(endpoint1, query, variables, headers1);
+            var response1 = await ExecuteGraphQlRequest(endpoint1, query, variables, headers1);
             stopwatch1.Stop();
 
             var stopwatch2 = System.Diagnostics.Stopwatch.StartNew();
-            var response2 = await ExecuteGraphQLRequest(endpoint2, query, variables, headers2);
+            var response2 = await ExecuteGraphQlRequest(endpoint2, query, variables, headers2);
             stopwatch2.Stop();
 
             // Parse responses
@@ -227,8 +227,8 @@ public static class GraphQLSchemaTools
             }
 
             // Error comparison
-            bool hasErrors1 = errors1.HasValue && errors1.Value.ValueKind == JsonValueKind.Array && errors1.Value.GetArrayLength() > 0;
-            bool hasErrors2 = errors2.HasValue && errors2.Value.ValueKind == JsonValueKind.Array && errors2.Value.GetArrayLength() > 0;
+            var hasErrors1 = errors1.HasValue && errors1.Value.ValueKind == JsonValueKind.Array && errors1.Value.GetArrayLength() > 0;
+            var hasErrors2 = errors2.HasValue && errors2.Value.ValueKind == JsonValueKind.Array && errors2.Value.GetArrayLength() > 0;
 
             if (hasErrors1 || hasErrors2)
             {
@@ -362,7 +362,7 @@ public static class GraphQLSchemaTools
        
     }
 
-    private static async Task<string> ExecuteGraphQLRequest(string endpoint, string query, string? variables, string? headers)
+    private static async Task<string> ExecuteGraphQlRequest(string endpoint, string query, string? variables, string? headers)
     {
         var requestBody = new
         {
@@ -370,7 +370,7 @@ public static class GraphQLSchemaTools
             variables = !string.IsNullOrEmpty(variables) ? JsonSerializer.Deserialize<object>(variables) : null
         };
 
-        var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(endpoint, requestBody, headers);
+        var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpoint, requestBody, headers);
         
         if (!result.IsSuccess)
         {
@@ -429,7 +429,7 @@ public static class GraphQLSchemaTools
                 }
 
                 var minLength = Math.Min(array1.Length, array2.Length);
-                for (int i = 0; i < minLength; i++)
+                for (var i = 0; i < minLength; i++)
                 {
                     differences.AddRange(FindJsonDifferences(
                         array1[i], 
@@ -475,7 +475,7 @@ public static class GraphQLSchemaTools
                     foreach (var field in fields.EnumerateArray())
                     {
                         var fieldName = field.GetProperty("name").GetString();
-                        var fieldType = GraphQLTypeHelpers.GetTypeName(field.GetProperty("type"));
+                        var fieldType = GraphQlTypeHelpers.GetTypeName(field.GetProperty("type"));
                         var fieldDesc = field.TryGetProperty("description", out var fd) ? fd.GetString() : "";
                         
                         result.AppendLine($"- `{fieldName}`: {fieldType}" + 

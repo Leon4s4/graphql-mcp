@@ -1,15 +1,15 @@
+using System.Net;
 using System.Text;
 using System.Text.Json;
-using System.Net;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 /// <summary>
 /// Utility class for configuring HttpClient instances with proper header handling
 /// </summary>
 public static class HttpClientHelper
 {
-    private static readonly Lazy<HttpClient> _staticHttpClient = new Lazy<HttpClient>(() => new HttpClient());
+    private static readonly Lazy<HttpClient> StaticHttpClient = new(() => new HttpClient());
 
     /// <summary>
     /// Creates a configured HttpClient for GraphQL operations that can be used in static contexts
@@ -105,7 +105,7 @@ public static class HttpClientHelper
     /// </summary>
     /// <param name="requestBody">The request body object to serialize</param>
     /// <returns>StringContent configured for GraphQL requests</returns>
-    public static StringContent CreateGraphQLContent(object requestBody)
+    public static StringContent CreateGraphQlContent(object requestBody)
     {
         var json = JsonSerializer.Serialize(requestBody);
         return new StringContent(json, Encoding.UTF8, "application/json");
@@ -135,9 +135,9 @@ public static class HttpClientHelper
     /// <param name="headers">Optional headers to add (as JSON string)</param>
     /// <param name="timeout">Optional timeout override</param>
     /// <returns>GraphQLResponse containing either success data or detailed error information</returns>
-    public static async Task<GraphQLResponse> ExecuteGraphQLRequestAsync(string endpoint, object requestBody, string? headers = null, TimeSpan? timeout = null)
+    public static async Task<GraphQlResponse> ExecuteGraphQlRequestAsync(string endpoint, object requestBody, string? headers = null, TimeSpan? timeout = null)
     {
-        return await ExecuteGraphQLRequestAsync(endpoint, requestBody, ParseHeaders(headers), timeout);
+        return await ExecuteGraphQlRequestAsync(endpoint, requestBody, ParseHeaders(headers), timeout);
     }
 
     /// <summary>
@@ -148,19 +148,19 @@ public static class HttpClientHelper
     /// <param name="headers">Optional headers to add (as dictionary)</param>
     /// <param name="timeout">Optional timeout override</param>
     /// <returns>GraphQLResponse containing either success data or detailed error information</returns>
-    public static async Task<GraphQLResponse> ExecuteGraphQLRequestAsync(string endpoint, object requestBody, Dictionary<string, string>? headers = null, TimeSpan? timeout = null)
+    public static async Task<GraphQlResponse> ExecuteGraphQlRequestAsync(string endpoint, object requestBody, Dictionary<string, string>? headers = null, TimeSpan? timeout = null)
     {
         HttpResponseMessage? response = null;
         
         try
         {
             using var client = CreateStaticClient(headers, timeout);
-            var content = CreateGraphQLContent(requestBody);
+            var content = CreateGraphQlContent(requestBody);
             
             // Validate endpoint URL
             if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
             {
-                return GraphQLResponse.ConnectionError($"Invalid endpoint URL: {endpoint}");
+                return GraphQlResponse.ConnectionError($"Invalid endpoint URL: {endpoint}");
             }
 
             // Execute the request
@@ -172,7 +172,7 @@ public static class HttpClientHelper
             var responseContent = await response.Content.ReadAsStringAsync();
             
             // Parse and validate GraphQL response
-            return ParseGraphQLResponse(responseContent);
+            return ParseGraphQlResponse(responseContent);
         }
         catch (HttpRequestException) when (response?.IsSuccessStatusCode == false)
         {
@@ -187,27 +187,27 @@ public static class HttpClientHelper
                 // Ignore errors when reading error content
             }
             
-            return GraphQLResponse.HttpError(response.StatusCode, response.ReasonPhrase ?? "Unknown error", errorContent);
+            return GraphQlResponse.HttpError(response.StatusCode, response.ReasonPhrase ?? "Unknown error", errorContent);
         }
         catch (HttpRequestException ex)
         {
             // Connection-related errors (network issues, DNS resolution, etc.)
-            return GraphQLResponse.ConnectionError($"Cannot connect to GraphQL endpoint '{endpoint}': {ex.Message}");
+            return GraphQlResponse.ConnectionError($"Cannot connect to GraphQL endpoint '{endpoint}': {ex.Message}");
         }
         catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
         {
             // Request timeout
-            return GraphQLResponse.ConnectionError($"Request to GraphQL endpoint '{endpoint}' timed out");
+            return GraphQlResponse.ConnectionError($"Request to GraphQL endpoint '{endpoint}' timed out");
         }
         catch (TaskCanceledException)
         {
             // Request was cancelled
-            return GraphQLResponse.ConnectionError($"Request to GraphQL endpoint '{endpoint}' was cancelled");
+            return GraphQlResponse.ConnectionError($"Request to GraphQL endpoint '{endpoint}' was cancelled");
         }
         catch (Exception ex)
         {
             // Unexpected errors
-            return GraphQLResponse.UnexpectedError($"Unexpected error calling GraphQL endpoint '{endpoint}': {ex.Message}");
+            return GraphQlResponse.UnexpectedError($"Unexpected error calling GraphQL endpoint '{endpoint}': {ex.Message}");
         }
         finally
         {
@@ -218,7 +218,7 @@ public static class HttpClientHelper
     /// <summary>
     /// Parses a GraphQL response and determines if it contains errors
     /// </summary>
-    private static GraphQLResponse ParseGraphQLResponse(string responseContent)
+    private static GraphQlResponse ParseGraphQlResponse(string responseContent)
     {
         try
         {
@@ -230,15 +230,15 @@ public static class HttpClientHelper
                 errors.ValueKind == JsonValueKind.Array && 
                 errors.GetArrayLength() > 0)
             {
-                return GraphQLResponse.GraphQLErrors(responseContent);
+                return GraphQlResponse.GraphQlErrors(responseContent);
             }
             
-            return GraphQLResponse.Success(responseContent);
+            return GraphQlResponse.Success(responseContent);
         }
         catch (JsonException)
         {
             // If JSON parsing fails, treat as successful raw response
-            return GraphQLResponse.Success(responseContent);
+            return GraphQlResponse.Success(responseContent);
         }
     }
 
@@ -264,50 +264,50 @@ public static class HttpClientHelper
 /// <summary>
 /// Represents the result of a GraphQL request with detailed error categorization
 /// </summary>
-public class GraphQLResponse
+public class GraphQlResponse
 {
     public bool IsSuccess { get; private set; }
     public string? Content { get; private set; }
-    public GraphQLErrorType ErrorType { get; private set; }
+    public GraphQlErrorType ErrorType { get; private set; }
     public string? ErrorMessage { get; private set; }
     public HttpStatusCode? HttpStatusCode { get; private set; }
 
-    private GraphQLResponse() { }
+    private GraphQlResponse() { }
 
-    public static GraphQLResponse Success(string content) => new()
+    public static GraphQlResponse Success(string content) => new()
     {
         IsSuccess = true,
         Content = content,
-        ErrorType = GraphQLErrorType.None
+        ErrorType = GraphQlErrorType.None
     };
 
-    public static GraphQLResponse ConnectionError(string message) => new()
+    public static GraphQlResponse ConnectionError(string message) => new()
     {
         IsSuccess = false,
-        ErrorType = GraphQLErrorType.ConnectionError,
+        ErrorType = GraphQlErrorType.ConnectionError,
         ErrorMessage = message
     };
 
-    public static GraphQLResponse HttpError(HttpStatusCode statusCode, string reasonPhrase, string content) => new()
+    public static GraphQlResponse HttpError(HttpStatusCode statusCode, string reasonPhrase, string content) => new()
     {
         IsSuccess = false,
-        ErrorType = GraphQLErrorType.HttpError,
+        ErrorType = GraphQlErrorType.HttpError,
         ErrorMessage = $"HTTP {(int)statusCode} {reasonPhrase}",
         HttpStatusCode = statusCode,
         Content = content
     };
 
-    public static GraphQLResponse GraphQLErrors(string content) => new()
+    public static GraphQlResponse GraphQlErrors(string content) => new()
     {
         IsSuccess = false,
-        ErrorType = GraphQLErrorType.GraphQLErrors,
+        ErrorType = GraphQlErrorType.GraphQlErrors,
         Content = content
     };
 
-    public static GraphQLResponse UnexpectedError(string message) => new()
+    public static GraphQlResponse UnexpectedError(string message) => new()
     {
         IsSuccess = false,
-        ErrorType = GraphQLErrorType.UnexpectedError,
+        ErrorType = GraphQlErrorType.UnexpectedError,
         ErrorMessage = message
     };
 
@@ -323,10 +323,10 @@ public class GraphQLResponse
 
         return ErrorType switch
         {
-            GraphQLErrorType.ConnectionError => FormatConnectionError(),
-            GraphQLErrorType.HttpError => FormatHttpError(),
-            GraphQLErrorType.GraphQLErrors => FormatGraphQLErrors(),
-            GraphQLErrorType.UnexpectedError => FormatUnexpectedError(),
+            GraphQlErrorType.ConnectionError => FormatConnectionError(),
+            GraphQlErrorType.HttpError => FormatHttpError(),
+            GraphQlErrorType.GraphQlErrors => FormatGraphQlErrors(),
+            GraphQlErrorType.UnexpectedError => FormatUnexpectedError(),
             _ => "Unknown error occurred"
         };
     }
@@ -409,7 +409,7 @@ public class GraphQLResponse
         return result.ToString();
     }
 
-    private string FormatGraphQLErrors()
+    private string FormatGraphQlErrors()
     {
         try
         {
@@ -452,11 +452,11 @@ public class GraphQLResponse
 /// <summary>
 /// Types of errors that can occur during GraphQL requests
 /// </summary>
-public enum GraphQLErrorType
+public enum GraphQlErrorType
 {
     None,
     ConnectionError,
     HttpError,
-    GraphQLErrors,
+    GraphQlErrors,
     UnexpectedError
 }

@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class UtilityTools
@@ -194,7 +194,7 @@ public static class UtilityTools
             result.AppendLine("# Variables");
             result.AppendLine("```json");
             result.AppendLine("{");
-            for (int i = 0; i < variables.Count; i++)
+            for (var i = 0; i < variables.Count; i++)
             {
                 var variable = variables[i];
                 var comma = i < variables.Count - 1 ? "," : "";
@@ -247,7 +247,7 @@ public static class UtilityTools
             foreach (Match match in selectionMatches)
             {
                 var fieldName = match.Groups[1].Value;
-                if (!IsGraphQLKeyword(fieldName))
+                if (!IsGraphQlKeyword(fieldName))
                 {
                     selectionCounts[fieldName] = selectionCounts.GetValueOrDefault(fieldName, 0) + 1;
                 }
@@ -290,7 +290,7 @@ public static class UtilityTools
         return input.Count(c => c == target);
     }
 
-    private static bool IsGraphQLKeyword(string word)
+    private static bool IsGraphQlKeyword(string word)
     {
         var keywords = new[] { "query", "mutation", "subscription", "fragment", "on", "true", "false", "null", "__schema", "__type" };
         return keywords.Contains(word.ToLower());

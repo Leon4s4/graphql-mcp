@@ -2,10 +2,10 @@ using System.ComponentModel;
 using System.Text;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerPromptType]
-public static class GraphQLPrompts
+public static class GraphQlPrompts
 {
     [McpServerPrompt, Description("Generate optimized GraphQL queries based on requirements and schema analysis")]
     public static string GenerateQuery(

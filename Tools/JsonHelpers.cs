@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 /// <summary>
 /// Utility helpers for converting <see cref="JsonElement"/> values

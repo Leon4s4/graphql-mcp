@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 /// <summary>
 /// Dynamic tool registry that generates MCP tools from GraphQL schema operations
@@ -20,9 +20,14 @@ public static class DynamicToolRegistry
         [Description("Allow mutations to be registered as tools")] bool allowMutations = false,
         [Description("Tool prefix for generated tools")] string toolPrefix = "")
     {
+        if (string.IsNullOrEmpty(endpoint))
+            return "Error: GraphQL endpoint URL cannot be null or empty.";
+
+        if (string.IsNullOrEmpty(endpointName))
+            return "Error: Endpoint name cannot be null or empty.";
+
         try
         {
-            // Parse headers
             var headerDict = new Dictionary<string, string>();
             if (!string.IsNullOrEmpty(headers))
             {
@@ -36,8 +41,7 @@ public static class DynamicToolRegistry
                 }
             }
 
-            // Store endpoint info
-            var endpointInfo = new GraphQLEndpointInfo
+            var endpointInfo = new GraphQlEndpointInfo
             {
                 Name = endpointName,
                 Url = endpoint,
@@ -153,7 +157,7 @@ public static class DynamicToolRegistry
                 operationName = toolInfo.OperationName
             };
 
-            var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(
+            var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(
                 endpointInfo.Url,
                 request,
                 endpointInfo.Headers);
@@ -164,7 +168,7 @@ public static class DynamicToolRegistry
                 return result.FormatForDisplay();
             }
 
-            return FormatGraphQLResponse(result.Content!);
+            return FormatGraphQlResponse(result.Content!);
         }
         catch (Exception ex)
         {
@@ -190,7 +194,7 @@ public static class DynamicToolRegistry
         return $"Refreshed tools for endpoint '{endpointName}'. Removed {toolsRemoved} existing tools. {result}";
     }
 
-    private static async Task<string> GenerateToolsFromSchema(GraphQLEndpointInfo endpointInfo)
+    private static async Task<string> GenerateToolsFromSchema(GraphQlEndpointInfo endpointInfo)
     {
       
             // Introspect the schema
@@ -262,7 +266,7 @@ public static class DynamicToolRegistry
         return null;
     }
 
-    private static int GenerateToolsForType(JsonElement type, string operationType, GraphQLEndpointInfo endpointInfo)
+    private static int GenerateToolsForType(JsonElement type, string operationType, GraphQlEndpointInfo endpointInfo)
     {
         var toolsGenerated = 0;
 
@@ -338,7 +342,7 @@ public static class DynamicToolRegistry
                     arg.TryGetProperty("type", out var argType))
                 {
                     var paramName = argName.GetString() ?? "";
-                    var paramType = GraphQLTypeHelpers.GetTypeName(argType);
+                    var paramType = GraphQlTypeHelpers.GetTypeName(argType);
                     parameters.Add($"${paramName}: {paramType}");
                 }
             }
@@ -410,7 +414,7 @@ public static class DynamicToolRegistry
     }
 
 
-    private static string FormatGraphQLResponse(string responseContent)
+    private static string FormatGraphQlResponse(string responseContent)
     {
         try
         {
