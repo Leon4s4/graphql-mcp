@@ -1,4 +1,5 @@
-using System.Text.Json;
+using System.Collections.Concurrent;
+using Graphql.Mcp.DTO;
 
 namespace Graphql.Mcp.Tools;
 
@@ -10,10 +11,9 @@ public sealed class EndpointRegistryService
 {
     private static readonly Lazy<EndpointRegistryService> EndpointRegistryServiceInstance = new(() => new EndpointRegistryService());
     
-    private readonly Dictionary<string, DynamicToolInfo> _dynamicTools = new();
-    private readonly Dictionary<string, GraphQlEndpointInfo> _endpoints = new();
-    private readonly Dictionary<string, List<string>> _endpointToTools = new();
-    private readonly Lock _lock = new();
+    private readonly ConcurrentDictionary<string, DynamicToolInfo> _dynamicTools = new();
+    private readonly ConcurrentDictionary<string, GraphQlEndpointInfo> _endpoints = new();
+    private readonly ConcurrentDictionary<string, List<string>> _endpointToTools = new();
 
     public static EndpointRegistryService Instance => EndpointRegistryServiceInstance.Value;
 
@@ -23,14 +23,13 @@ public sealed class EndpointRegistryService
 
     public void RegisterEndpoint(string endpointName, GraphQlEndpointInfo endpointInfo)
     {
-        lock (_lock)
+        if (_endpoints.ContainsKey(endpointName))
         {
-            if (_endpoints.ContainsKey(endpointName)) RemoveToolsForEndpointInternal(endpointName);
-            
-            endpointInfo.SchemaContent = LoadSchemaContentFromFile();
-
-            _endpoints[endpointName] = endpointInfo;
+            RemoveToolsForEndpointInternal(endpointName);
         }
+        
+        endpointInfo.SchemaContent = LoadSchemaContentFromFile();
+        _endpoints[endpointName] = endpointInfo;
     }
 
     private static string? LoadSchemaContentFromFile()
@@ -44,66 +43,49 @@ public sealed class EndpointRegistryService
 
     public GraphQlEndpointInfo? GetEndpointInfo(string endpointName)
     {
-        lock (_lock)
-        {
-            return _endpoints.GetValueOrDefault(endpointName);
-        }
+        return _endpoints.GetValueOrDefault(endpointName);
     }
 
     public bool IsEndpointRegistered(string endpointName)
     {
-        lock (_lock)
-        {
-            return _endpoints.ContainsKey(endpointName);
-        }
+        return _endpoints.ContainsKey(endpointName);
     }
 
     public IEnumerable<string> GetRegisteredEndpointNames()
     {
-        lock (_lock)
-        {
-            return _endpoints.Keys.ToList();
-        }
+        return _endpoints.Keys.ToList();
     }
 
     public Dictionary<string, GraphQlEndpointInfo> GetAllEndpoints()
     {
-        lock (_lock)
-        {
-            return new Dictionary<string, GraphQlEndpointInfo>(_endpoints);
-        }
+        return new Dictionary<string, GraphQlEndpointInfo>(_endpoints);
     }
 
     public bool RemoveEndpoint(string endpointName, out int toolsRemoved)
     {
-        lock (_lock)
+        if (!_endpoints.TryGetValue(endpointName, out var endpointInfo))
         {
-            if (!_endpoints.TryGetValue(endpointName, out var endpointInfo))
-            {
-                toolsRemoved = 0;
-                return false;
-            }
-
             toolsRemoved = 0;
-
-            // Use lookup map for efficient tool removal
-            if (_endpointToTools.TryGetValue(endpointName, out var toolNames))
-            {
-                foreach (var toolName in toolNames)
-                {
-                    if (_dynamicTools.Remove(toolName))
-                    {
-                        toolsRemoved++;
-                    }
-                }
-                _endpointToTools.Remove(endpointName);
-            }
-
-            // Remove endpoint
-            _endpoints.Remove(endpointName);
-
-            return true;
+            return false;
         }
+
+        toolsRemoved = 0;
+
+        if (_endpointToTools.TryGetValue(endpointName, out var toolNames))
+        {
+            foreach (var toolName in toolNames)
+            {
+                if (_dynamicTools.TryRemove(toolName, out _))
+                {
+                    toolsRemoved++;
+                }
+            }
+            _endpointToTools.TryRemove(endpointName, out _);
+        }
+
+        _endpoints.TryRemove(endpointName, out _);
+
+        return true;
     }
 
     #endregion
@@ -112,68 +94,44 @@ public sealed class EndpointRegistryService
 
     public void RegisterDynamicTool(string toolName, DynamicToolInfo toolInfo)
     {
-        lock (_lock)
-        {
-            _dynamicTools[toolName] = toolInfo;
+        _dynamicTools[toolName] = toolInfo;
 
-            // Ensure the endpoint has an entry in the lookup map
-            if (!_endpointToTools.ContainsKey(toolInfo.EndpointName))
+        _endpointToTools.AddOrUpdate(
+            toolInfo.EndpointName,
+            [toolName],
+            (_, existingList) =>
             {
-                _endpointToTools[toolInfo.EndpointName] = new List<string>();
-            }
-
-            _endpointToTools[toolInfo.EndpointName].Add(toolName);
-        }
+                lock (existingList)
+                {
+                    existingList.Add(toolName);
+                    return existingList;
+                }
+            });
     }
 
     public DynamicToolInfo? GetDynamicTool(string toolName)
     {
-        lock (_lock)
-        {
-            return _dynamicTools.TryGetValue(toolName, out var toolInfo) ? toolInfo : null;
-        }
+        return _dynamicTools.GetValueOrDefault(toolName);
     }
 
-    public Dictionary<string, DynamicToolInfo> GetAllDynamicTools()
-    {
-        lock (_lock)
-        {
-            return new Dictionary<string, DynamicToolInfo>(_dynamicTools);
-        }
-    }
+    public IReadOnlyDictionary<string, DynamicToolInfo> GetAllDynamicTools() => _dynamicTools;
 
-    public int GetToolCountForEndpoint(string endpointName)
-    {
-        lock (_lock)
-        {
-            return _endpointToTools.TryGetValue(endpointName, out var toolNames) ? toolNames.Count : 0;
-        }
-    }
+    public int GetToolCountForEndpoint(string endpointName) => _endpointToTools.TryGetValue(endpointName, out var toolNames) ? toolNames.Count : 0;
 
-    public int RemoveToolsForEndpoint(string endpointName)
-    {
-        lock (_lock)
-        {
-            return RemoveToolsForEndpointInternal(endpointName);
-        }
-    }
+    public int RemoveToolsForEndpoint(string endpointName) => RemoveToolsForEndpointInternal(endpointName);
 
     private int RemoveToolsForEndpointInternal(string endpointName)
     {
         var toolsRemoved = 0;
 
-        // Use lookup map for efficient tool removal
         if (_endpointToTools.TryGetValue(endpointName, out var toolNames))
         {
-            foreach (var toolName in toolNames)
+            lock (toolNames)
             {
-                if (_dynamicTools.Remove(toolName))
-                {
-                    toolsRemoved++;
-                }
+                toolsRemoved += toolNames.Count(toolName => _dynamicTools.TryRemove(toolName, out _));
+
+                toolNames.Clear();
             }
-            // Clear the tool list but keep the endpoint entry for future tool additions
-            toolNames.Clear();
         }
 
         return toolsRemoved;
@@ -187,31 +145,4 @@ public sealed class EndpointRegistryService
     public int TotalDynamicTools => _dynamicTools.Count;
 
     #endregion
-}
-
-/// <summary>
-/// Information about a GraphQL endpoint
-/// </summary>
-public class GraphQlEndpointInfo
-{
-    public string Name { get; set; } = "";
-    public string Url { get; set; } = "";
-    public Dictionary<string, string> Headers { get; set; } = new();
-    public bool AllowMutations { get; set; }
-    public string ToolPrefix { get; set; } = "";
-    public string? SchemaContent { get; set; } = "";
-}
-
-/// <summary>
-/// Information about a dynamically generated tool
-/// </summary>
-public class DynamicToolInfo
-{
-    public string ToolName { get; set; } = "";
-    public string EndpointName { get; set; } = "";
-    public string OperationType { get; set; } = "";
-    public string OperationName { get; set; } = "";
-    public string Operation { get; set; } = "";
-    public string Description { get; set; } = "";
-    public JsonElement Field { get; set; }
 }

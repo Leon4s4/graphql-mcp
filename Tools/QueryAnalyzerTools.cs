@@ -442,19 +442,19 @@ public static class QueryAnalyzerTools
     {
         public int Score { get; set; }
         public string RiskLevel { get; set; } = "";
-        public List<string> Issues { get; set; } = new();
+        public List<string> Issues { get; set; } = [];
     }
 
     private class PerformanceAnalysis
     {
-        public List<string> Recommendations { get; set; } = new();
-        public List<string> Warnings { get; set; } = new();
+        public List<string> Recommendations { get; set; } = [];
+        public List<string> Warnings { get; set; } = [];
     }
 
     private class SecurityAnalysis
     {
         public string RiskLevel { get; set; } = "";
-        public List<string> Issues { get; set; } = new();
-        public List<string> Recommendations { get; set; } = new();
+        public List<string> Issues { get; set; } = [];
+        public List<string> Recommendations { get; set; } = [];
     }
 }

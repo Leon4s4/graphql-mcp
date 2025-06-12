@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
+using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
@@ -55,53 +56,35 @@ public static class DynamicToolRegistry
     [McpServerTool, Description("List all registered dynamic tools")]
     public static string ListDynamicTools()
     {
-        var dynamicTools = EndpointRegistryService.Instance.GetAllDynamicTools();
-        
-        if (dynamicTools.Count == 0)
-        {
+        var tools = EndpointRegistryService.Instance.GetAllDynamicTools().Values;
+
+        if (!tools.Any())
             return "No dynamic tools are currently registered. Use RegisterEndpoint to generate tools from a GraphQL schema.";
-        }
 
-        var result = new StringBuilder();
-        result.AppendLine("# Registered Dynamic Tools\n");
+        string Format(string title, IEnumerable<DynamicToolInfo> items) =>
+            items.Any()
+                ? $"### {title}{Environment.NewLine}" +
+                  string.Join(Environment.NewLine, items.Select(i => $"- **{i.ToolName}**: {i.Description}")) +
+                  Environment.NewLine + Environment.NewLine
+                : string.Empty;
 
-        var groupedByEndpoint = dynamicTools.Values.GroupBy(t => t.EndpointName);
-
-        foreach (var group in groupedByEndpoint)
-        {
-            var endpoint = EndpointRegistryService.Instance.GetEndpointInfo(group.Key);
-            if (endpoint == null) continue;
-            
-            result.AppendLine($"## Endpoint: {group.Key}");
-            result.AppendLine($"**URL:** {endpoint.Url}");
-            result.AppendLine($"**Operations:** {group.Count()}");
-            result.AppendLine();
-
-            var queries = group.Where(t => t.OperationType == "Query").ToList();
-            var mutations = group.Where(t => t.OperationType == "Mutation").ToList();
-
-            if (queries.Any())
+        var sections = tools
+            .GroupBy(t => t.EndpointName)
+            .Select(g =>
             {
-                result.AppendLine("### Queries");
-                foreach (var query in queries)
-                {
-                    result.AppendLine($"- **{query.ToolName}**: {query.Description}");
-                }
-                result.AppendLine();
-            }
+                var endpoint = EndpointRegistryService.Instance.GetEndpointInfo(g.Key);
+                if (endpoint is null) return null;
 
-            if (mutations.Any())
-            {
-                result.AppendLine("### Mutations");
-                foreach (var mutation in mutations)
-                {
-                    result.AppendLine($"- **{mutation.ToolName}**: {mutation.Description}");
-                }
-                result.AppendLine();
-            }
-        }
+                return
+                    $"## Endpoint: {g.Key}{Environment.NewLine}" +
+                    $"**URL:** {endpoint.Url}{Environment.NewLine}" +
+                    $"**Operations:** {g.Count()}{Environment.NewLine}{Environment.NewLine}" +
+                    Format("Queries",   g.Where(t => t.OperationType == "Query")) +
+                    Format("Mutations", g.Where(t => t.OperationType == "Mutation"));
+            })
+            .Where(s => s is not null);
 
-        return result.ToString();
+        return $"# Registered Dynamic Tools{Environment.NewLine}{Environment.NewLine}{string.Concat(sections)}";
     }
 
     [McpServerTool, Description("Execute a dynamically generated GraphQL operation")]

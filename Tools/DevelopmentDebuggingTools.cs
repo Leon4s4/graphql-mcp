@@ -183,7 +183,7 @@ public static class DevelopmentDebuggingTools
                     {
                         var key = string.Join(", ", currentFields.OrderBy(f => f));
                         if (!fieldPatterns.ContainsKey(key))
-                            fieldPatterns[key] = new List<string>();
+                            fieldPatterns[key] = [];
                         fieldPatterns[key].Add(currentContext);
                     }
                     currentContext = trimmedLine.Replace("{", "").Trim();
@@ -195,7 +195,7 @@ public static class DevelopmentDebuggingTools
                     {
                         var key = string.Join(", ", currentFields.OrderBy(f => f));
                         if (!fieldPatterns.ContainsKey(key))
-                            fieldPatterns[key] = new List<string>();
+                            fieldPatterns[key] = [];
                         fieldPatterns[key].Add(currentContext);
                     }
                     currentContext = "";

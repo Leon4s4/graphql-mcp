@@ -406,7 +406,7 @@ public static class SchemaEvolutionTools
     private class TypeInfo
     {
         public string Name { get; set; } = "";
-        public List<FieldInfo> Fields { get; set; } = new();
+        public List<FieldInfo> Fields { get; set; } = [];
     }
 
     private class FieldInfo

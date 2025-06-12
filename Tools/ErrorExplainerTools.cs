@@ -232,14 +232,14 @@ public static class ErrorExplainerTools
         return new ErrorResponse 
         { 
             IsGraphQlError = false, 
-            Errors = new List<GraphQlError> 
-            { 
+            Errors =
+            [
                 new()
-                { 
-                    Message = errorText, 
-                    Type = DetermineErrorType(errorText) 
-                } 
-            } 
+                {
+                    Message = errorText,
+                    Type = DetermineErrorType(errorText)
+                }
+            ]
         };
     }
 
@@ -486,7 +486,7 @@ public static class ErrorExplainerTools
     private class ErrorResponse
     {
         public bool IsGraphQlError { get; set; }
-        public List<GraphQlError> Errors { get; set; } = new();
+        public List<GraphQlError> Errors { get; set; } = [];
     }
 
     private class GraphQlError
@@ -494,7 +494,7 @@ public static class ErrorExplainerTools
         public string Message { get; set; } = "";
         public string Type { get; set; } = "";
         public string Path { get; set; } = "";
-        public List<ErrorLocation> Locations { get; set; } = new();
+        public List<ErrorLocation> Locations { get; set; } = [];
     }
 
     private class ErrorLocation
@@ -506,7 +506,7 @@ public static class ErrorExplainerTools
     private class ErrorAnalysis
     {
         public string Explanation { get; set; } = "";
-        public List<string> Solutions { get; set; } = new();
+        public List<string> Solutions { get; set; } = [];
     }
 
     private class ValidationIssue

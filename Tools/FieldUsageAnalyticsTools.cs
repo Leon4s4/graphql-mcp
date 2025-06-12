@@ -507,6 +507,6 @@ public static class FieldUsageAnalyticsTools
         public int TotalComplexity { get; set; }
         public double AverageComplexity { get; set; }
         public string MostComplexField { get; set; } = "";
-        public List<string> HighComplexityFields { get; set; } = new();
+        public List<string> HighComplexityFields { get; set; } = [];
     }
 }
