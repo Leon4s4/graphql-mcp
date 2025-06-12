@@ -50,7 +50,7 @@ public static class DynamicRegistryTool
 
             EndpointRegistryService.Instance.RegisterEndpoint(endpointName, endpointInfo);
 
-            return await GraphQLSchemaHelper.GenerateToolsFromSchema(endpointInfo);
+            return await GraphQlSchemaHelper.GenerateToolsFromSchema(endpointInfo);
         }
         catch (Exception ex)
         {
@@ -61,8 +61,7 @@ public static class DynamicRegistryTool
     [McpServerTool, Description("List all registered dynamic tools")]
     public static string ListDynamicTools()
     {
-        var tools = EndpointRegistryService.Instance.GetAllDynamicTools()
-            .Values.ToList();
+        var tools = EndpointRegistryService.Instance.GetAllDynamicTools().Values.ToList();
 
         if (tools.Count == 0)
             return "No dynamic tools are currently registered. Use RegisterEndpoint to generate tools from a GraphQL schema.";
@@ -84,12 +83,10 @@ public static class DynamicRegistryTool
             result.AppendLine($"**Operations:** {group.Count()}");
             result.AppendLine();
 
-            var queries = group.Where(t => t.OperationType == "Query")
-                .ToList();
+            var queries = group.Where(t => t.OperationType == "Query").ToList();
             result.Append(MarkdownFormatHelpers.FormatToolSection("Queries", queries));
 
-            var mutations = group.Where(t => t.OperationType == "Mutation")
-                .ToList();
+            var mutations = group.Where(t => t.OperationType == "Mutation").ToList();
             result.Append(MarkdownFormatHelpers.FormatToolSection("Mutations", mutations));
         }
 
@@ -160,7 +157,7 @@ public static class DynamicRegistryTool
 
         var toolsRemoved = EndpointRegistryService.Instance.RemoveToolsForEndpoint(endpointName);
 
-        var result = await GraphQLSchemaHelper.GenerateToolsFromSchema(endpointInfo);
+        var result = await GraphQlSchemaHelper.GenerateToolsFromSchema(endpointInfo);
 
         return $"Refreshed tools for endpoint '{endpointName}'. Removed {toolsRemoved} existing tools. {result}";
     }

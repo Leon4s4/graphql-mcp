@@ -8,7 +8,7 @@ namespace Graphql.Mcp.Helpers;
 /// <summary>
 /// Helper class for GraphQL schema operations
 /// </summary>
-public static class GraphQLSchemaHelper
+public static class GraphQlSchemaHelper
 {
     /// <summary>
     /// Generates tools from a GraphQL schema
@@ -19,39 +19,54 @@ public static class GraphQLSchemaHelper
             ? JsonSerializer.Serialize(endpointInfo.Headers)
             : null;
 
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo.Url, headersJson);
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
-
-        if (!schemaData.TryGetProperty("data", out var data) || !data.TryGetProperty("__schema", out var schema))
+        var schema = await GetSchemaFromEndpoint(endpointInfo.Url, headersJson);
+        if (schema == null)
         {
             return "Failed to parse schema introspection data";
         }
 
         var toolsGenerated = 0;
+        
+        // Process Query type
+        toolsGenerated += ProcessRootType(schema.Value, "queryType", "Query", endpointInfo, true);
+        
+        // Process Mutation type (only if mutations are allowed)
+        toolsGenerated += ProcessRootType(schema.Value, "mutationType", "Mutation", endpointInfo, endpointInfo.AllowMutations);
 
-        if (schema.TryGetProperty("queryType", out var queryTypeRef) &&
-            queryTypeRef.TryGetProperty("name", out var queryTypeName))
+        return GenerateResultMessage(toolsGenerated, endpointInfo);
+    }
+
+    private static async Task<JsonElement?> GetSchemaFromEndpoint(string url, string? headersJson)
+    {
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(url, headersJson);
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+
+        if (!schemaData.TryGetProperty("data", out var data) || !data.TryGetProperty("__schema", out var schema))
         {
-            var queryType = FindTypeByName(schema, queryTypeName.GetString() ?? "Query");
-            if (queryType.HasValue)
-            {
-                var queryTools = GraphQLToolGenerator.GenerateToolsForType(queryType.Value, "Query", endpointInfo);
-                toolsGenerated += queryTools;
-            }
+            return null;
         }
 
-        if (endpointInfo.AllowMutations &&
-            schema.TryGetProperty("mutationType", out var mutationTypeRef) &&
-            mutationTypeRef.TryGetProperty("name", out var mutationTypeName))
-        {
-            var mutationType = FindTypeByName(schema, mutationTypeName.GetString() ?? "Mutation");
-            if (mutationType.HasValue)
-            {
-                var mutationTools = GraphQLToolGenerator.GenerateToolsForType(mutationType.Value, "Mutation", endpointInfo);
-                toolsGenerated += mutationTools;
-            }
-        }
+        return schema;
+    }
 
+    private static int ProcessRootType(JsonElement schema, string typeRefName, string defaultTypeName, GraphQlEndpointInfo endpointInfo, bool shouldProcess)
+    {
+        if (!shouldProcess)
+            return 0;
+
+        if (!schema.TryGetProperty(typeRefName, out var typeRef) || 
+            !typeRef.TryGetProperty("name", out var typeName))
+            return 0;
+
+        var rootType = FindTypeByName(schema, typeName.GetString() ?? defaultTypeName);
+        if (!rootType.HasValue)
+            return 0;
+
+        return GraphQLToolGenerator.GenerateToolsForType(rootType.Value, defaultTypeName, endpointInfo);
+    }
+
+    private static string GenerateResultMessage(int toolsGenerated, GraphQlEndpointInfo endpointInfo)
+    {
         var result = new StringBuilder();
         result.AppendLine($"Generated {toolsGenerated} dynamic tools for endpoint '{endpointInfo.Name}'");
 
