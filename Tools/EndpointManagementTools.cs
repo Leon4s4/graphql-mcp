@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
@@ -12,7 +11,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class EndpointManagementTools
 {
-    [McpServerTool, Description("Register a GraphQL endpoint for automatic tool generation")]
+    [McpServerTool, Description("Register a GraphQL endpoint to enable all GraphQL MCP tools and operations")]
     public static async Task<string> RegisterEndpoint(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Unique name for this endpoint")]
@@ -112,7 +111,7 @@ public static class EndpointManagementTools
         return $"Refreshed tools for endpoint '{endpointName}'. Removed {toolsRemoved} existing tools. {result}";
     }
 
-    [McpServerTool, Description("Remove all dynamic tools for an endpoint")]
+    [McpServerTool, Description("Unregister a GraphQL endpoint and remove all its associated dynamic tools")]
     public static string UnregisterEndpoint(
         [Description("Name of the endpoint to unregister")]
         string endpointName)

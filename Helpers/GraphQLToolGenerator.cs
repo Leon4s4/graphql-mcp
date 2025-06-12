@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Graphql.Mcp.DTO;
-using Graphql.Mcp.Helpers;
 
 namespace Graphql.Mcp.Helpers;
 

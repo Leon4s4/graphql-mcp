@@ -1,5 +1,3 @@
-using Graphql.Mcp.Tools;
-
 namespace Graphql.Mcp.Helpers;
 
 /// <summary>

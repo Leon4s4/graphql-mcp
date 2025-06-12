@@ -1,5 +1,3 @@
-using System;
-
 namespace Graphql.Mcp.DTO;
 
 /// <summary>
