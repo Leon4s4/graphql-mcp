@@ -104,7 +104,7 @@ public static class EndpointManagementTools
             return $"Endpoint '{endpointName}' not found. Use RegisterEndpoint first.";
         }
 
-        var toolsRemoved = EndpointRegistryService.Instance.RemoveToolsForEndpoint(endpointName);
+        EndpointRegistryService.Instance.RemoveEndpoint(endpointName, out var toolsRemoved);
 
         var result = await GraphQlSchemaHelper.GenerateToolsFromSchema(endpointInfo);
 

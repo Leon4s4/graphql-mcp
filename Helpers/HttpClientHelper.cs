@@ -12,42 +12,10 @@ public static class HttpClientHelper
     private static readonly Lazy<HttpClient> StaticHttpClient = new(() => new HttpClient());
 
     /// <summary>
-    /// Creates a configured HttpClient for GraphQL operations that can be used in static contexts
+    /// Gets the shared HttpClient instance for GraphQL operations
     /// </summary>
-    /// <param name="headers">Optional headers to add (as JSON string)</param>
-    /// <param name="timeout">Optional timeout override</param>
-    /// <returns>Configured HttpClient</returns>
-    public static HttpClient CreateStaticClient(string? headers = null, TimeSpan? timeout = null)
-    {
-        var client = new HttpClient();
-
-        if (timeout.HasValue)
-        {
-            client.Timeout = timeout.Value;
-        }
-
-        ConfigureHeaders(client, headers);
-        return client;
-    }
-
-    /// <summary>
-    /// Creates a configured HttpClient for GraphQL operations that can be used in static contexts
-    /// </summary>
-    /// <param name="headers">Optional headers to add (as dictionary)</param>
-    /// <param name="timeout">Optional timeout override</param>
-    /// <returns>Configured HttpClient</returns>
-    public static HttpClient CreateStaticClient(Dictionary<string, string>? headers, TimeSpan? timeout = null)
-    {
-        var client = new HttpClient();
-
-        if (timeout.HasValue)
-        {
-            client.Timeout = timeout.Value;
-        }
-
-        ConfigureHeaders(client, headers);
-        return client;
-    }
+    /// <returns>The shared HttpClient instance</returns>
+    public static HttpClient GetSharedClient() => StaticHttpClient.Value;
 
     /// <summary>
     /// Configures an HttpClient with headers, properly separating content headers from request headers
@@ -148,8 +116,11 @@ public static class HttpClientHelper
 
         try
         {
-            using var client = CreateStaticClient(headers, timeout);
+            var client = GetSharedClient();
             var content = CreateGraphQlContent(requestBody);
+            
+            // Configure headers per request (thread-safe way)
+            AddHeadersToContent(content, headers);
 
             // Validate endpoint URL
             if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
@@ -157,8 +128,13 @@ public static class HttpClientHelper
                 return GraphQlResponse.ConnectionError($"Invalid endpoint URL: {endpoint}");
             }
 
-            // Execute the request
-            response = await client.PostAsync(endpoint, content);
+            // Create request message with timeout if specified
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint) { Content = content };
+            AddHeadersToRequest(request, headers);
+            
+            // Execute the request with optional timeout
+            using var cts = timeout.HasValue ? new CancellationTokenSource(timeout.Value) : new CancellationTokenSource();
+            response = await client.SendAsync(request, cts.Token);
 
             // Ensure success status code - this will throw for non-success status codes
             response.EnsureSuccessStatusCode();
@@ -252,6 +228,60 @@ public static class HttpClientHelper
             return null;
         }
     }
+
+    /// <summary>
+    /// Adds headers to HttpRequestMessage in a thread-safe way
+    /// </summary>
+    /// <param name="request">The request message</param>
+    /// <param name="headers">Headers to add</param>
+    private static void AddHeadersToRequest(HttpRequestMessage request, Dictionary<string, string>? headers)
+    {
+        if (headers == null || headers.Count == 0)
+            return;
+
+        foreach (var header in headers)
+        {
+            if (IsContentHeader(header.Key))
+                continue;
+
+            try
+            {
+                request.Headers.Add(header.Key, header.Value);
+            }
+            catch (InvalidOperationException)
+            {
+                // Header already exists or invalid
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adds content headers to HttpContent in a thread-safe way
+    /// </summary>
+    /// <param name="content">The content to add headers to</param>
+    /// <param name="headers">Headers to add</param>
+    private static void AddHeadersToContent(HttpContent content, Dictionary<string, string>? headers)
+    {
+        if (headers == null || headers.Count == 0)
+            return;
+
+        foreach (var header in headers)
+        {
+            if (!IsContentHeader(header.Key))
+                continue;
+
+            try
+            {
+                content.Headers.Add(header.Key, header.Value);
+            }
+            catch (InvalidOperationException)
+            {
+                // Header already exists or invalid
+            }
+        }
+    }
+
+    // ...existing code...
 }
 
 /// <summary>
