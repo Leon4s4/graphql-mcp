@@ -11,172 +11,188 @@ public static class QueryAnalyzerTools
 {
     [McpServerTool, Description("Perform comprehensive analysis of GraphQL queries including complexity, performance, and best practices")]
     public static string AnalyzeQuery(
-        [Description("GraphQL query to analyze")] string query,
-        [Description("Include detailed complexity analysis")] bool includeComplexity = true,
-        [Description("Include performance recommendations")] bool includePerformance = true,
-        [Description("Include security analysis")] bool includeSecurity = true)
+        [Description("GraphQL query to analyze")]
+        string query,
+        [Description("Include detailed complexity analysis")]
+        bool includeComplexity = true,
+        [Description("Include performance recommendations")]
+        bool includePerformance = true,
+        [Description("Include security analysis")]
+        bool includeSecurity = true)
     {
-        
-            var analysis = new StringBuilder();
-            analysis.AppendLine("# GraphQL Query Analysis Report\n");
+        var analysis = new StringBuilder();
+        analysis.AppendLine("# GraphQL Query Analysis Report\n");
 
-            // Basic query information
-            var operationInfo = AnalyzeOperation(query);
-            analysis.AppendLine("## Operation Information");
-            analysis.AppendLine($"- **Type:** {operationInfo.Type}");
-            analysis.AppendLine($"- **Name:** {operationInfo.Name}");
-            analysis.AppendLine($"- **Has Variables:** {operationInfo.HasVariables}");
-            analysis.AppendLine($"- **Has Fragments:** {operationInfo.HasFragments}");
-            analysis.AppendLine($"- **Has Directives:** {operationInfo.HasDirectives}\n");
+        // Basic query information
+        var operationInfo = AnalyzeOperation(query);
+        analysis.AppendLine("## Operation Information");
+        analysis.AppendLine($"- **Type:** {operationInfo.Type}");
+        analysis.AppendLine($"- **Name:** {operationInfo.Name}");
+        analysis.AppendLine($"- **Has Variables:** {operationInfo.HasVariables}");
+        analysis.AppendLine($"- **Has Fragments:** {operationInfo.HasFragments}");
+        analysis.AppendLine($"- **Has Directives:** {operationInfo.HasDirectives}\n");
 
-            // Field analysis
-            var fieldAnalysis = AnalyzeFields(query);
-            analysis.AppendLine("## Field Analysis");
-            analysis.AppendLine($"- **Total Fields:** {fieldAnalysis.TotalFields}");
-            analysis.AppendLine($"- **Unique Fields:** {fieldAnalysis.UniqueFields}");
-            analysis.AppendLine($"- **Nested Selections:** {fieldAnalysis.NestedSelections}");
-            analysis.AppendLine($"- **Max Depth:** {fieldAnalysis.MaxDepth}\n");
+        // Field analysis
+        var fieldAnalysis = AnalyzeFields(query);
+        analysis.AppendLine("## Field Analysis");
+        analysis.AppendLine($"- **Total Fields:** {fieldAnalysis.TotalFields}");
+        analysis.AppendLine($"- **Unique Fields:** {fieldAnalysis.UniqueFields}");
+        analysis.AppendLine($"- **Nested Selections:** {fieldAnalysis.NestedSelections}");
+        analysis.AppendLine($"- **Max Depth:** {fieldAnalysis.MaxDepth}\n");
 
-            if (includeComplexity)
+        if (includeComplexity)
+        {
+            var complexity = AnalyzeComplexity(query);
+            analysis.AppendLine("## Complexity Analysis");
+            analysis.AppendLine($"- **Estimated Complexity Score:** {complexity.Score}");
+            analysis.AppendLine($"- **Risk Level:** {complexity.RiskLevel}");
+            if (complexity.Issues.Any())
             {
-                var complexity = AnalyzeComplexity(query);
-                analysis.AppendLine("## Complexity Analysis");
-                analysis.AppendLine($"- **Estimated Complexity Score:** {complexity.Score}");
-                analysis.AppendLine($"- **Risk Level:** {complexity.RiskLevel}");
-                if (complexity.Issues.Any())
+                analysis.AppendLine("- **Complexity Issues:**");
+                foreach (var issue in complexity.Issues)
                 {
-                    analysis.AppendLine("- **Complexity Issues:**");
-                    foreach (var issue in complexity.Issues)
-                    {
-                        analysis.AppendLine($"  - {issue}");
-                    }
+                    analysis.AppendLine($"  - {issue}");
                 }
-                analysis.AppendLine();
             }
 
-            if (includePerformance)
+            analysis.AppendLine();
+        }
+
+        if (includePerformance)
+        {
+            var performance = AnalyzePerformance(query);
+            analysis.AppendLine("## Performance Analysis");
+            if (performance.Recommendations.Any())
             {
-                var performance = AnalyzePerformance(query);
-                analysis.AppendLine("## Performance Analysis");
-                if (performance.Recommendations.Any())
+                analysis.AppendLine("### Recommendations:");
+                foreach (var rec in performance.Recommendations)
                 {
-                    analysis.AppendLine("### Recommendations:");
-                    foreach (var rec in performance.Recommendations)
-                    {
-                        analysis.AppendLine($"- {rec}");
-                    }
+                    analysis.AppendLine($"- {rec}");
                 }
-                if (performance.Warnings.Any())
-                {
-                    analysis.AppendLine("### Warnings:");
-                    foreach (var warning in performance.Warnings)
-                    {
-                        analysis.AppendLine($"- ⚠️ {warning}");
-                    }
-                }
-                analysis.AppendLine();
             }
 
-            if (includeSecurity)
+            if (performance.Warnings.Any())
             {
-                var security = AnalyzeSecurity(query);
-                analysis.AppendLine("## Security Analysis");
-                analysis.AppendLine($"- **Risk Level:** {security.RiskLevel}");
-                if (security.Issues.Any())
+                analysis.AppendLine("### Warnings:");
+                foreach (var warning in performance.Warnings)
                 {
-                    analysis.AppendLine("### Security Issues:");
-                    foreach (var issue in security.Issues)
-                    {
-                        analysis.AppendLine($"- 🔒 {issue}");
-                    }
+                    analysis.AppendLine($"- ⚠️ {warning}");
                 }
-                if (security.Recommendations.Any())
-                {
-                    analysis.AppendLine("### Security Recommendations:");
-                    foreach (var rec in security.Recommendations)
-                    {
-                        analysis.AppendLine($"- {rec}");
-                    }
-                }
-                analysis.AppendLine();
             }
 
-            return analysis.ToString();
+            analysis.AppendLine();
+        }
+
+        if (includeSecurity)
+        {
+            var security = AnalyzeSecurity(query);
+            analysis.AppendLine("## Security Analysis");
+            analysis.AppendLine($"- **Risk Level:** {security.RiskLevel}");
+            if (security.Issues.Any())
+            {
+                analysis.AppendLine("### Security Issues:");
+                foreach (var issue in security.Issues)
+                {
+                    analysis.AppendLine($"- 🔒 {issue}");
+                }
+            }
+
+            if (security.Recommendations.Any())
+            {
+                analysis.AppendLine("### Security Recommendations:");
+                foreach (var rec in security.Recommendations)
+                {
+                    analysis.AppendLine($"- {rec}");
+                }
+            }
+
+            analysis.AppendLine();
+        }
+
+        return analysis.ToString();
     }
 
     [McpServerTool, Description("Automatically build GraphQL queries based on schema and requirements")]
     public static async Task<string> BuildQuery(
         [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("Root type to query (e.g., 'User', 'Product')")] string rootType,
-        [Description("Fields to include (comma-separated)")] string fields,
-        [Description("Include related objects")] bool includeRelated = false,
-        [Description("Maximum depth for nested objects")] int maxDepth = 3,
-        [Description("HTTP headers as JSON object (optional)")] string? headers = null)
+        [Description("Root type to query (e.g., 'User', 'Product')")]
+        string rootType,
+        [Description("Fields to include (comma-separated)")]
+        string fields,
+        [Description("Include related objects")]
+        bool includeRelated = false,
+        [Description("Maximum depth for nested objects")]
+        int maxDepth = 3,
+        [Description("HTTP headers as JSON object (optional)")]
+        string? headers = null)
     {
-        
-            // Get schema to understand available fields
-            var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
-            var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        // Get schema to understand available fields
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
-            if (!schemaData.TryGetProperty("data", out var data) || 
-                !data.TryGetProperty("__schema", out var schema))
-            {
-                return "Failed to retrieve schema data";
-            }
+        if (!schemaData.TryGetProperty("data", out var data) ||
+            !data.TryGetProperty("__schema", out var schema))
+        {
+            return "Failed to retrieve schema data";
+        }
 
-            // Find the root type in schema
-            var typeInfo = FindTypeInSchema(schema, rootType);
-            if (typeInfo == null)
-            {
-                return $"Type '{rootType}' not found in schema";
-            }
+        // Find the root type in schema
+        var typeInfo = FindTypeInSchema(schema, rootType);
+        if (typeInfo == null)
+        {
+            return $"Type '{rootType}' not found in schema";
+        }
 
-            var requestedFields = fields.Split(',').Select(f => f.Trim()).ToList();
-            var queryBuilder = new StringBuilder();
+        var requestedFields = fields.Split(',')
+            .Select(f => f.Trim())
+            .ToList();
+        var queryBuilder = new StringBuilder();
 
-            // Build the query
-            queryBuilder.AppendLine($"query Get{rootType} {{");
-            
-            // Determine if this is a single object or list query
-            var rootOperation = DetermineRootOperation(schema, rootType);
-            if (!string.IsNullOrEmpty(rootOperation))
-            {
-                queryBuilder.AppendLine($"  {rootOperation} {{");
-                queryBuilder.AppendLine(BuildFieldSelection(typeInfo, requestedFields, includeRelated, maxDepth, schema, 2));
-                queryBuilder.AppendLine("  }");
-            }
-            else
-            {
-                return $"No query operation found for type '{rootType}'";
-            }
+        // Build the query
+        queryBuilder.AppendLine($"query Get{rootType} {{");
 
-            queryBuilder.AppendLine("}");
+        // Determine if this is a single object or list query
+        var rootOperation = DetermineRootOperation(schema, rootType);
+        if (!string.IsNullOrEmpty(rootOperation))
+        {
+            queryBuilder.AppendLine($"  {rootOperation} {{");
+            queryBuilder.AppendLine(BuildFieldSelection(typeInfo, requestedFields, includeRelated, maxDepth, schema, 2));
+            queryBuilder.AppendLine("  }");
+        }
+        else
+        {
+            return $"No query operation found for type '{rootType}'";
+        }
 
-            var result = new StringBuilder();
-            result.AppendLine("# Auto-Generated GraphQL Query\n");
-            result.AppendLine("## Generated Query");
-            result.AppendLine("```graphql");
-            result.AppendLine(queryBuilder.ToString());
-            result.AppendLine("```\n");
+        queryBuilder.AppendLine("}");
 
-            result.AppendLine("## Query Information");
-            result.AppendLine($"- **Root Type:** {rootType}");
-            result.AppendLine($"- **Requested Fields:** {string.Join(", ", requestedFields)}");
-            result.AppendLine($"- **Include Related:** {includeRelated}");
-            result.AppendLine($"- **Max Depth:** {maxDepth}");
+        var result = new StringBuilder();
+        result.AppendLine("# Auto-Generated GraphQL Query\n");
+        result.AppendLine("## Generated Query");
+        result.AppendLine("```graphql");
+        result.AppendLine(queryBuilder.ToString());
+        result.AppendLine("```\n");
 
-            return result.ToString();
+        result.AppendLine("## Query Information");
+        result.AppendLine($"- **Root Type:** {rootType}");
+        result.AppendLine($"- **Requested Fields:** {string.Join(", ", requestedFields)}");
+        result.AppendLine($"- **Include Related:** {includeRelated}");
+        result.AppendLine($"- **Max Depth:** {maxDepth}");
+
+        return result.ToString();
     }
 
     private static OperationInfo AnalyzeOperation(string query)
     {
         var operationMatch = Regex.Match(query, @"^\s*(query|mutation|subscription)\s+(\w+)?", RegexOptions.IgnoreCase);
-        
+
         return new OperationInfo
         {
-            Type = operationMatch.Success ? operationMatch.Groups[1].Value.ToLower() : "query",
-            Name = operationMatch.Success && operationMatch.Groups[2].Success ? 
-                operationMatch.Groups[2].Value : "anonymous",
+            Type = operationMatch.Success
+                ? operationMatch.Groups[1]
+                    .Value.ToLower()
+                : "query",
+            Name = operationMatch.Success && operationMatch.Groups[2].Success ? operationMatch.Groups[2].Value : "anonymous",
             HasVariables = query.Contains("$"),
             HasFragments = Regex.IsMatch(query, @"fragment\s+\w+", RegexOptions.IgnoreCase),
             HasDirectives = query.Contains("@")
@@ -186,15 +202,19 @@ public static class QueryAnalyzerTools
     private static FieldAnalysis AnalyzeFields(string query)
     {
         var fieldMatches = Regex.Matches(query, @"\b\w+(?=\s*[{(]|\s*$)", RegexOptions.IgnoreCase);
-        var fields = fieldMatches.Cast<Match>().Select(m => m.Value).ToList();
-        
+        var fields = fieldMatches.Cast<Match>()
+            .Select(m => m.Value)
+            .ToList();
+
         var depth = CalculateMaxDepth(query);
-        var nestedSelections = Regex.Matches(query, @"\{[^}]*\{", RegexOptions.IgnoreCase).Count;
+        var nestedSelections = Regex.Matches(query, @"\{[^}]*\{", RegexOptions.IgnoreCase)
+            .Count;
 
         return new FieldAnalysis
         {
             TotalFields = fields.Count,
-            UniqueFields = fields.Distinct().Count(),
+            UniqueFields = fields.Distinct()
+                .Count(),
             NestedSelections = nestedSelections,
             MaxDepth = depth
         };
@@ -206,22 +226,24 @@ public static class QueryAnalyzerTools
         var score = 0;
 
         // Calculate base complexity
-        var fieldCount = Regex.Matches(query, @"\b\w+(?=\s*[{(]|\s*$)").Count;
+        var fieldCount = Regex.Matches(query, @"\b\w+(?=\s*[{(]|\s*$)")
+            .Count;
         score += fieldCount;
 
         var depth = CalculateMaxDepth(query);
         score += depth * 2;
 
-        var listFields = Regex.Matches(query, @"\[\s*\w+").Count;
+        var listFields = Regex.Matches(query, @"\[\s*\w+")
+            .Count;
         score += listFields * 3;
 
         // Check for potential issues
         if (depth > 10)
             issues.Add($"Very deep nesting detected ({depth} levels)");
-        
+
         if (fieldCount > 50)
             issues.Add($"High field count ({fieldCount} fields)");
-        
+
         if (listFields > 5)
             issues.Add($"Multiple list selections ({listFields} lists)");
 
@@ -257,7 +279,8 @@ public static class QueryAnalyzerTools
             warnings.Add("List queries without pagination detected - consider adding limits");
         }
 
-        var fieldCount = Regex.Matches(query, @"\b\w+(?=\s*[{(]|\s*$)").Count;
+        var fieldCount = Regex.Matches(query, @"\b\w+(?=\s*[{(]|\s*$)")
+            .Count;
         if (fieldCount > 30)
         {
             recommendations.Add("Consider breaking large queries into smaller, focused queries");
@@ -318,7 +341,7 @@ public static class QueryAnalyzerTools
     {
         var maxDepth = 0;
         var currentDepth = 0;
-        
+
         foreach (var c in query)
         {
             if (c == '{')
@@ -331,7 +354,7 @@ public static class QueryAnalyzerTools
                 currentDepth--;
             }
         }
-        
+
         return maxDepth;
     }
 
@@ -342,8 +365,9 @@ public static class QueryAnalyzerTools
 
         foreach (var type in types.EnumerateArray())
         {
-            if (type.TryGetProperty("name", out var name) && 
-                name.GetString()?.Equals(typeName, StringComparison.OrdinalIgnoreCase) == true)
+            if (type.TryGetProperty("name", out var name) &&
+                name.GetString()
+                    ?.Equals(typeName, StringComparison.OrdinalIgnoreCase) == true)
             {
                 return type;
             }
@@ -378,7 +402,8 @@ public static class QueryAnalyzerTools
         {
             foreach (var field in fields.EnumerateArray())
             {
-                var name = field.GetProperty("name").GetString();
+                var name = field.GetProperty("name")
+                    .GetString();
                 if (requestedFields.Contains(name))
                     continue;
 
@@ -402,7 +427,8 @@ public static class QueryAnalyzerTools
 
     private static bool IsScalar(JsonElement typeElement)
     {
-        var kind = typeElement.GetProperty("kind").GetString();
+        var kind = typeElement.GetProperty("kind")
+            .GetString();
         if (kind == "ENUM")
             return true;
 
@@ -412,7 +438,8 @@ public static class QueryAnalyzerTools
 
     private static string GetNamedType(JsonElement typeElement)
     {
-        var kind = typeElement.GetProperty("kind").GetString();
+        var kind = typeElement.GetProperty("kind")
+            .GetString();
         return kind switch
         {
             "NON_NULL" => typeElement.TryGetProperty("ofType", out var ofType) ? GetNamedType(ofType) : string.Empty,

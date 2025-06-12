@@ -4,13 +4,15 @@ This document demonstrates how to use the comprehensive GraphQL expert prompts a
 
 ## 🚀 What Are MCP Prompts?
 
-MCP prompts are intelligent, parameterized templates that provide expert-level guidance and assistance. Unlike tools that perform actions, prompts provide contextual expertise and generate guidance based on your specific situation.
+MCP prompts are intelligent, parameterized templates that provide expert-level guidance and assistance. Unlike tools
+that perform actions, prompts provide contextual expertise and generate guidance based on your specific situation.
 
 ## 💡 Available GraphQL Expert Prompts
 
 ### 1. **Query Generation & Optimization**
 
 #### `GenerateQuery` - Expert Query Creation
+
 Get optimized GraphQL queries tailored to your requirements:
 
 ```json
@@ -22,12 +24,14 @@ Get optimized GraphQL queries tailored to your requirements:
 ```
 
 **Result**: Receives expert guidance on:
+
 - Optimized query structure with fragments
 - Performance considerations and field selection
 - Variable parameterization recommendations
 - Usage examples and best practices
 
 #### `AnalyzeSchema` - Schema Expert Analysis
+
 Get comprehensive schema analysis:
 
 ```json
@@ -39,14 +43,16 @@ Get comprehensive schema analysis:
 ```
 
 **Analysis Types:**
+
 - `structure` - Design patterns and organization
-- `performance` - N+1 problems and optimization opportunities  
+- `performance` - N+1 problems and optimization opportunities
 - `security` - DoS vulnerabilities and auth patterns
 - `evolution` - Breaking changes and migration planning
 
 ### 2. **Development Workflow Guidance**
 
 #### `DevelopmentWorkflow` - Phase-Specific Best Practices
+
 Get expert guidance for any development phase:
 
 ```json
@@ -58,12 +64,14 @@ Get expert guidance for any development phase:
 ```
 
 **Phases Covered:**
+
 - `planning` - Requirements analysis and schema design
 - `implementation` - Development patterns and quality assurance
 - `testing` - Testing strategies and automation
 - `deployment` - Production readiness and monitoring
 
 #### `DebuggingAssistant` - Expert Troubleshooting
+
 Get systematic debugging guidance:
 
 ```json
@@ -75,6 +83,7 @@ Get systematic debugging guidance:
 ```
 
 **Issue Types:**
+
 - `query-error` - Syntax and validation problems
 - `performance` - Slow queries and bottlenecks
 - `schema` - Type definition and resolver issues
@@ -83,6 +92,7 @@ Get systematic debugging guidance:
 ### 3. **Architecture & Design Guidance**
 
 #### `SchemaDesign` - Architecture Expert
+
 Get comprehensive schema design guidance:
 
 ```json
@@ -94,17 +104,20 @@ Get comprehensive schema design guidance:
 ```
 
 **Design Focus Areas:**
+
 - `new-schema` - Green field design principles
 - `refactoring` - Safe improvement strategies
 - `migration` - Version evolution and compatibility
 - `optimization` - Performance and structure improvements
 
 **Domain Expertise:**
+
 - E-commerce, Social Media, API Gateway, Microservices
 
 ### 4. **Testing Strategy & Implementation**
 
 #### `TestingStrategy` - Comprehensive Testing Guidance
+
 Get expert testing strategies:
 
 ```json
@@ -116,6 +129,7 @@ Get expert testing strategies:
 ```
 
 **Testing Types:**
+
 - `unit` - Resolver and schema testing
 - `integration` - End-to-end query flows
 - `performance` - Load and complexity testing
@@ -124,6 +138,7 @@ Get expert testing strategies:
 ### 5. **Documentation & Learning**
 
 #### `DocumentationGuide` - Professional Documentation
+
 Create comprehensive API documentation:
 
 ```json
@@ -135,12 +150,14 @@ Create comprehensive API documentation:
 ```
 
 **Documentation Types:**
+
 - `api-reference` - Complete API documentation
 - `getting-started` - Onboarding guides
-- `best-practices` - Implementation guidelines  
+- `best-practices` - Implementation guidelines
 - `migration` - Version migration guides
 
 #### `TrainingMaterial` - Team Education
+
 Generate training curricula:
 
 ```json
@@ -153,6 +170,7 @@ Generate training curricula:
 ```
 
 **Training Levels:**
+
 - `beginner` - GraphQL fundamentals
 - `intermediate` - Implementation and integration
 - `advanced` - Architecture and optimization
@@ -161,6 +179,7 @@ Generate training curricula:
 ## 🎯 Real-World Usage Examples
 
 ### Example 1: New Project Setup
+
 ```json
 // Step 1: Get architecture guidance
 {
@@ -188,6 +207,7 @@ Generate training curricula:
 ```
 
 ### Example 2: Performance Optimization
+
 ```json
 // Step 1: Analyze schema for performance issues
 {
@@ -213,6 +233,7 @@ Generate training curricula:
 ```
 
 ### Example 3: Team Training
+
 ```json
 // Step 1: Create training material
 {
@@ -241,6 +262,7 @@ The prompts work seamlessly with the server's tools:
 3. **Iterate and improve** → Refine based on results
 
 For example:
+
 1. Use `AnalyzeSchema` prompt to identify performance issues
 2. Use `analyze_dataloader_patterns` tool to get specific metrics
 3. Use `GenerateQuery` prompt to get optimized query patterns
@@ -253,4 +275,5 @@ For example:
 3. **Start with a simple prompt** like `GenerateQuery` to get familiar
 4. **Combine prompts and tools** for comprehensive GraphQL development
 
-The prompts transform your MCP client into a GraphQL expert consultant, providing exactly the guidance you need at every stage of your GraphQL journey!
+The prompts transform your MCP client into a GraphQL expert consultant, providing exactly the guidance you need at every
+stage of your GraphQL journey!

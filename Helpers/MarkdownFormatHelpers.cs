@@ -23,7 +23,7 @@ public static class MarkdownFormatHelpers
               Environment.NewLine + Environment.NewLine
             : string.Empty;
     }
-    
+
     /// <summary>
     /// Formats a collection of items into a bulleted list with optional formatting for each item
     /// </summary>
@@ -36,10 +36,10 @@ public static class MarkdownFormatHelpers
         var list = items.ToList();
         if (!list.Any())
             return string.Empty;
-            
+
         return string.Join(Environment.NewLine, list.Select(item => $"- {formatter(item)}"));
     }
-    
+
     /// <summary>
     /// Creates a markdown header with the specified level
     /// </summary>
@@ -51,7 +51,7 @@ public static class MarkdownFormatHelpers
         level = Math.Clamp(level, 1, 6);
         return $"{new string('#', level)} {text}{Environment.NewLine}{Environment.NewLine}";
     }
-    
+
     /// <summary>
     /// Formats key-value pairs as markdown metadata
     /// </summary>
@@ -64,6 +64,7 @@ public static class MarkdownFormatHelpers
         {
             sb.AppendLine($"**{kvp.Key}:** {kvp.Value}");
         }
+
         sb.AppendLine();
         return sb.ToString();
     }

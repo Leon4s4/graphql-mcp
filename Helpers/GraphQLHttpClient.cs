@@ -23,12 +23,12 @@ public class GraphQlHttpClient : IGraphQlHttpClient
     public HttpClient CreateClient(string? headers = null, TimeSpan? timeout = null)
     {
         var client = _httpClientFactory.CreateClient();
-        
+
         if (timeout.HasValue)
         {
             client.Timeout = timeout.Value;
         }
-        
+
         HttpClientHelper.ConfigureHeaders(client, headers);
         return client;
     }
@@ -42,12 +42,12 @@ public class GraphQlHttpClient : IGraphQlHttpClient
     public HttpClient CreateClient(Dictionary<string, string>? headers, TimeSpan? timeout = null)
     {
         var client = _httpClientFactory.CreateClient();
-        
+
         if (timeout.HasValue)
         {
             client.Timeout = timeout.Value;
         }
-        
+
         HttpClientHelper.ConfigureHeaders(client, headers);
         return client;
     }

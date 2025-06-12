@@ -10,14 +10,16 @@ namespace Graphql.Mcp.Helpers;
 public sealed class EndpointRegistryService
 {
     private static readonly Lazy<EndpointRegistryService> EndpointRegistryServiceInstance = new(() => new EndpointRegistryService());
-    
+
     private readonly ConcurrentDictionary<string, DynamicToolInfo> _dynamicTools = new();
     private readonly ConcurrentDictionary<string, GraphQlEndpointInfo> _endpoints = new();
     private readonly ConcurrentDictionary<string, List<string>> _endpointToTools = new();
 
     public static EndpointRegistryService Instance => EndpointRegistryServiceInstance.Value;
 
-    private EndpointRegistryService() { }
+    private EndpointRegistryService()
+    {
+    }
 
     #region Endpoint Management
 
@@ -27,7 +29,7 @@ public sealed class EndpointRegistryService
         {
             RemoveToolsForEndpointInternal(endpointName);
         }
-        
+
         endpointInfo.SchemaContent = LoadSchemaContentFromFile();
         _endpoints[endpointName] = endpointInfo;
     }
@@ -37,7 +39,7 @@ public sealed class EndpointRegistryService
         var schemaPath = Environment.GetEnvironmentVariable("SCHEMA");
         if (!string.IsNullOrWhiteSpace(schemaPath) && File.Exists(schemaPath))
             return File.ReadAllText(schemaPath);
-        
+
         return null;
     }
 
@@ -80,6 +82,7 @@ public sealed class EndpointRegistryService
                     toolsRemoved++;
                 }
             }
+
             _endpointToTools.TryRemove(endpointName, out _);
         }
 

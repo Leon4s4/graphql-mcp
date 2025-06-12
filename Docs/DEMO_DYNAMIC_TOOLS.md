@@ -4,7 +4,9 @@ This demonstration shows how the new **automatic API-to-tools mapping** feature 
 
 ## Overview
 
-The dynamic tool generation feature can introspect any GraphQL endpoint and automatically create individual MCP tools for each available query and mutation. This means you can connect to any GraphQL API and immediately have all its operations available as separate MCP tools.
+The dynamic tool generation feature can introspect any GraphQL endpoint and automatically create individual MCP tools
+for each available query and mutation. This means you can connect to any GraphQL API and immediately have all its
+operations available as separate MCP tools.
 
 ## Step-by-Step Demo
 
@@ -23,6 +25,7 @@ Use the `registerEndpoint` tool to add a GraphQL API. For example, with a public
 
 **Tool:** `registerEndpoint`
 **Parameters:**
+
 ```json
 {
   "endpoint": "https://countries.trevorblades.com/",
@@ -33,6 +36,7 @@ Use the `registerEndpoint` tool to add a GraphQL API. For example, with a public
 ```
 
 This will:
+
 - Introspect the Countries GraphQL schema
 - Generate individual tools for each query operation
 - Name them with the "country" prefix
@@ -44,6 +48,7 @@ Use the `listDynamicTools` tool to see what was created:
 **Tool:** `listDynamicTools`
 
 Expected output:
+
 ```
 # Registered Dynamic Tools
 
@@ -63,6 +68,7 @@ Now you can execute any of the generated tools using `executeDynamicOperation`:
 
 **Tool:** `executeDynamicOperation`
 **Parameters:**
+
 ```json
 {
   "toolName": "country_query_countries",
@@ -71,6 +77,7 @@ Now you can execute any of the generated tools using `executeDynamicOperation`:
 ```
 
 Or with parameters:
+
 ```json
 {
   "toolName": "country_query_country", 
@@ -84,6 +91,7 @@ You can register multiple endpoints. For example, a local development API:
 
 **Tool:** `registerEndpoint`
 **Parameters:**
+
 ```json
 {
   "endpoint": "http://localhost:4000/graphql",
@@ -99,6 +107,7 @@ If the GraphQL schema changes, refresh the tools:
 
 **Tool:** `refreshEndpointTools`
 **Parameters:**
+
 ```json
 {
   "endpointName": "countries"
@@ -122,8 +131,9 @@ Register the GitHub API (requires authentication):
 ```
 
 Generated tools would include:
+
 - `gh_query_viewer` - Get authenticated user
-- `gh_query_repository` - Get repository information  
+- `gh_query_repository` - Get repository information
 - `gh_query_organization` - Get organization details
 - `gh_query_user` - Get user profile
 - etc.
@@ -141,6 +151,7 @@ Generated tools would include:
 ```
 
 Generated tools could include:
+
 - **Queries:** `shop_query_products`, `shop_query_orders`, `shop_query_customers`
 - **Mutations:** `shop_mutation_createOrder`, `shop_mutation_updateProduct`, etc.
 
@@ -149,7 +160,7 @@ Generated tools could include:
 1. **Zero Manual Configuration**: No need to manually create tools for each GraphQL operation
 2. **Instant API Integration**: Any GraphQL API becomes immediately usable through MCP
 3. **Type-Safe Operations**: All GraphQL types and parameters are preserved
-4. **Multi-API Support**: Can work with multiple GraphQL endpoints simultaneously  
+4. **Multi-API Support**: Can work with multiple GraphQL endpoints simultaneously
 5. **Authentication Support**: Handles authenticated APIs through custom headers
 6. **Dynamic Updates**: Tools stay in sync with schema changes
 
@@ -163,4 +174,5 @@ The automatic tool generation:
 4. **Provides Execution Engine**: `ExecuteDynamicOperation` handles all generated tool execution
 5. **Manages Tool Lifecycle**: Registration, updates, and cleanup are all handled automatically
 
-This feature transforms the GraphQL MCP server from a general-purpose toolkit into a dynamic, auto-configuring interface that can provide instant MCP access to any GraphQL API.
+This feature transforms the GraphQL MCP server from a general-purpose toolkit into a dynamic, auto-configuring interface
+that can provide instant MCP access to any GraphQL API.

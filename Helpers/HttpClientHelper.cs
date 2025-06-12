@@ -21,12 +21,12 @@ public static class HttpClientHelper
     {
         // Create a new HttpClient that will be properly disposed by the caller
         var client = new HttpClient();
-        
+
         if (timeout.HasValue)
         {
             client.Timeout = timeout.Value;
         }
-        
+
         ConfigureHeaders(client, headers);
         return client;
     }
@@ -41,12 +41,12 @@ public static class HttpClientHelper
     {
         // Create a new HttpClient that will be properly disposed by the caller
         var client = new HttpClient();
-        
+
         if (timeout.HasValue)
         {
             client.Timeout = timeout.Value;
         }
-        
+
         ConfigureHeaders(client, headers);
         return client;
     }
@@ -87,7 +87,7 @@ public static class HttpClientHelper
             // Skip content headers as they should be set on the content object, not request headers
             if (IsContentHeader(header.Key))
                 continue;
-            
+
             try
             {
                 client.DefaultRequestHeaders.Add(header.Key, header.Value);
@@ -151,12 +151,12 @@ public static class HttpClientHelper
     public static async Task<GraphQlResponse> ExecuteGraphQlRequestAsync(string endpoint, object requestBody, Dictionary<string, string>? headers = null, TimeSpan? timeout = null)
     {
         HttpResponseMessage? response = null;
-        
+
         try
         {
             using var client = CreateStaticClient(headers, timeout);
             var content = CreateGraphQlContent(requestBody);
-            
+
             // Validate endpoint URL
             if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
             {
@@ -165,12 +165,12 @@ public static class HttpClientHelper
 
             // Execute the request
             response = await client.PostAsync(endpoint, content);
-            
+
             // Ensure success status code - this will throw for non-success status codes
             response.EnsureSuccessStatusCode();
-            
+
             var responseContent = await response.Content.ReadAsStringAsync();
-            
+
             // Parse and validate GraphQL response
             return ParseGraphQlResponse(responseContent);
         }
@@ -186,7 +186,7 @@ public static class HttpClientHelper
             {
                 // Ignore errors when reading error content
             }
-            
+
             return GraphQlResponse.HttpError(response.StatusCode, response.ReasonPhrase ?? "Unknown error", errorContent);
         }
         catch (HttpRequestException ex)
@@ -224,15 +224,15 @@ public static class HttpClientHelper
         {
             using var document = JsonDocument.Parse(responseContent);
             var root = document.RootElement;
-            
+
             // Check for GraphQL errors
-            if (root.TryGetProperty("errors", out var errors) && 
-                errors.ValueKind == JsonValueKind.Array && 
+            if (root.TryGetProperty("errors", out var errors) &&
+                errors.ValueKind == JsonValueKind.Array &&
                 errors.GetArrayLength() > 0)
             {
                 return GraphQlResponse.GraphQlErrors(responseContent);
             }
-            
+
             return GraphQlResponse.Success(responseContent);
         }
         catch (JsonException)
@@ -272,7 +272,9 @@ public class GraphQlResponse
     public string? ErrorMessage { get; private set; }
     public HttpStatusCode? HttpStatusCode { get; private set; }
 
-    private GraphQlResponse() { }
+    private GraphQlResponse()
+    {
+    }
 
     public static GraphQlResponse Success(string content) => new()
     {
@@ -337,7 +339,7 @@ public class GraphQlResponse
         {
             using var document = JsonDocument.Parse(Content!);
             var formatted = JsonSerializer.Serialize(document, new JsonSerializerOptions { WriteIndented = true });
-            
+
             var result = new StringBuilder();
             result.AppendLine("# GraphQL Query Result\n");
             result.AppendLine("✅ **Status:** Success\n");
@@ -345,7 +347,7 @@ public class GraphQlResponse
             result.AppendLine("```json");
             result.AppendLine(formatted);
             result.AppendLine("```");
-            
+
             return result.ToString();
         }
         catch
@@ -367,7 +369,7 @@ public class GraphQlResponse
         result.AppendLine("3. **Check firewall settings** - Are there any blocked ports?");
         result.AppendLine("4. **Validate DNS resolution** - Does the hostname resolve correctly?");
         result.AppendLine("5. **Review authentication** - Are the required headers/tokens provided?");
-        
+
         return result.ToString();
     }
 
@@ -377,7 +379,7 @@ public class GraphQlResponse
         result.AppendLine("# GraphQL HTTP Error\n");
         result.AppendLine($"❌ **Status:** {ErrorMessage}\n");
         result.AppendLine("## Error Details");
-        
+
         if (!string.IsNullOrEmpty(Content))
         {
             try
@@ -393,7 +395,7 @@ public class GraphQlResponse
                 result.AppendLine($"```\n{Content}\n```");
             }
         }
-        
+
         result.AppendLine("\n## Troubleshooting Steps");
         result.AppendLine(HttpStatusCode switch
         {
@@ -405,7 +407,7 @@ public class GraphQlResponse
             System.Net.HttpStatusCode.ServiceUnavailable => "- **Service unavailable** - The server may be temporarily down",
             _ => "- **Check server status** - Verify the GraphQL service is running properly"
         });
-        
+
         return result.ToString();
     }
 
@@ -415,7 +417,7 @@ public class GraphQlResponse
         {
             using var document = JsonDocument.Parse(Content!);
             var formatted = JsonSerializer.Serialize(document, new JsonSerializerOptions { WriteIndented = true });
-            
+
             var result = new StringBuilder();
             result.AppendLine("# GraphQL Query Errors\n");
             result.AppendLine("❌ **Status:** GraphQL Errors Present\n");
@@ -423,7 +425,7 @@ public class GraphQlResponse
             result.AppendLine("```json");
             result.AppendLine(formatted);
             result.AppendLine("```");
-            
+
             return result.ToString();
         }
         catch
@@ -444,7 +446,7 @@ public class GraphQlResponse
         result.AppendLine("2. **Check the query syntax** - Ensure valid GraphQL");
         result.AppendLine("3. **Verify endpoint configuration** - Check URL and headers");
         result.AppendLine("4. **Report the issue** - If the problem persists, report it as a bug");
-        
+
         return result.ToString();
     }
 }

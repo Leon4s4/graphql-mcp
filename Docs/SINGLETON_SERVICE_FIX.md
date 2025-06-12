@@ -2,7 +2,10 @@
 
 ## Problem Solved
 
-The original issue was that `McpServerToolType` classes are independent static classes that are **not kept alive between MCP tool calls**. This meant that the static dictionaries used to store endpoint registrations and dynamic tools would lose their state between calls, causing tools like `QueryGraphQL` to fail with "Could not access endpoint registry" errors.
+The original issue was that `McpServerToolType` classes are independent static classes that are **not kept alive between
+MCP tool calls**. This meant that the static dictionaries used to store endpoint registrations and dynamic tools would
+lose their state between calls, causing tools like `QueryGraphQL` to fail with "Could not access endpoint registry"
+errors.
 
 ## Root Cause
 
@@ -13,7 +16,8 @@ private static readonly Dictionary<string, GraphQLEndpointInfo> _endpoints = new
 private static readonly Dictionary<string, List<string>> _endpointToTools = new();
 ```
 
-Since MCP tool classes are stateless and recreated for each call, these static fields would not maintain their state across different tool invocations.
+Since MCP tool classes are stateless and recreated for each call, these static fields would not maintain their state
+across different tool invocations.
 
 ## Solution: Singleton Service Pattern
 
@@ -64,26 +68,31 @@ builder.Services.AddSingleton<EndpointRegistryService>(provider => EndpointRegis
 ## Key Benefits
 
 ### ✅ **State Persistence**
+
 - Endpoint registrations now persist across all MCP tool calls
 - Dynamic tools remain available throughout the server lifetime
 - No more "Could not access endpoint registry" errors
 
 ### ✅ **Thread Safety**
+
 - All operations are protected with locks to prevent race conditions
 - Safe for concurrent access from multiple MCP tool calls
 
 ### ✅ **Clean Architecture**
+
 - Separation of concerns: data persistence vs. tool logic
 - Public API through well-defined methods
 - No more reflection-based private field access
 
 ### ✅ **Dependency Injection Ready**
+
 - Properly registered as a singleton service
 - Can be injected into other services if needed
 
 ## API Changes
 
 ### Before (Static Fields)
+
 ```csharp
 // Direct access to static dictionaries
 if (!_endpoints.ContainsKey(endpointName)) { ... }
@@ -92,6 +101,7 @@ _dynamicTools[toolName] = toolInfo;
 ```
 
 ### After (Singleton Service)
+
 ```csharp
 // Clean API through singleton service
 if (!Registry.IsEndpointRegistered(endpointName)) { ... }
@@ -104,6 +114,7 @@ Registry.RegisterDynamicTool(toolName, toolInfo);
 The singleton service provides these public methods:
 
 ### Endpoint Management
+
 - `RegisterEndpoint(endpointName, endpointInfo)`
 - `GetEndpointInfo(endpointName)`
 - `IsEndpointRegistered(endpointName)`
@@ -111,6 +122,7 @@ The singleton service provides these public methods:
 - `RemoveEndpoint(endpointName, out toolsRemoved)`
 
 ### Dynamic Tool Management
+
 - `RegisterDynamicTool(toolName, toolInfo)`
 - `GetDynamicTool(toolName)`
 - `GetAllDynamicTools()`
@@ -131,25 +143,27 @@ The singleton service provides these public methods:
 ✅ **Server Start**: Server starts successfully  
 ✅ **State Persistence**: Endpoint registrations persist across tool calls  
 ✅ **Thread Safety**: Concurrent access is protected  
-✅ **API Consistency**: Clean public API for accessing data  
+✅ **API Consistency**: Clean public API for accessing data
 
 ## Files Modified
 
 1. **`Tools/EndpointRegistryService.cs`** (NEW)
-   - Thread-safe singleton service for data persistence
-   - Clean public API for endpoint and tool management
+    - Thread-safe singleton service for data persistence
+    - Clean public API for endpoint and tool management
 
 2. **`Tools/DynamicToolRegistry.cs`** (UPDATED)
-   - Removed static dictionaries
-   - Updated all methods to use singleton service
-   - Removed old class definitions (moved to service)
+    - Removed static dictionaries
+    - Updated all methods to use singleton service
+    - Removed old class definitions (moved to service)
 
 3. **`Program.cs`** (UPDATED)
-   - Registered singleton service in DI container
+    - Registered singleton service in DI container
 
 4. **`Tools/QueryGraphQLMcpTool.cs`** (UPDATED)
-   - Updated to use new public API instead of reflection
+    - Updated to use new public API instead of reflection
 
 ## Conclusion
 
-The singleton service pattern ensures that endpoint registrations and dynamic tools persist for the entire lifetime of the MCP server, solving the state persistence issue while maintaining thread safety and clean architecture. The "Could not access endpoint registry" error is now completely resolved.
+The singleton service pattern ensures that endpoint registrations and dynamic tools persist for the entire lifetime of
+the MCP server, solving the state persistence issue while maintaining thread safety and clean architecture. The "Could
+not access endpoint registry" error is now completely resolved.

@@ -14,145 +14,148 @@ public static class QueryValidationTools
     public static async Task<string> TestQuery(
         [Description("GraphQL query to test")] string query,
         [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("Variables as JSON (optional)")] string? variables = null,
-        [Description("HTTP headers as JSON object (optional)")] string? headers = null,
-        [Description("Validate query syntax only")] bool syntaxCheckOnly = false)
+        [Description("Variables as JSON (optional)")]
+        string? variables = null,
+        [Description("HTTP headers as JSON object (optional)")]
+        string? headers = null,
+        [Description("Validate query syntax only")]
+        bool syntaxCheckOnly = false)
     {
-        
-            var result = new StringBuilder();
-            result.AppendLine("# GraphQL Query Test Report\n");
+        var result = new StringBuilder();
+        result.AppendLine("# GraphQL Query Test Report\n");
 
-            // 1. Syntax Validation
-            var syntaxErrors = ValidateQuerySyntax(query);
-            result.AppendLine("## Syntax Validation");
-            if (syntaxErrors.Any())
+        // 1. Syntax Validation
+        var syntaxErrors = ValidateQuerySyntax(query);
+        result.AppendLine("## Syntax Validation");
+        if (syntaxErrors.Any())
+        {
+            result.AppendLine("❌ **Status:** Syntax errors found\n");
+            result.AppendLine("**Errors:**");
+            foreach (var error in syntaxErrors)
             {
-                result.AppendLine("❌ **Status:** Syntax errors found\n");
+                result.AppendLine($"- {error}");
+            }
+
+            result.AppendLine();
+        }
+        else
+        {
+            result.AppendLine("✅ **Status:** Syntax is valid\n");
+        }
+
+        // If syntax-only check or syntax errors found, return early
+        if (syntaxCheckOnly || syntaxErrors.Any())
+        {
+            return result.ToString();
+        }
+
+        // 2. Schema Validation (against endpoint)
+        result.AppendLine("## Schema Validation");
+        try
+        {
+            var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
+            var schemaErrors = ValidateQueryAgainstSchema(query, schemaJson);
+
+            if (schemaErrors.Any())
+            {
+                result.AppendLine("❌ **Status:** Schema validation errors\n");
                 result.AppendLine("**Errors:**");
-                foreach (var error in syntaxErrors)
+                foreach (var error in schemaErrors)
                 {
                     result.AppendLine($"- {error}");
                 }
+
                 result.AppendLine();
             }
             else
             {
-                result.AppendLine("✅ **Status:** Syntax is valid\n");
+                result.AppendLine("✅ **Status:** Query is valid against schema\n");
+            }
+        }
+        catch (Exception ex)
+        {
+            result.AppendLine($"⚠️ **Status:** Could not validate against schema: {ex.Message}\n");
+        }
+
+        // 3. Execution Test
+        result.AppendLine("## Execution Test");
+        try
+        {
+            var executionResult = await ExecuteTestQuery(endpoint, query, variables, headers);
+            result.AppendLine(executionResult);
+        }
+        catch (Exception ex)
+        {
+            result.AppendLine($"❌ **Status:** Execution failed: {ex.Message}\n");
+        }
+
+        // 4. Performance Analysis
+        result.AppendLine("## Quick Performance Check");
+        var performanceWarnings = AnalyzeQueryPerformance(query);
+        if (performanceWarnings.Any())
+        {
+            result.AppendLine("⚠️ **Performance Warnings:**");
+            foreach (var warning in performanceWarnings)
+            {
+                result.AppendLine($"- {warning}");
             }
 
-            // If syntax-only check or syntax errors found, return early
-            if (syntaxCheckOnly || syntaxErrors.Any())
-            {
-                return result.ToString();
-            }
+            result.AppendLine();
+        }
+        else
+        {
+            result.AppendLine("✅ **Performance:** No obvious performance issues detected\n");
+        }
 
-            // 2. Schema Validation (against endpoint)
-            result.AppendLine("## Schema Validation");
-            try
-            {
-                var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
-                var schemaErrors = ValidateQueryAgainstSchema(query, schemaJson);
-                
-                if (schemaErrors.Any())
-                {
-                    result.AppendLine("❌ **Status:** Schema validation errors\n");
-                    result.AppendLine("**Errors:**");
-                    foreach (var error in schemaErrors)
-                    {
-                        result.AppendLine($"- {error}");
-                    }
-                    result.AppendLine();
-                }
-                else
-                {
-                    result.AppendLine("✅ **Status:** Query is valid against schema\n");
-                }
-            }
-            catch (Exception ex)
-            {
-                result.AppendLine($"⚠️ **Status:** Could not validate against schema: {ex.Message}\n");
-            }
-
-            // 3. Execution Test
-            result.AppendLine("## Execution Test");
-            try
-            {
-                var executionResult = await ExecuteTestQuery(endpoint, query, variables, headers);
-                result.AppendLine(executionResult);
-            }
-            catch (Exception ex)
-            {
-                result.AppendLine($"❌ **Status:** Execution failed: {ex.Message}\n");
-            }
-
-            // 4. Performance Analysis
-            result.AppendLine("## Quick Performance Check");
-            var performanceWarnings = AnalyzeQueryPerformance(query);
-            if (performanceWarnings.Any())
-            {
-                result.AppendLine("⚠️ **Performance Warnings:**");
-                foreach (var warning in performanceWarnings)
-                {
-                    result.AppendLine($"- {warning}");
-                }
-                result.AppendLine();
-            }
-            else
-            {
-                result.AppendLine("✅ **Performance:** No obvious performance issues detected\n");
-            }
-
-            return result.ToString();
-       
+        return result.ToString();
     }
 
     [McpServerTool, Description("Validate GraphQL query syntax and structure")]
     public static string ValidateQuery([Description("GraphQL query to validate")] string query)
     {
-       
-            var result = new StringBuilder();
-            result.AppendLine("# GraphQL Query Validation Report\n");
+        var result = new StringBuilder();
+        result.AppendLine("# GraphQL Query Validation Report\n");
 
-            var errors = ValidateQuerySyntax(query);
-            
-            if (errors.Any())
-            {
-                result.AppendLine("## ❌ Validation Failed\n");
-                result.AppendLine("**Syntax Errors:**");
-                foreach (var error in errors)
-                {
-                    result.AppendLine($"- {error}");
-                }
+        var errors = ValidateQuerySyntax(query);
 
-                result.AppendLine("\n## Suggestions");
-                var suggestions = GetValidationSuggestions(query, errors);
-                foreach (var suggestion in suggestions)
-                {
-                    result.AppendLine($"- {suggestion}");
-                }
-            }
-            else
+        if (errors.Any())
+        {
+            result.AppendLine("## ❌ Validation Failed\n");
+            result.AppendLine("**Syntax Errors:**");
+            foreach (var error in errors)
             {
-                result.AppendLine("## ✅ Validation Passed\n");
-                result.AppendLine("The query syntax is valid.");
-                
-                // Add additional analysis for valid queries
-                var analysis = AnalyzeValidQuery(query);
-                result.AppendLine("\n## Query Analysis");
-                result.AppendLine($"- **Operation Type:** {analysis.OperationType}");
-                result.AppendLine($"- **Field Count:** {analysis.FieldCount}");
-                result.AppendLine($"- **Max Depth:** {analysis.MaxDepth}");
-                result.AppendLine($"- **Has Variables:** {analysis.HasVariables}");
-                result.AppendLine($"- **Has Fragments:** {analysis.HasFragments}");
+                result.AppendLine($"- {error}");
             }
 
-            return result.ToString();
+            result.AppendLine("\n## Suggestions");
+            var suggestions = GetValidationSuggestions(query, errors);
+            foreach (var suggestion in suggestions)
+            {
+                result.AppendLine($"- {suggestion}");
+            }
+        }
+        else
+        {
+            result.AppendLine("## ✅ Validation Passed\n");
+            result.AppendLine("The query syntax is valid.");
+
+            // Add additional analysis for valid queries
+            var analysis = AnalyzeValidQuery(query);
+            result.AppendLine("\n## Query Analysis");
+            result.AppendLine($"- **Operation Type:** {analysis.OperationType}");
+            result.AppendLine($"- **Field Count:** {analysis.FieldCount}");
+            result.AppendLine($"- **Max Depth:** {analysis.MaxDepth}");
+            result.AppendLine($"- **Has Variables:** {analysis.HasVariables}");
+            result.AppendLine($"- **Has Fragments:** {analysis.HasFragments}");
+        }
+
+        return result.ToString();
     }
 
     private static List<string> ValidateQuerySyntax(string query)
     {
         var errors = new List<string>();
-        
+
         if (string.IsNullOrWhiteSpace(query))
         {
             errors.Add("Query is empty or null");
@@ -162,7 +165,7 @@ public static class QueryValidationTools
         // Check for balanced braces
         var braceCount = 0;
         var parenCount = 0;
-        
+
         foreach (var c in query)
         {
             switch (c)
@@ -172,23 +175,25 @@ public static class QueryValidationTools
                 case '(': parenCount++; break;
                 case ')': parenCount--; break;
             }
-            
+
             if (braceCount < 0)
             {
                 errors.Add("Unmatched closing brace '}'");
                 break;
             }
+
             if (parenCount < 0)
             {
                 errors.Add("Unmatched closing parenthesis ')'");
                 break;
             }
         }
-        
+
         if (braceCount > 0)
         {
             errors.Add($"Missing {braceCount} closing brace(s) '}}'");
         }
+
         if (parenCount > 0)
         {
             errors.Add($"Missing {parenCount} closing parenthesis ')'");
@@ -196,9 +201,9 @@ public static class QueryValidationTools
 
         // Check for basic GraphQL structure
         var trimmedQuery = query.Trim();
-        if (!trimmedQuery.StartsWith("query") && 
-            !trimmedQuery.StartsWith("mutation") && 
-            !trimmedQuery.StartsWith("subscription") && 
+        if (!trimmedQuery.StartsWith("query") &&
+            !trimmedQuery.StartsWith("mutation") &&
+            !trimmedQuery.StartsWith("subscription") &&
             !trimmedQuery.StartsWith("{") &&
             !trimmedQuery.StartsWith("fragment"))
         {
@@ -220,7 +225,8 @@ public static class QueryValidationTools
         var operationMatch = Regex.Match(query, @"^(?:query|mutation|subscription)\b\s*(\w+)?\s*(\(([^)]*)\))?\s*(?:@[\w]+)?\s*(?:\.\.\.[\w]+)?");
         if (operationMatch.Success)
         {
-            var declarations = operationMatch.Groups[1].Value.Split(',');
+            var declarations = operationMatch.Groups[1]
+                .Value.Split(',');
             foreach (var decl in declarations)
             {
                 var trimmed = decl.Trim();
@@ -237,11 +243,11 @@ public static class QueryValidationTools
     private static List<string> ValidateQueryAgainstSchema(string query, string schemaJson)
     {
         var errors = new List<string>();
-        
+
         try
         {
             var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
-            if (!schemaData.TryGetProperty("data", out var data) || 
+            if (!schemaData.TryGetProperty("data", out var data) ||
                 !data.TryGetProperty("__schema", out var schema))
             {
                 errors.Add("Invalid schema data received");
@@ -250,7 +256,7 @@ public static class QueryValidationTools
 
             // Extract field names from query
             var queryFields = ExtractFieldNames(query);
-            
+
             // Get schema types
             if (schema.TryGetProperty("types", out var types))
             {
@@ -272,7 +278,7 @@ public static class QueryValidationTools
                 // Check if query fields exist in schema
                 foreach (var fieldName in queryFields)
                 {
-                    if (!schemaFieldNames.Contains(fieldName) && 
+                    if (!schemaFieldNames.Contains(fieldName) &&
                         !IsMetaField(fieldName))
                     {
                         errors.Add($"Field '{fieldName}' does not exist in schema");
@@ -303,14 +309,14 @@ public static class QueryValidationTools
             stopwatch.Stop();
 
             var response = new StringBuilder();
-            
+
             if (result.IsSuccess)
             {
                 response.AppendLine($"✅ **Status:** Execution successful ({stopwatch.ElapsedMilliseconds}ms)");
-                
+
                 var responseData = JsonSerializer.Deserialize<JsonElement>(result.Content!);
-                if (responseData.TryGetProperty("errors", out var errors) && 
-                    errors.ValueKind == JsonValueKind.Array && 
+                if (responseData.TryGetProperty("errors", out var errors) &&
+                    errors.ValueKind == JsonValueKind.Array &&
                     errors.GetArrayLength() > 0)
                 {
                     response.AppendLine("\n⚠️ **GraphQL Errors:**");
@@ -358,7 +364,8 @@ public static class QueryValidationTools
         }
 
         // Check for potential N+1 problems
-        var fieldCount = Regex.Matches(query, @"\w+\s*{").Count;
+        var fieldCount = Regex.Matches(query, @"\w+\s*{")
+            .Count;
         if (fieldCount > 20)
         {
             warnings.Add($"High number of nested fields ({fieldCount}) may indicate N+1 query problems");
@@ -403,12 +410,15 @@ public static class QueryValidationTools
     private static QueryAnalysisResult AnalyzeValidQuery(string query)
     {
         var operationType = "query";
-        if (query.TrimStart().StartsWith("mutation", StringComparison.OrdinalIgnoreCase))
+        if (query.TrimStart()
+            .StartsWith("mutation", StringComparison.OrdinalIgnoreCase))
             operationType = "mutation";
-        else if (query.TrimStart().StartsWith("subscription", StringComparison.OrdinalIgnoreCase))
+        else if (query.TrimStart()
+                 .StartsWith("subscription", StringComparison.OrdinalIgnoreCase))
             operationType = "subscription";
 
-        var fieldCount = Regex.Matches(query, @"\b\w+\s*[{(:]").Count;
+        var fieldCount = Regex.Matches(query, @"\b\w+\s*[{(:]")
+            .Count;
         var maxDepth = CalculateMaxDepth(query);
         var hasVariables = query.Contains("$");
         var hasFragments = Regex.IsMatch(query, @"fragment\s+\w+", RegexOptions.IgnoreCase);
@@ -427,7 +437,7 @@ public static class QueryValidationTools
     {
         var fieldNames = new List<string>();
         var matches = Regex.Matches(query, @"\b(\w+)\s*[{(:]", RegexOptions.IgnoreCase);
-        
+
         foreach (Match match in matches)
         {
             var fieldName = match.Groups[1].Value;
@@ -437,14 +447,15 @@ public static class QueryValidationTools
             }
         }
 
-        return fieldNames.Distinct().ToList();
+        return fieldNames.Distinct()
+            .ToList();
     }
 
     private static bool IsMetaField(string fieldName)
     {
-        return fieldName.StartsWith("__") || 
-               fieldName == "schema" || 
-               fieldName == "type" || 
+        return fieldName.StartsWith("__") ||
+               fieldName == "schema" ||
+               fieldName == "type" ||
                fieldName == "typename";
     }
 
@@ -480,7 +491,8 @@ public static class QueryValidationTools
         switch (data.ValueKind)
         {
             case JsonValueKind.Object:
-                var propCount = data.EnumerateObject().Count();
+                var propCount = data.EnumerateObject()
+                    .Count();
                 return $"Object with {propCount} properties";
             case JsonValueKind.Array:
                 return $"Array with {data.GetArrayLength()} items";

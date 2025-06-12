@@ -18,6 +18,7 @@ public static class JsonHelpers
         {
             dictionary[property.Name] = JsonElementToObject(property.Value);
         }
+
         return dictionary;
     }
 
@@ -33,12 +34,14 @@ public static class JsonHelpers
             JsonValueKind.True => true,
             JsonValueKind.False => false,
             JsonValueKind.Null => null!,
-            JsonValueKind.Array => element.EnumerateArray().Select(JsonElementToObject).ToArray(),
+            JsonValueKind.Array => element.EnumerateArray()
+                .Select(JsonElementToObject)
+                .ToArray(),
             JsonValueKind.Object => JsonElementToDictionary(element),
             _ => element.ToString()
         };
     }
-    
+
     /// <summary>
     /// Parse a JSON string into a dictionary of string key-value pairs.
     /// Returns empty dictionary if input is null/empty.
@@ -48,10 +51,10 @@ public static class JsonHelpers
     public static (Dictionary<string, string> Headers, string? ErrorMessage) ParseHeadersJson(string? jsonString)
     {
         var headers = new Dictionary<string, string>();
-        
+
         if (string.IsNullOrEmpty(jsonString))
             return (headers, null);
-        
+
         try
         {
             headers = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString) ?? new();

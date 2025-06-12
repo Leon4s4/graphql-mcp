@@ -13,9 +13,12 @@ public static class QueryGraphQlMcpTool
 {
     [McpServerTool, Description("Execute GraphQL queries and mutations against registered endpoints")]
     public static async Task<string> QueryGraphQl(
-        [Description("GraphQL query or mutation to execute")] string query,
-        [Description("Name of the registered endpoint (use ListDynamicTools to see available endpoints)")] string endpointName,
-        [Description("Variables for the query as JSON object (optional)")] string? variables = null)
+        [Description("GraphQL query or mutation to execute")]
+        string query,
+        [Description("Name of the registered endpoint (use ListDynamicTools to see available endpoints)")]
+        string endpointName,
+        [Description("Variables for the query as JSON object (optional)")]
+        string? variables = null)
     {
         try
         {
@@ -68,13 +71,11 @@ public static class QueryGraphQlMcpTool
         {
             return $"Error executing GraphQL query: {ex.Message}";
         }
-      
     }
 
     private static bool IsMutation(string query)
     {
-        return System.Text.RegularExpressions.Regex.IsMatch(query, @"\bmutation\b", 
+        return System.Text.RegularExpressions.Regex.IsMatch(query, @"\bmutation\b",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
-
 }

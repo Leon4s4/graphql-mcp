@@ -12,10 +12,7 @@ builder.Services
     .WithStdioServerTransport()
     .WithToolsFromAssembly();
 
-builder.Services.AddHttpClient("GraphQLClient", client =>
-{
-    client.Timeout = TimeSpan.FromSeconds(30);
-});
+builder.Services.AddHttpClient("GraphQLClient", client => { client.Timeout = TimeSpan.FromSeconds(30); });
 
 builder.Services.AddSingleton<IGraphQlHttpClient, GraphQlHttpClient>();
 

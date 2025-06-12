@@ -12,7 +12,7 @@ public interface IGraphQlHttpClient
     /// <param name="timeout">Optional timeout override</param>
     /// <returns>Configured HttpClient</returns>
     HttpClient CreateClient(string? headers = null, TimeSpan? timeout = null);
-    
+
     /// <summary>
     /// Creates a configured HttpClient for GraphQL operations
     /// </summary>

@@ -9,35 +9,39 @@ public static class GraphQlPrompts
 {
     [McpServerPrompt, Description("Generate optimized GraphQL queries based on requirements and schema analysis")]
     public static string GenerateQuery(
-        [Description("What data you want to retrieve")] string dataRequirement,
-        [Description("GraphQL endpoint name (optional)")] string? endpointName = null,
-        [Description("Performance requirements (fast, normal, comprehensive)")] string performance = "normal",
-        [Description("Include related data (yes/no)")] string includeRelated = "yes")
+        [Description("What data you want to retrieve")]
+        string dataRequirement,
+        [Description("GraphQL endpoint name (optional)")]
+        string? endpointName = null,
+        [Description("Performance requirements (fast, normal, comprehensive)")]
+        string performance = "normal",
+        [Description("Include related data (yes/no)")]
+        string includeRelated = "yes")
     {
         var prompt = new StringBuilder();
-        
+
         prompt.AppendLine("# GraphQL Query Generation Assistant");
         prompt.AppendLine();
         prompt.AppendLine("You are an expert GraphQL developer. Generate an optimized GraphQL query based on these requirements:");
         prompt.AppendLine();
         prompt.AppendLine($"**Data Requirement:** {dataRequirement}");
-        
+
         if (!string.IsNullOrEmpty(endpointName))
         {
             prompt.AppendLine($"**Target Endpoint:** {endpointName}");
         }
-        
+
         prompt.AppendLine($"**Performance Level:** {performance}");
         prompt.AppendLine($"**Include Related Data:** {includeRelated}");
         prompt.AppendLine();
-        
+
         prompt.AppendLine("## Guidelines:");
         prompt.AppendLine("- Write efficient, well-structured GraphQL queries");
         prompt.AppendLine("- Use fragments for reusable field sets");
         prompt.AppendLine("- Consider query complexity and depth");
         prompt.AppendLine("- Include proper variable definitions");
         prompt.AppendLine("- Add helpful comments explaining the query structure");
-        
+
         if (performance == "fast")
         {
             prompt.AppendLine("- Prioritize minimal field selection for fast response");
@@ -48,45 +52,47 @@ public static class GraphQlPrompts
             prompt.AppendLine("- Include comprehensive field selection");
             prompt.AppendLine("- Consider pagination for large datasets");
         }
-        
+
         if (includeRelated == "yes")
         {
             prompt.AppendLine("- Include related/connected data where relevant");
             prompt.AppendLine("- Use proper relationship traversal");
         }
-        
+
         prompt.AppendLine();
         prompt.AppendLine("## Response Format:");
         prompt.AppendLine("1. Provide the complete GraphQL query");
         prompt.AppendLine("2. Explain the query structure and choices");
         prompt.AppendLine("3. Suggest any variables that should be parameterized");
         prompt.AppendLine("4. Include usage examples if helpful");
-        
+
         return prompt.ToString();
     }
 
     [McpServerPrompt, Description("Analyze and explain GraphQL schemas with best practices and recommendations")]
     public static string AnalyzeSchema(
-        [Description("What aspect to focus on (structure, performance, security, evolution)")] string focus = "structure",
+        [Description("What aspect to focus on (structure, performance, security, evolution)")]
+        string focus = "structure",
         [Description("GraphQL endpoint name")] string endpointName = "",
-        [Description("Specific type or field to analyze (optional)")] string? specificType = null)
+        [Description("Specific type or field to analyze (optional)")]
+        string? specificType = null)
     {
         var prompt = new StringBuilder();
-        
+
         prompt.AppendLine("# GraphQL Schema Analysis Assistant");
         prompt.AppendLine();
         prompt.AppendLine("You are a GraphQL schema expert. Analyze the provided GraphQL schema and provide insights based on the following criteria:");
         prompt.AppendLine();
         prompt.AppendLine($"**Analysis Focus:** {focus}");
         prompt.AppendLine($"**Endpoint:** {endpointName}");
-        
+
         if (!string.IsNullOrEmpty(specificType))
         {
             prompt.AppendLine($"**Specific Focus:** {specificType}");
         }
-        
+
         prompt.AppendLine();
-        
+
         switch (focus.ToLower())
         {
             case "structure":
@@ -97,7 +103,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Field naming conventions and consistency");
                 prompt.AppendLine("- Input type design and reusability");
                 break;
-                
+
             case "performance":
                 prompt.AppendLine("## Performance Analysis Focus:");
                 prompt.AppendLine("- Potential N+1 query problems");
@@ -106,7 +112,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Query complexity and depth concerns");
                 prompt.AppendLine("- DataLoader optimization opportunities");
                 break;
-                
+
             case "security":
                 prompt.AppendLine("## Security Analysis Focus:");
                 prompt.AppendLine("- Query complexity and DoS vulnerability");
@@ -115,7 +121,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Introspection and information disclosure");
                 prompt.AppendLine("- Input validation requirements");
                 break;
-                
+
             case "evolution":
                 prompt.AppendLine("## Evolution Analysis Focus:");
                 prompt.AppendLine("- Schema versioning and backward compatibility");
@@ -125,7 +131,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Client impact assessment");
                 break;
         }
-        
+
         prompt.AppendLine();
         prompt.AppendLine("## Response Format:");
         prompt.AppendLine("1. **Summary**: High-level findings and overall assessment");
@@ -133,18 +139,21 @@ public static class GraphQlPrompts
         prompt.AppendLine("3. **Recommendations**: Actionable improvements and best practices");
         prompt.AppendLine("4. **Implementation Notes**: How to implement suggested changes");
         prompt.AppendLine("5. **Priority Ranking**: Order recommendations by importance/impact");
-        
+
         return prompt.ToString();
     }
 
     [McpServerPrompt, Description("Debug GraphQL errors with context-aware troubleshooting guidance")]
     public static string DebuggingAssistant(
-        [Description("Type of issue (query-error, performance, schema, resolver)")] string issueType,
-        [Description("Severity level (critical, high, medium, low)")] string severity = "medium",
-        [Description("Environment context (development, staging, production)")] string environment = "development")
+        [Description("Type of issue (query-error, performance, schema, resolver)")]
+        string issueType,
+        [Description("Severity level (critical, high, medium, low)")]
+        string severity = "medium",
+        [Description("Environment context (development, staging, production)")]
+        string environment = "development")
     {
         var prompt = new StringBuilder();
-        
+
         prompt.AppendLine("# GraphQL Debugging Assistant");
         prompt.AppendLine();
         prompt.AppendLine("You are a GraphQL debugging expert. Help troubleshoot and resolve GraphQL issues with systematic analysis.");
@@ -153,9 +162,9 @@ public static class GraphQlPrompts
         prompt.AppendLine($"**Severity:** {severity}");
         prompt.AppendLine($"**Environment:** {environment}");
         prompt.AppendLine();
-        
+
         prompt.AppendLine("## Debugging Approach:");
-        
+
         switch (issueType.ToLower())
         {
             case "query-error":
@@ -166,7 +175,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("4. **Fragments**: Validate fragment usage and type conditions");
                 prompt.AppendLine("5. **Authorization**: Consider field-level permissions and auth context");
                 break;
-                
+
             case "performance":
                 prompt.AppendLine("### Performance Analysis:");
                 prompt.AppendLine("1. **Query Complexity**: Analyze depth and breadth of query");
@@ -175,7 +184,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("4. **Cache Strategy**: Evaluate caching at resolver and response levels");
                 prompt.AppendLine("5. **Database Queries**: Analyze underlying data fetching patterns");
                 break;
-                
+
             case "schema":
                 prompt.AppendLine("### Schema Issue Analysis:");
                 prompt.AppendLine("1. **Type Definitions**: Check for circular references and invalid types");
@@ -184,7 +193,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("4. **Enum Values**: Check enum definition and usage");
                 prompt.AppendLine("5. **Directive Usage**: Validate custom directive implementation");
                 break;
-                
+
             case "resolver":
                 prompt.AppendLine("### Resolver Issue Analysis:");
                 prompt.AppendLine("1. **Return Types**: Verify resolver returns match schema types");
@@ -194,7 +203,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("5. **Data Sources**: Check database/API connectivity and queries");
                 break;
         }
-        
+
         if (severity == "critical" || severity == "high")
         {
             prompt.AppendLine();
@@ -203,7 +212,7 @@ public static class GraphQlPrompts
             prompt.AppendLine("- Consider temporary workarounds to restore service");
             prompt.AppendLine("- Document incident details for post-mortem analysis");
         }
-        
+
         if (environment == "production")
         {
             prompt.AppendLine();
@@ -213,7 +222,7 @@ public static class GraphQlPrompts
             prompt.AppendLine("- Monitor impact of changes with proper observability");
             prompt.AppendLine("- Have rollback plan ready before implementing fixes");
         }
-        
+
         prompt.AppendLine();
         prompt.AppendLine("## Response Format:");
         prompt.AppendLine("1. **Root Cause Analysis**: What is likely causing the issue");
@@ -221,18 +230,21 @@ public static class GraphQlPrompts
         prompt.AppendLine("3. **Resolution Plan**: Step-by-step fix implementation");
         prompt.AppendLine("4. **Validation**: How to verify the fix works");
         prompt.AppendLine("5. **Prevention**: How to avoid similar issues in the future");
-        
+
         return prompt.ToString();
     }
 
     [McpServerPrompt, Description("Generate comprehensive testing strategies for GraphQL APIs")]
     public static string TestingStrategy(
-        [Description("Testing focus (unit, integration, performance, security)")] string testingType,
-        [Description("GraphQL operation type (query, mutation, subscription)")] string operationType = "query",
-        [Description("Test framework preference (jest, vitest, xunit, pytest)")] string framework = "jest")
+        [Description("Testing focus (unit, integration, performance, security)")]
+        string testingType,
+        [Description("GraphQL operation type (query, mutation, subscription)")]
+        string operationType = "query",
+        [Description("Test framework preference (jest, vitest, xunit, pytest)")]
+        string framework = "jest")
     {
         var prompt = new StringBuilder();
-        
+
         prompt.AppendLine("# GraphQL Testing Strategy Assistant");
         prompt.AppendLine();
         prompt.AppendLine("You are a GraphQL testing expert. Create comprehensive testing strategies and test cases for GraphQL APIs.");
@@ -241,7 +253,7 @@ public static class GraphQlPrompts
         prompt.AppendLine($"**Operation Type:** {operationType}");
         prompt.AppendLine($"**Preferred Framework:** {framework}");
         prompt.AppendLine();
-        
+
         switch (testingType.ToLower())
         {
             case "unit":
@@ -257,7 +269,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Test type relationships and constraints");
                 prompt.AppendLine("- Verify directive implementations");
                 break;
-                
+
             case "integration":
                 prompt.AppendLine("## Integration Testing Strategy:");
                 prompt.AppendLine("### End-to-End Query Testing:");
@@ -271,7 +283,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Verify response formats and structures");
                 prompt.AppendLine("- Test with various client configurations");
                 break;
-                
+
             case "performance":
                 prompt.AppendLine("## Performance Testing Strategy:");
                 prompt.AppendLine("### Load Testing:");
@@ -284,7 +296,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Verify query complexity limits");
                 prompt.AppendLine("- Test DataLoader and caching effectiveness");
                 break;
-                
+
             case "security":
                 prompt.AppendLine("## Security Testing Strategy:");
                 prompt.AppendLine("### Query Security:");
@@ -298,7 +310,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Test injection attack prevention");
                 break;
         }
-        
+
         prompt.AppendLine();
         prompt.AppendLine("## Test Case Generation Guidelines:");
         prompt.AppendLine("1. **Happy Path**: Normal successful operations");
@@ -314,18 +326,21 @@ public static class GraphQlPrompts
         prompt.AppendLine("4. **Mocking Strategy**: How to mock dependencies and external services");
         prompt.AppendLine("5. **Assertions**: What to verify in each test type");
         prompt.AppendLine("6. **Continuous Integration**: How to integrate tests into CI/CD pipeline");
-        
+
         return prompt.ToString();
     }
 
     [McpServerPrompt, Description("Design and optimize GraphQL schema architecture with best practices")]
     public static string SchemaDesign(
-        [Description("Design focus (new-schema, refactoring, migration, optimization)")] string designFocus,
-        [Description("Domain context (e-commerce, social, api-gateway, microservices)")] string domain,
-        [Description("Scale requirements (small, medium, large, enterprise)")] string scale = "medium")
+        [Description("Design focus (new-schema, refactoring, migration, optimization)")]
+        string designFocus,
+        [Description("Domain context (e-commerce, social, api-gateway, microservices)")]
+        string domain,
+        [Description("Scale requirements (small, medium, large, enterprise)")]
+        string scale = "medium")
     {
         var prompt = new StringBuilder();
-        
+
         prompt.AppendLine("# GraphQL Schema Design Assistant");
         prompt.AppendLine();
         prompt.AppendLine("You are a GraphQL architecture expert. Help design, refactor, or optimize GraphQL schemas following industry best practices.");
@@ -334,7 +349,7 @@ public static class GraphQlPrompts
         prompt.AppendLine($"**Domain Context:** {domain}");
         prompt.AppendLine($"**Scale Requirements:** {scale}");
         prompt.AppendLine();
-        
+
         switch (designFocus.ToLower())
         {
             case "new-schema":
@@ -351,7 +366,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Design input types for reusability");
                 prompt.AppendLine("- Plan enum values for extensibility");
                 break;
-                
+
             case "refactoring":
                 prompt.AppendLine("## Schema Refactoring Strategy:");
                 prompt.AppendLine("### Safe Refactoring Practices:");
@@ -365,7 +380,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Improve type relationships and hierarchies");
                 prompt.AppendLine("- Optimize resolver patterns and data fetching");
                 break;
-                
+
             case "migration":
                 prompt.AppendLine("## Schema Migration Strategy:");
                 prompt.AppendLine("### Migration Planning:");
@@ -379,7 +394,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Provide migration tools and helper utilities");
                 prompt.AppendLine("- Set clear timelines for deprecation and removal");
                 break;
-                
+
             case "optimization":
                 prompt.AppendLine("## Schema Optimization Strategy:");
                 prompt.AppendLine("### Performance Optimization:");
@@ -394,11 +409,11 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Implement consistent authorization patterns");
                 break;
         }
-        
+
         // Add domain-specific considerations
         prompt.AppendLine();
         prompt.AppendLine($"## {domain.ToUpper()} Domain Considerations:");
-        
+
         switch (domain.ToLower())
         {
             case "e-commerce":
@@ -408,7 +423,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Search and filtering capabilities");
                 prompt.AppendLine("- Real-time inventory updates");
                 break;
-                
+
             case "social":
                 prompt.AppendLine("- User profiles and social connections");
                 prompt.AppendLine("- Content creation and sharing");
@@ -416,7 +431,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Real-time messaging and updates");
                 prompt.AppendLine("- Privacy and content moderation");
                 break;
-                
+
             case "api-gateway":
                 prompt.AppendLine("- Service composition and federation");
                 prompt.AppendLine("- Authentication and authorization patterns");
@@ -424,7 +439,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Error handling and service resilience");
                 prompt.AppendLine("- Monitoring and observability");
                 break;
-                
+
             case "microservices":
                 prompt.AppendLine("- Service boundaries and data ownership");
                 prompt.AppendLine("- Cross-service data fetching strategies");
@@ -433,7 +448,7 @@ public static class GraphQlPrompts
                 prompt.AppendLine("- Distributed tracing and monitoring");
                 break;
         }
-        
+
         // Add scale-specific guidance
         if (scale == "large" || scale == "enterprise")
         {
@@ -445,7 +460,7 @@ public static class GraphQlPrompts
             prompt.AppendLine("- Implement robust caching strategies");
             prompt.AppendLine("- Design for disaster recovery and high availability");
         }
-        
+
         prompt.AppendLine();
         prompt.AppendLine("## Response Format:");
         prompt.AppendLine("1. **Architecture Overview**: High-level design approach and patterns");
@@ -454,7 +469,7 @@ public static class GraphQlPrompts
         prompt.AppendLine("4. **Best Practices**: Specific recommendations for the domain and scale");
         prompt.AppendLine("5. **Potential Challenges**: Common pitfalls and how to avoid them");
         prompt.AppendLine("6. **Future Considerations**: How to prepare for growth and evolution");
-        
+
         return prompt.ToString();
     }
 }

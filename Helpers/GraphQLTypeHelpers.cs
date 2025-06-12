@@ -6,7 +6,8 @@ public static class GraphQlTypeHelpers
 {
     public static string GetTypeName(JsonElement typeElement)
     {
-        var kind = typeElement.GetProperty("kind").GetString();
+        var kind = typeElement.GetProperty("kind")
+            .GetString();
 
         return kind switch
         {
@@ -20,7 +21,9 @@ public static class GraphQlTypeHelpers
     {
         var isNonNull = graphqlType.EndsWith("!");
         var isList = graphqlType.Contains("[");
-        var baseType = graphqlType.Replace("!", "").Replace("[", "").Replace("]", "");
+        var baseType = graphqlType.Replace("!", "")
+            .Replace("[", "")
+            .Replace("]", "");
 
         var csharpType = baseType switch
         {

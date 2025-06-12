@@ -9,17 +9,17 @@ public class ComplexityAnalysis
     /// The total complexity score for all analyzed fields
     /// </summary>
     public int TotalComplexity { get; set; }
-    
+
     /// <summary>
     /// The average complexity per field
     /// </summary>
     public double AverageComplexity { get; set; }
-    
+
     /// <summary>
     /// The name of the most complex field
     /// </summary>
     public string MostComplexField { get; set; } = "";
-    
+
     /// <summary>
     /// List of fields that have significantly higher complexity than average
     /// </summary>

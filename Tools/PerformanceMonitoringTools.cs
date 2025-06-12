@@ -14,10 +14,13 @@ public static class PerformanceMonitoringTools
     [McpServerTool, Description("Measure and report query execution times")]
     public static async Task<string> MeasureQueryPerformance(
         [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("GraphQL query to measure")] string query,
+        [Description("GraphQL query to measure")]
+        string query,
         [Description("Number of test runs")] int runs = 5,
-        [Description("Variables as JSON object (optional)")] string? variables = null,
-        [Description("HTTP headers as JSON object (optional)")] string? headers = null)
+        [Description("Variables as JSON object (optional)")]
+        string? variables = null,
+        [Description("HTTP headers as JSON object (optional)")]
+        string? headers = null)
     {
         try
         {
@@ -32,7 +35,7 @@ public static class PerformanceMonitoringTools
             };
 
             var jsonContent = JsonSerializer.Serialize(requestBody);
-            
+
             results.AppendLine("## Test Configuration");
             results.AppendLine($"- **Endpoint:** {endpoint}");
             results.AppendLine($"- **Runs:** {runs}");
@@ -60,7 +63,7 @@ public static class PerformanceMonitoringTools
                 {
                     var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpoint, requestBody, headers);
                     stopwatch.Stop();
-                    
+
                     if (result.IsSuccess)
                     {
                         measurements.Add(stopwatch.Elapsed);
@@ -88,7 +91,8 @@ public static class PerformanceMonitoringTools
             var avgMs = measurements.Average(m => m.TotalMilliseconds);
             var minMs = measurements.Min(m => m.TotalMilliseconds);
             var maxMs = measurements.Max(m => m.TotalMilliseconds);
-            var medianMs = CalculateMedian(measurements.Select(m => m.TotalMilliseconds).ToList());
+            var medianMs = CalculateMedian(measurements.Select(m => m.TotalMilliseconds)
+                .ToList());
 
             results.AppendLine("\n## Performance Statistics");
             results.AppendLine($"- **Average:** {avgMs:F2}ms");
@@ -125,6 +129,7 @@ public static class PerformanceMonitoringTools
                 results.AppendLine("- Review query complexity and nesting levels");
                 results.AppendLine("- Check if query can be broken into smaller parts");
             }
+
             if (maxMs - minMs > avgMs)
             {
                 results.AppendLine("- High variance detected - consider server load balancing");
@@ -161,7 +166,7 @@ public static class PerformanceMonitoringTools
 
             // Detect potential N+1 patterns
             var potentialN1Issues = DetectPotentialN1Issues(query);
-            
+
             if (potentialN1Issues.Count > 0)
             {
                 analysis.AppendLine("## ⚠️ Potential N+1 Issues Detected");
@@ -169,6 +174,7 @@ public static class PerformanceMonitoringTools
                 {
                     analysis.AppendLine($"- **{issue.FieldPath}**: {issue.Description}");
                 }
+
                 analysis.AppendLine();
 
                 analysis.AppendLine("## 🔧 DataLoader Recommendations");
@@ -230,7 +236,7 @@ public static class PerformanceMonitoringTools
     {
         values.Sort();
         var count = values.Count;
-        
+
         if (count % 2 == 0)
         {
             return (values[count / 2 - 1] + values[count / 2]) / 2.0;
@@ -259,7 +265,7 @@ public static class PerformanceMonitoringTools
                 currentPath.Add(fieldName);
                 currentNesting++;
                 maxNesting = Math.Max(maxNesting, currentNesting);
-                
+
                 if (currentNesting > 2)
                 {
                     nestedPaths.Add(string.Join(".", currentPath));
@@ -274,7 +280,7 @@ public static class PerformanceMonitoringTools
     {
         var fieldMatches = Regex.Matches(query, @"\b(\w+)(?:\s*\([^)]*\))?\s*(?:\{|$)", RegexOptions.IgnoreCase);
         var fields = new List<string>();
-        
+
         foreach (Match match in fieldMatches)
         {
             var fieldName = match.Groups[1].Value;
@@ -284,17 +290,18 @@ public static class PerformanceMonitoringTools
             }
         }
 
-        return (fields.Count, fields.Distinct().Count());
+        return (fields.Count, fields.Distinct()
+            .Count());
     }
 
     private static List<string> AnalyzeListFields(string query)
     {
         var potentialListFields = new List<string>();
-        
+
         // Look for fields that are likely to return lists (common naming patterns)
         var listPatterns = new[] { "s$", "list$", "items$", "collection$", "all$" };
         var fieldMatches = Regex.Matches(query, @"\b(\w+)(?:\s*\([^)]*\))?\s*\{", RegexOptions.IgnoreCase);
-        
+
         foreach (Match match in fieldMatches)
         {
             var fieldName = match.Groups[1].Value;
@@ -310,16 +317,16 @@ public static class PerformanceMonitoringTools
     private static List<N1Issue> DetectPotentialN1Issues(string query)
     {
         var issues = new List<N1Issue>();
-        
+
         // Pattern 1: List field followed by scalar field selections (classic N+1)
         var listFieldPattern = @"(\w+s|\w+List|\w+Collection)\s*(?:\([^)]*\))?\s*\{([^}]+)\}";
         var listMatches = Regex.Matches(query, listFieldPattern, RegexOptions.IgnoreCase);
-        
+
         foreach (Match match in listMatches)
         {
             var listField = match.Groups[1].Value;
             var innerFields = match.Groups[2].Value;
-            
+
             // Check if inner fields contain object relationships
             var objectFieldMatches = Regex.Matches(innerFields, @"\b(\w+)\s*\{");
             if (objectFieldMatches.Count > 0)
@@ -351,7 +358,7 @@ public static class PerformanceMonitoringTools
             {
                 path.Add(fieldName);
                 nestingLevel++;
-                
+
                 if (nestingLevel > 3)
                 {
                     issues.Add(new N1Issue
@@ -372,14 +379,14 @@ public static class PerformanceMonitoringTools
     {
         return issue.Type switch
         {
-            "ListWithObjectFields" => 
+            "ListWithObjectFields" =>
                 $"Consider implementing a DataLoader for the '{issue.FieldPath.Split('.').Last()}' relationship. " +
                 "This will batch the database queries instead of making individual queries for each item in the list.",
-            
-            "DeepNesting" => 
+
+            "DeepNesting" =>
                 "Consider implementing DataLoaders at each level of nesting to batch queries. " +
                 "Also consider if this level of nesting is necessary or if the query can be restructured.",
-            
+
             _ => "Consider using DataLoader patterns to batch and cache database queries."
         };
     }

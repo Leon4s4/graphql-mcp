@@ -11,141 +11,150 @@ public static class SchemaEvolutionTools
 {
     [McpServerTool, Description("Detect breaking changes between schema versions")]
     public static async Task<string> DetectBreakingChanges(
-        [Description("Old schema endpoint or SDL")] string oldSchema,
-        [Description("New schema endpoint or SDL")] string newSchema,
-        [Description("Severity level filter (all, critical, major, minor)")] string severityFilter = "all")
+        [Description("Old schema endpoint or SDL")]
+        string oldSchema,
+        [Description("New schema endpoint or SDL")]
+        string newSchema,
+        [Description("Severity level filter (all, critical, major, minor)")]
+        string severityFilter = "all")
     {
-       
-            var result = new StringBuilder();
-            result.AppendLine("# Schema Evolution Analysis\n");
+        var result = new StringBuilder();
+        result.AppendLine("# Schema Evolution Analysis\n");
 
-            // Get schema data
-            var oldSchemaData = await GetSchemaData(oldSchema);
-            var newSchemaData = await GetSchemaData(newSchema);
+        // Get schema data
+        var oldSchemaData = await GetSchemaData(oldSchema);
+        var newSchemaData = await GetSchemaData(newSchema);
 
-            if (oldSchemaData == null || newSchemaData == null)
+        if (oldSchemaData == null || newSchemaData == null)
+        {
+            return "Error: Could not retrieve schema data for comparison";
+        }
+
+        // Analyze changes
+        var changes = AnalyzeSchemaChanges(oldSchemaData.Value, newSchemaData.Value);
+
+        // Filter by severity
+        var filteredChanges = FilterChangesBySeverity(changes, severityFilter);
+
+        // Generate report
+        result.AppendLine($"## Change Summary");
+        result.AppendLine($"- **Total Changes:** {filteredChanges.Count}");
+        result.AppendLine($"- **Breaking Changes:** {filteredChanges.Count(c => c.IsBreaking)}");
+        result.AppendLine($"- **Non-Breaking Changes:** {filteredChanges.Count(c => !c.IsBreaking)}\n");
+
+        if (filteredChanges.Any(c => c.IsBreaking))
+        {
+            result.AppendLine("## ⚠️ Breaking Changes");
+            foreach (var change in filteredChanges.Where(c => c.IsBreaking))
             {
-                return "Error: Could not retrieve schema data for comparison";
-            }
-
-            // Analyze changes
-            var changes = AnalyzeSchemaChanges(oldSchemaData.Value, newSchemaData.Value);
-            
-            // Filter by severity
-            var filteredChanges = FilterChangesBySeverity(changes, severityFilter);
-
-            // Generate report
-            result.AppendLine($"## Change Summary");
-            result.AppendLine($"- **Total Changes:** {filteredChanges.Count}");
-            result.AppendLine($"- **Breaking Changes:** {filteredChanges.Count(c => c.IsBreaking)}");
-            result.AppendLine($"- **Non-Breaking Changes:** {filteredChanges.Count(c => !c.IsBreaking)}\n");
-
-            if (filteredChanges.Any(c => c.IsBreaking))
-            {
-                result.AppendLine("## ⚠️ Breaking Changes");
-                foreach (var change in filteredChanges.Where(c => c.IsBreaking))
+                result.AppendLine($"- **{change.Severity}**: {change.Description}");
+                if (!string.IsNullOrEmpty(change.Impact))
                 {
-                    result.AppendLine($"- **{change.Severity}**: {change.Description}");
-                    if (!string.IsNullOrEmpty(change.Impact))
-                    {
-                        result.AppendLine($"  - *Impact:* {change.Impact}");
-                    }
-                    if (!string.IsNullOrEmpty(change.Recommendation))
-                    {
-                        result.AppendLine($"  - *Recommendation:* {change.Recommendation}");
-                    }
+                    result.AppendLine($"  - *Impact:* {change.Impact}");
                 }
-                result.AppendLine();
-            }
 
-            if (filteredChanges.Any(c => !c.IsBreaking))
-            {
-                result.AppendLine("## ✅ Non-Breaking Changes");
-                foreach (var change in filteredChanges.Where(c => !c.IsBreaking))
+                if (!string.IsNullOrEmpty(change.Recommendation))
                 {
-                    result.AppendLine($"- **{change.Severity}**: {change.Description}");
+                    result.AppendLine($"  - *Recommendation:* {change.Recommendation}");
                 }
-                result.AppendLine();
             }
 
-            // Migration suggestions
-            var migrationSuggestions = GenerateMigrationSuggestions(filteredChanges);
-            if (migrationSuggestions.Any())
+            result.AppendLine();
+        }
+
+        if (filteredChanges.Any(c => !c.IsBreaking))
+        {
+            result.AppendLine("## ✅ Non-Breaking Changes");
+            foreach (var change in filteredChanges.Where(c => !c.IsBreaking))
             {
-                result.AppendLine("## Migration Suggestions");
-                foreach (var suggestion in migrationSuggestions)
-                {
-                    result.AppendLine($"- {suggestion}");
-                }
-                result.AppendLine();
+                result.AppendLine($"- **{change.Severity}**: {change.Description}");
             }
 
-            // Compatibility score
-            var compatibilityScore = CalculateCompatibilityScore(changes);
-            result.AppendLine($"## Compatibility Score: {compatibilityScore:P0}");
-            result.AppendLine(GetCompatibilityRecommendation(compatibilityScore));
+            result.AppendLine();
+        }
 
-            return result.ToString();
+        // Migration suggestions
+        var migrationSuggestions = GenerateMigrationSuggestions(filteredChanges);
+        if (migrationSuggestions.Any())
+        {
+            result.AppendLine("## Migration Suggestions");
+            foreach (var suggestion in migrationSuggestions)
+            {
+                result.AppendLine($"- {suggestion}");
+            }
+
+            result.AppendLine();
+        }
+
+        // Compatibility score
+        var compatibilityScore = CalculateCompatibilityScore(changes);
+        result.AppendLine($"## Compatibility Score: {compatibilityScore:P0}");
+        result.AppendLine(GetCompatibilityRecommendation(compatibilityScore));
+
+        return result.ToString();
     }
 
     [McpServerTool, Description("Track schema evolution metrics and trends")]
     public static async Task<string> TrackSchemaEvolution(
-        [Description("List of schema endpoints or versions as JSON array")] string schemaVersions,
-        [Description("Include detailed change history")] bool includeHistory = true)
+        [Description("List of schema endpoints or versions as JSON array")]
+        string schemaVersions,
+        [Description("Include detailed change history")]
+        bool includeHistory = true)
     {
-       
-            var result = new StringBuilder();
-            result.AppendLine("# Schema Evolution Tracking\n");
+        var result = new StringBuilder();
+        result.AppendLine("# Schema Evolution Tracking\n");
 
-            var versions = JsonSerializer.Deserialize<string[]>(schemaVersions);
-            if (versions == null || versions.Length < 2)
+        var versions = JsonSerializer.Deserialize<string[]>(schemaVersions);
+        if (versions == null || versions.Length < 2)
+        {
+            return "Error: At least 2 schema versions are required for evolution tracking";
+        }
+
+        var evolutionData = new List<EvolutionMetrics>();
+
+        // Analyze each version transition
+        for (var i = 1; i < versions.Length; i++)
+        {
+            var oldSchema = await GetSchemaData(versions[i - 1]);
+            var newSchema = await GetSchemaData(versions[i]);
+
+            if (oldSchema != null && newSchema != null)
             {
-                return "Error: At least 2 schema versions are required for evolution tracking";
+                var changes = AnalyzeSchemaChanges(oldSchema.Value, newSchema.Value);
+                var metrics = CalculateEvolutionMetrics(changes, i);
+                evolutionData.Add(metrics);
             }
+        }
 
-            var evolutionData = new List<EvolutionMetrics>();
+        // Generate evolution report
+        result.AppendLine("## Evolution Metrics");
+        result.AppendLine("| Version | Breaking Changes | Non-Breaking | Compatibility Score |");
+        result.AppendLine("|---------|------------------|--------------|-------------------|");
 
-            // Analyze each version transition
-            for (var i = 1; i < versions.Length; i++)
-            {
-                var oldSchema = await GetSchemaData(versions[i - 1]);
-                var newSchema = await GetSchemaData(versions[i]);
+        foreach (var data in evolutionData)
+        {
+            result.AppendLine($"| v{data.Version} | {data.BreakingChanges} | {data.NonBreakingChanges} | {data.CompatibilityScore:P0} |");
+        }
 
-                if (oldSchema != null && newSchema != null)
-                {
-                    var changes = AnalyzeSchemaChanges(oldSchema.Value, newSchema.Value);
-                    var metrics = CalculateEvolutionMetrics(changes, i);
-                    evolutionData.Add(metrics);
-                }
-            }
+        result.AppendLine();
 
-            // Generate evolution report
-            result.AppendLine("## Evolution Metrics");
-            result.AppendLine("| Version | Breaking Changes | Non-Breaking | Compatibility Score |");
-            result.AppendLine("|---------|------------------|--------------|-------------------|");
+        // Trends analysis
+        result.AppendLine("## Trends Analysis");
+        var avgBreakingChanges = evolutionData.Average(d => d.BreakingChanges);
+        var avgCompatibility = evolutionData.Average(d => d.CompatibilityScore);
 
-            foreach (var data in evolutionData)
-            {
-                result.AppendLine($"| v{data.Version} | {data.BreakingChanges} | {data.NonBreakingChanges} | {data.CompatibilityScore:P0} |");
-            }
-            result.AppendLine();
+        result.AppendLine($"- **Average Breaking Changes per Version:** {avgBreakingChanges:F1}");
+        result.AppendLine($"- **Average Compatibility Score:** {avgCompatibility:P0}");
 
-            // Trends analysis
-            result.AppendLine("## Trends Analysis");
-            var avgBreakingChanges = evolutionData.Average(d => d.BreakingChanges);
-            var avgCompatibility = evolutionData.Average(d => d.CompatibilityScore);
+        if (evolutionData.Count > 1)
+        {
+            var trend = evolutionData.Last()
+                .CompatibilityScore - evolutionData.First()
+                .CompatibilityScore;
+            result.AppendLine($"- **Compatibility Trend:** {(trend > 0 ? "Improving" : trend < 0 ? "Declining" : "Stable")} ({trend:+0.0%;-0.0%;0%})");
+        }
 
-            result.AppendLine($"- **Average Breaking Changes per Version:** {avgBreakingChanges:F1}");
-            result.AppendLine($"- **Average Compatibility Score:** {avgCompatibility:P0}");
-
-            if (evolutionData.Count > 1)
-            {
-                var trend = evolutionData.Last().CompatibilityScore - evolutionData.First().CompatibilityScore;
-                result.AppendLine($"- **Compatibility Trend:** {(trend > 0 ? "Improving" : trend < 0 ? "Declining" : "Stable")} ({trend:+0.0%;-0.0%;0%})");
-            }
-
-            return result.ToString();
-       
+        return result.ToString();
     }
 
     private static async Task<JsonElement?> GetSchemaData(string schemaSource)
@@ -303,7 +312,7 @@ public static class SchemaEvolutionTools
                     if (!string.IsNullOrEmpty(typeName) && !typeName.StartsWith("__"))
                     {
                         var typeInfo = new TypeInfo { Name = typeName };
-                        
+
                         if (typeElement.TryGetProperty("fields", out var fieldsArray))
                         {
                             foreach (var fieldElement in fieldsArray.EnumerateArray())
@@ -333,9 +342,12 @@ public static class SchemaEvolutionTools
     {
         return severityFilter.ToLower() switch
         {
-            "critical" => changes.Where(c => c.Severity == ChangeSeverity.Critical).ToList(),
-            "major" => changes.Where(c => c.Severity == ChangeSeverity.Major || c.Severity == ChangeSeverity.Critical).ToList(),
-            "minor" => changes.Where(c => c.Severity == ChangeSeverity.Minor).ToList(),
+            "critical" => changes.Where(c => c.Severity == ChangeSeverity.Critical)
+                .ToList(),
+            "major" => changes.Where(c => c.Severity == ChangeSeverity.Major || c.Severity == ChangeSeverity.Critical)
+                .ToList(),
+            "minor" => changes.Where(c => c.Severity == ChangeSeverity.Minor)
+                .ToList(),
             _ => changes
         };
     }

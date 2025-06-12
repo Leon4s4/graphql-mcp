@@ -11,179 +11,190 @@ public static class SecurityAnalysisTools
 {
     [McpServerTool, Description("Analyze query for security issues and complexity")]
     public static async Task<string> AnalyzeQuerySecurity(
-        [Description("GraphQL query to analyze")] string query,
+        [Description("GraphQL query to analyze")]
+        string query,
         [Description("Schema endpoint")] string endpoint,
-        [Description("Max query depth allowed")] int maxDepth = 10,
+        [Description("Max query depth allowed")]
+        int maxDepth = 10,
         [Description("Max query complexity")] int maxComplexity = 1000,
-        [Description("HTTP headers as JSON object (optional)")] string? headers = null)
+        [Description("HTTP headers as JSON object (optional)")]
+        string? headers = null)
     {
-            var result = new StringBuilder();
-            result.AppendLine("# GraphQL Security Analysis Report\n");
+        var result = new StringBuilder();
+        result.AppendLine("# GraphQL Security Analysis Report\n");
 
-            // 1. Query Complexity Analysis
-            var complexityAnalysis = AnalyzeQueryComplexity(query, maxComplexity);
-            result.AppendLine("## Query Complexity Analysis");
-            result.AppendLine($"- **Estimated Complexity:** {complexityAnalysis.Score}");
-            result.AppendLine($"- **Max Allowed:** {maxComplexity}");
-            result.AppendLine($"- **Status:** {(complexityAnalysis.Score <= maxComplexity ? "✅ Within limits" : "❌ Exceeds limits")}");
-            
-            if (complexityAnalysis.Score > maxComplexity)
-            {
-                result.AppendLine($"- **Risk:** Query may cause server overload");
-            }
-            result.AppendLine();
+        // 1. Query Complexity Analysis
+        var complexityAnalysis = AnalyzeQueryComplexity(query, maxComplexity);
+        result.AppendLine("## Query Complexity Analysis");
+        result.AppendLine($"- **Estimated Complexity:** {complexityAnalysis.Score}");
+        result.AppendLine($"- **Max Allowed:** {maxComplexity}");
+        result.AppendLine($"- **Status:** {(complexityAnalysis.Score <= maxComplexity ? "✅ Within limits" : "❌ Exceeds limits")}");
 
-            // 2. Query Depth Analysis
-            var depthAnalysis = AnalyzeQueryDepth(query, maxDepth);
-            result.AppendLine("## Query Depth Analysis");
-            result.AppendLine($"- **Actual Depth:** {depthAnalysis.ActualDepth}");
-            result.AppendLine($"- **Max Allowed:** {maxDepth}");
-            result.AppendLine($"- **Status:** {(depthAnalysis.ActualDepth <= maxDepth ? "✅ Within limits" : "❌ Exceeds limits")}");
-            
-            if (depthAnalysis.ActualDepth > maxDepth)
-            {
-                result.AppendLine($"- **Risk:** Deep nesting may cause performance issues or DoS attacks");
-            }
-            result.AppendLine();
+        if (complexityAnalysis.Score > maxComplexity)
+        {
+            result.AppendLine($"- **Risk:** Query may cause server overload");
+        }
 
-            // 3. Introspection Detection
-            var introspectionRisks = DetectIntrospectionQueries(query);
-            result.AppendLine("## Introspection Analysis");
-            if (introspectionRisks.Any())
-            {
-                result.AppendLine("⚠️ **Introspection queries detected:**");
-                foreach (var risk in introspectionRisks)
-                {
-                    result.AppendLine($"- {risk}");
-                }
-                result.AppendLine("- **Recommendation:** Disable introspection in production");
-            }
-            else
-            {
-                result.AppendLine("✅ **Status:** No introspection queries detected");
-            }
-            result.AppendLine();
+        result.AppendLine();
 
-            // 4. Potential Injection Vulnerabilities
-            var injectionRisks = DetectInjectionRisks(query);
-            result.AppendLine("## Injection Risk Analysis");
-            if (injectionRisks.Any())
-            {
-                result.AppendLine("⚠️ **Potential injection risks:**");
-                foreach (var risk in injectionRisks)
-                {
-                    result.AppendLine($"- {risk}");
-                }
-            }
-            else
-            {
-                result.AppendLine("✅ **Status:** No obvious injection risks detected");
-            }
-            result.AppendLine();
+        // 2. Query Depth Analysis
+        var depthAnalysis = AnalyzeQueryDepth(query, maxDepth);
+        result.AppendLine("## Query Depth Analysis");
+        result.AppendLine($"- **Actual Depth:** {depthAnalysis.ActualDepth}");
+        result.AppendLine($"- **Max Allowed:** {maxDepth}");
+        result.AppendLine($"- **Status:** {(depthAnalysis.ActualDepth <= maxDepth ? "✅ Within limits" : "❌ Exceeds limits")}");
 
-            // 5. Resource Consumption Analysis
-            var resourceRisks = AnalyzeResourceConsumption(query);
-            result.AppendLine("## Resource Consumption Analysis");
-            if (resourceRisks.Any())
-            {
-                result.AppendLine("⚠️ **Resource consumption concerns:**");
-                foreach (var risk in resourceRisks)
-                {
-                    result.AppendLine($"- {risk}");
-                }
-            }
-            else
-            {
-                result.AppendLine("✅ **Status:** No obvious resource consumption issues");
-            }
-            result.AppendLine();
+        if (depthAnalysis.ActualDepth > maxDepth)
+        {
+            result.AppendLine($"- **Risk:** Deep nesting may cause performance issues or DoS attacks");
+        }
 
-            // 6. Schema-based Security Analysis (if schema available)
-            try
+        result.AppendLine();
+
+        // 3. Introspection Detection
+        var introspectionRisks = DetectIntrospectionQueries(query);
+        result.AppendLine("## Introspection Analysis");
+        if (introspectionRisks.Any())
+        {
+            result.AppendLine("⚠️ **Introspection queries detected:**");
+            foreach (var risk in introspectionRisks)
             {
-                var schemaAnalysis = await AnalyzeSchemaBasedSecurity(query, endpoint, headers);
-                result.AppendLine("## Schema-based Security Analysis");
-                result.AppendLine(schemaAnalysis);
-            }
-            catch (Exception ex)
-            {
-                result.AppendLine("## Schema-based Security Analysis");
-                result.AppendLine($"⚠️ Could not perform schema analysis: {ex.Message}\n");
+                result.AppendLine($"- {risk}");
             }
 
-            // 7. Overall Security Score
-            var securityScore = CalculateSecurityScore(complexityAnalysis, depthAnalysis, introspectionRisks, injectionRisks, resourceRisks);
-            result.AppendLine($"## Overall Security Score: {securityScore.Score}/100");
-            result.AppendLine($"**Risk Level:** {securityScore.RiskLevel}");
-            result.AppendLine($"**Recommendation:** {securityScore.Recommendation}");
+            result.AppendLine("- **Recommendation:** Disable introspection in production");
+        }
+        else
+        {
+            result.AppendLine("✅ **Status:** No introspection queries detected");
+        }
 
-            return result.ToString();
-        
+        result.AppendLine();
+
+        // 4. Potential Injection Vulnerabilities
+        var injectionRisks = DetectInjectionRisks(query);
+        result.AppendLine("## Injection Risk Analysis");
+        if (injectionRisks.Any())
+        {
+            result.AppendLine("⚠️ **Potential injection risks:**");
+            foreach (var risk in injectionRisks)
+            {
+                result.AppendLine($"- {risk}");
+            }
+        }
+        else
+        {
+            result.AppendLine("✅ **Status:** No obvious injection risks detected");
+        }
+
+        result.AppendLine();
+
+        // 5. Resource Consumption Analysis
+        var resourceRisks = AnalyzeResourceConsumption(query);
+        result.AppendLine("## Resource Consumption Analysis");
+        if (resourceRisks.Any())
+        {
+            result.AppendLine("⚠️ **Resource consumption concerns:**");
+            foreach (var risk in resourceRisks)
+            {
+                result.AppendLine($"- {risk}");
+            }
+        }
+        else
+        {
+            result.AppendLine("✅ **Status:** No obvious resource consumption issues");
+        }
+
+        result.AppendLine();
+
+        // 6. Schema-based Security Analysis (if schema available)
+        try
+        {
+            var schemaAnalysis = await AnalyzeSchemaBasedSecurity(query, endpoint, headers);
+            result.AppendLine("## Schema-based Security Analysis");
+            result.AppendLine(schemaAnalysis);
+        }
+        catch (Exception ex)
+        {
+            result.AppendLine("## Schema-based Security Analysis");
+            result.AppendLine($"⚠️ Could not perform schema analysis: {ex.Message}\n");
+        }
+
+        // 7. Overall Security Score
+        var securityScore = CalculateSecurityScore(complexityAnalysis, depthAnalysis, introspectionRisks, injectionRisks, resourceRisks);
+        result.AppendLine($"## Overall Security Score: {securityScore.Score}/100");
+        result.AppendLine($"**Risk Level:** {securityScore.RiskLevel}");
+        result.AppendLine($"**Recommendation:** {securityScore.Recommendation}");
+
+        return result.ToString();
     }
 
     [McpServerTool, Description("Detect potential DoS attacks in GraphQL queries")]
     public static string DetectDoSPatterns(
-        [Description("GraphQL query to analyze")] string query,
-        [Description("Include detailed analysis")] bool includeDetails = true)
+        [Description("GraphQL query to analyze")]
+        string query,
+        [Description("Include detailed analysis")]
+        bool includeDetails = true)
     {
-            var result = new StringBuilder();
-            result.AppendLine("# DoS Attack Pattern Detection\n");
+        var result = new StringBuilder();
+        result.AppendLine("# DoS Attack Pattern Detection\n");
 
-            var dosPatterns = new List<DoSPattern>();
+        var dosPatterns = new List<DoSPattern>();
 
-            // 1. Circular Query Detection
-            var circularPatterns = DetectCircularQueries(query);
-            dosPatterns.AddRange(circularPatterns);
+        // 1. Circular Query Detection
+        var circularPatterns = DetectCircularQueries(query);
+        dosPatterns.AddRange(circularPatterns);
 
-            // 2. Resource Exhaustion Patterns
-            var resourcePatterns = DetectResourceExhaustionPatterns(query);
-            dosPatterns.AddRange(resourcePatterns);
+        // 2. Resource Exhaustion Patterns
+        var resourcePatterns = DetectResourceExhaustionPatterns(query);
+        dosPatterns.AddRange(resourcePatterns);
 
-            // 3. Expensive Operation Patterns
-            var expensivePatterns = DetectExpensiveOperations(query);
-            dosPatterns.AddRange(expensivePatterns);
+        // 3. Expensive Operation Patterns
+        var expensivePatterns = DetectExpensiveOperations(query);
+        dosPatterns.AddRange(expensivePatterns);
 
-            // 4. Amplification Attack Patterns
-            var amplificationPatterns = DetectAmplificationAttacks(query);
-            dosPatterns.AddRange(amplificationPatterns);
+        // 4. Amplification Attack Patterns
+        var amplificationPatterns = DetectAmplificationAttacks(query);
+        dosPatterns.AddRange(amplificationPatterns);
 
-            // Generate report
-            if (dosPatterns.Any())
+        // Generate report
+        if (dosPatterns.Any())
+        {
+            result.AppendLine("⚠️ **Potential DoS patterns detected:**\n");
+
+            foreach (var pattern in dosPatterns.OrderByDescending(p => p.Severity))
             {
-                result.AppendLine("⚠️ **Potential DoS patterns detected:**\n");
-                
-                foreach (var pattern in dosPatterns.OrderByDescending(p => p.Severity))
-                {
-                    result.AppendLine($"### {pattern.Name} ({pattern.Severity} Risk)");
-                    result.AppendLine($"**Description:** {pattern.Description}");
-                    result.AppendLine($"**Impact:** {pattern.Impact}");
-                    result.AppendLine($"**Mitigation:** {pattern.Mitigation}\n");
-                }
-
-                result.AppendLine("## Recommendations");
-                result.AppendLine("1. Implement query complexity analysis");
-                result.AppendLine("2. Set query depth limits");
-                result.AppendLine("3. Use query timeouts");
-                result.AppendLine("4. Implement rate limiting");
-                result.AppendLine("5. Consider query allowlisting for production");
-            }
-            else
-            {
-                result.AppendLine("✅ **No obvious DoS patterns detected**");
-                result.AppendLine("\nThe query appears to have reasonable resource requirements.");
+                result.AppendLine($"### {pattern.Name} ({pattern.Severity} Risk)");
+                result.AppendLine($"**Description:** {pattern.Description}");
+                result.AppendLine($"**Impact:** {pattern.Impact}");
+                result.AppendLine($"**Mitigation:** {pattern.Mitigation}\n");
             }
 
-            return result.ToString();
-       
+            result.AppendLine("## Recommendations");
+            result.AppendLine("1. Implement query complexity analysis");
+            result.AppendLine("2. Set query depth limits");
+            result.AppendLine("3. Use query timeouts");
+            result.AppendLine("4. Implement rate limiting");
+            result.AppendLine("5. Consider query allowlisting for production");
+        }
+        else
+        {
+            result.AppendLine("✅ **No obvious DoS patterns detected**");
+            result.AppendLine("\nThe query appears to have reasonable resource requirements.");
+        }
+
+        return result.ToString();
     }
 
     private static ComplexityAnalysis AnalyzeQueryComplexity(string query, int maxComplexity)
     {
         // Simplified complexity calculation
-        var fieldCount = Regex.Matches(query, @"\b\w+\s*[{(]").Count;
+        var fieldCount = Regex.Matches(query, @"\b\w+\s*[{(]")
+            .Count;
         var nestedSelections = query.Count(c => c == '{');
-        var listFields = Regex.Matches(query, @"\[\s*\w+\s*\]").Count;
-        
+        var listFields = Regex.Matches(query, @"\[\s*\w+\s*\]")
+            .Count;
+
         // Basic complexity scoring
         var score = fieldCount + (nestedSelections * 2) + (listFields * 5);
 
@@ -273,7 +284,8 @@ public static class SecurityAnalysisTools
         var risks = new List<string>();
 
         // Large number of fields
-        var fieldCount = Regex.Matches(query, @"\b\w+\s*[{(:]").Count;
+        var fieldCount = Regex.Matches(query, @"\b\w+\s*[{(:]")
+            .Count;
         if (fieldCount > 50)
         {
             risks.Add($"High field count ({fieldCount}) may cause excessive database queries");
@@ -373,7 +385,8 @@ public static class SecurityAnalysisTools
         var patterns = new List<DoSPattern>();
 
         // Large selection sets
-        var fieldCount = Regex.Matches(query, @"\b\w+\s*[{(:]").Count;
+        var fieldCount = Regex.Matches(query, @"\b\w+\s*[{(:]")
+            .Count;
         if (fieldCount > 100)
         {
             patterns.Add(new DoSPattern
@@ -414,7 +427,8 @@ public static class SecurityAnalysisTools
         var patterns = new List<DoSPattern>();
 
         // Multiple aliases for expensive operations
-        var aliasCount = Regex.Matches(query, @"\w+:\s*\w+").Count;
+        var aliasCount = Regex.Matches(query, @"\w+:\s*\w+")
+            .Count;
         if (aliasCount > 20)
         {
             patterns.Add(new DoSPattern
@@ -433,7 +447,7 @@ public static class SecurityAnalysisTools
     private static List<string> FindDeprecatedFieldUsage(string query, JsonElement schemaData)
     {
         var deprecatedFields = new List<string>();
-        
+
         // This would require parsing the schema to find deprecated fields
         // Simplified implementation for now
         if (query.Contains("@deprecated"))

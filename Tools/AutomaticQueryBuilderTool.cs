@@ -16,11 +16,15 @@ public static class AutomaticQueryBuilderTool
     [McpServerTool, Description("Automatically build complete GraphQL queries with smart field selection")]
     public static async Task<string> BuildSmartQuery(
         [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("Operation name (query field name)")] string operationName,
+        [Description("Operation name (query field name)")]
+        string operationName,
         [Description("Maximum nesting depth")] int maxDepth = 3,
-        [Description("Include all scalar fields automatically")] bool includeAllScalars = true,
-        [Description("Variables as JSON object (optional)")] string? variables = null,
-        [Description("HTTP headers as JSON object (optional)")] string? headers = null)
+        [Description("Include all scalar fields automatically")]
+        bool includeAllScalars = true,
+        [Description("Variables as JSON object (optional)")]
+        string? variables = null,
+        [Description("HTTP headers as JSON object (optional)")]
+        string? headers = null)
     {
         try
         {
@@ -56,7 +60,7 @@ public static class AutomaticQueryBuilderTool
             JsonElement? operationField = null;
             foreach (var field in fields.EnumerateArray())
             {
-                if (field.TryGetProperty("name", out var nameElement) && 
+                if (field.TryGetProperty("name", out var nameElement) &&
                     nameElement.GetString() == operationName)
                 {
                     operationField = field;
@@ -72,7 +76,7 @@ public static class AutomaticQueryBuilderTool
             // Build the query
             var queryBuilder = new StringBuilder();
             var parsedVars = new Dictionary<string, object>();
-            
+
             // Add variables to the operation if provided
             if (!string.IsNullOrEmpty(variables))
             {
@@ -94,9 +98,9 @@ public static class AutomaticQueryBuilderTool
 
             // Build field selection
             var fieldSelection = BuildOperationFieldSelection(operationField.Value, schema, maxDepth, includeAllScalars, operationName);
-            
+
             queryBuilder.Append($"  {operationName}");
-            
+
             // Add arguments if we have variables
             if (parsedVars.Count > 0)
             {
@@ -120,7 +124,7 @@ public static class AutomaticQueryBuilderTool
             result.AppendLine($"- **Operation:** {operationName}");
             result.AppendLine($"- **Max Depth:** {maxDepth}");
             result.AppendLine($"- **Include All Scalars:** {includeAllScalars}");
-            
+
             if (!string.IsNullOrEmpty(variables))
             {
                 result.AppendLine($"- **Variables:** {variables}");
@@ -137,10 +141,13 @@ public static class AutomaticQueryBuilderTool
     [McpServerTool, Description("Build nested field selections for GraphQL types with automatic scalar detection")]
     public static async Task<string> BuildNestedSelection(
         [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("Type name to build selection for")] string typeName,
+        [Description("Type name to build selection for")]
+        string typeName,
         [Description("Maximum nesting depth")] int maxDepth = 3,
-        [Description("Current depth (for recursive calls)")] int currentDepth = 1,
-        [Description("HTTP headers as JSON object (optional)")] string? headers = null)
+        [Description("Current depth (for recursive calls)")]
+        int currentDepth = 1,
+        [Description("HTTP headers as JSON object (optional)")]
+        string? headers = null)
     {
         try
         {
@@ -236,7 +243,7 @@ public static class AutomaticQueryBuilderTool
         }
 
         var kind = kindElement.GetString();
-        
+
         // Only process OBJECT and INTERFACE types
         if (kind != "OBJECT" && kind != "INTERFACE")
         {
@@ -301,7 +308,7 @@ public static class AutomaticQueryBuilderTool
 
         foreach (var type in types.EnumerateArray())
         {
-            if (type.TryGetProperty("name", out var name) && 
+            if (type.TryGetProperty("name", out var name) &&
                 name.GetString() == typeName)
             {
                 return type;
@@ -330,7 +337,8 @@ public static class AutomaticQueryBuilderTool
 
     private static bool IsScalarType(string typeName)
     {
-        var scalarTypes = new[] { 
+        var scalarTypes = new[]
+        {
             "String", "Int", "Float", "Boolean", "ID",
             // Common custom scalars
             "DateTime", "Date", "Time", "JSON", "Upload", "Long", "Decimal"

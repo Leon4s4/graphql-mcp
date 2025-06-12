@@ -1,6 +1,7 @@
 # GraphQL MCP Server - Dynamic Tool Generation
 
-This project now includes **automatic API-to-tools mapping** functionality that can introspect any GraphQL endpoint and dynamically generate individual MCP tools for each available query and mutation.
+This project now includes **automatic API-to-tools mapping** functionality that can introspect any GraphQL endpoint and
+dynamically generate individual MCP tools for each available query and mutation.
 
 ## New Dynamic Tool Generation Feature
 
@@ -30,6 +31,7 @@ The dynamic registry adds these new MCP tools:
 ### 📝 Usage Examples
 
 #### 1. Register a Public GraphQL API
+
 ```json
 {
   "endpoint": "https://api.github.com/graphql",
@@ -41,12 +43,14 @@ The dynamic registry adds these new MCP tools:
 ```
 
 This would generate tools like:
+
 - `gh_query_viewer` - Get the authenticated user
 - `gh_query_repository` - Fetch repository information
 - `gh_query_user` - Get user details
 - etc.
 
 #### 2. Register a Local Development API
+
 ```json
 {
   "endpoint": "http://localhost:4000/graphql",
@@ -57,6 +61,7 @@ This would generate tools like:
 ```
 
 #### 3. Execute Generated Operations
+
 ```json
 {
   "toolName": "gh_query_repository",
@@ -99,4 +104,5 @@ The dynamic tools integrate seamlessly with the existing MCP server:
 4. Execute operations with `executeDynamicOperation`
 5. Refresh when schemas change with `refreshEndpointTools`
 
-This feature transforms the GraphQL MCP server from a general-purpose GraphQL toolkit into a dynamic, auto-configuring interface that can instantly provide MCP tools for any GraphQL API.
+This feature transforms the GraphQL MCP server from a general-purpose GraphQL toolkit into a dynamic, auto-configuring
+interface that can instantly provide MCP tools for any GraphQL API.

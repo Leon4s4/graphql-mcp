@@ -17,10 +17,14 @@ public static class DynamicRegistryTool
     [McpServerTool, Description("Register a GraphQL endpoint for automatic tool generation")]
     public static async Task<string> RegisterEndpoint(
         [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("Unique name for this endpoint")] string endpointName,
-        [Description("HTTP headers as JSON object (optional)")] string? headers = null,
-        [Description("Allow mutations to be registered as tools")] bool allowMutations = false,
-        [Description("Tool prefix for generated tools")] string toolPrefix = "")
+        [Description("Unique name for this endpoint")]
+        string endpointName,
+        [Description("HTTP headers as JSON object (optional)")]
+        string? headers = null,
+        [Description("Allow mutations to be registered as tools")]
+        bool allowMutations = false,
+        [Description("Tool prefix for generated tools")]
+        string toolPrefix = "")
     {
         if (string.IsNullOrEmpty(endpoint))
             return "Error: GraphQL endpoint URL cannot be null or empty.";
@@ -31,7 +35,7 @@ public static class DynamicRegistryTool
         try
         {
             var (requestHeaders, headerError) = JsonHelpers.ParseHeadersJson(headers);
-            
+
             if (headerError != null)
                 return headerError;
 
@@ -57,7 +61,8 @@ public static class DynamicRegistryTool
     [McpServerTool, Description("List all registered dynamic tools")]
     public static string ListDynamicTools()
     {
-        var tools = EndpointRegistryService.Instance.GetAllDynamicTools().Values.ToList();
+        var tools = EndpointRegistryService.Instance.GetAllDynamicTools()
+            .Values.ToList();
 
         if (tools.Count == 0)
             return "No dynamic tools are currently registered. Use RegisterEndpoint to generate tools from a GraphQL schema.";
@@ -65,9 +70,10 @@ public static class DynamicRegistryTool
         var result = new StringBuilder();
         result.AppendLine("# Registered Dynamic Tools");
         result.AppendLine();
-        
-        var endpointGroups = tools.GroupBy(t => t.EndpointName).ToList();
-        
+
+        var endpointGroups = tools.GroupBy(t => t.EndpointName)
+            .ToList();
+
         foreach (var group in endpointGroups)
         {
             var endpoint = EndpointRegistryService.Instance.GetEndpointInfo(group.Key);
@@ -77,11 +83,13 @@ public static class DynamicRegistryTool
             result.AppendLine($"**URL:** {endpoint.Url}");
             result.AppendLine($"**Operations:** {group.Count()}");
             result.AppendLine();
-            
-            var queries = group.Where(t => t.OperationType == "Query").ToList();
+
+            var queries = group.Where(t => t.OperationType == "Query")
+                .ToList();
             result.Append(MarkdownFormatHelpers.FormatToolSection("Queries", queries));
-            
-            var mutations = group.Where(t => t.OperationType == "Mutation").ToList();
+
+            var mutations = group.Where(t => t.OperationType == "Mutation")
+                .ToList();
             result.Append(MarkdownFormatHelpers.FormatToolSection("Mutations", mutations));
         }
 
@@ -90,8 +98,10 @@ public static class DynamicRegistryTool
 
     [McpServerTool, Description("Execute a dynamically generated GraphQL operation")]
     public static async Task<string> ExecuteDynamicOperation(
-        [Description("Name of the dynamic tool to execute")] string toolName,
-        [Description("Variables for the operation as JSON object")] string? variables = null)
+        [Description("Name of the dynamic tool to execute")]
+        string toolName,
+        [Description("Variables for the operation as JSON object")]
+        string? variables = null)
     {
         try
         {
@@ -116,7 +126,7 @@ public static class DynamicRegistryTool
                     return $"Error parsing variables JSON: {ex.Message}";
                 }
             }
-            
+
             var request = new
             {
                 query = toolInfo.Operation,
@@ -129,8 +139,7 @@ public static class DynamicRegistryTool
                 request,
                 endpointInfo.Headers);
 
-            return !result.IsSuccess ?
-                result.FormatForDisplay() : FormatGraphQlResponse(result.Content!);
+            return !result.IsSuccess ? result.FormatForDisplay() : FormatGraphQlResponse(result.Content!);
         }
         catch (Exception ex)
         {
@@ -140,7 +149,8 @@ public static class DynamicRegistryTool
 
     [McpServerTool, Description("Refresh tools for a registered endpoint (re-introspect schema)")]
     public static async Task<string> RefreshEndpointTools(
-        [Description("Name of the endpoint to refresh")] string endpointName)
+        [Description("Name of the endpoint to refresh")]
+        string endpointName)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -151,7 +161,7 @@ public static class DynamicRegistryTool
         var toolsRemoved = EndpointRegistryService.Instance.RemoveToolsForEndpoint(endpointName);
 
         var result = await GenerateToolsFromSchema(endpointInfo);
-        
+
         return $"Refreshed tools for endpoint '{endpointName}'. Removed {toolsRemoved} existing tools. {result}";
     }
 
@@ -262,10 +272,10 @@ public static class DynamicRegistryTool
     private static string GenerateToolName(string prefix, string operationType, string fieldName)
     {
         var parts = new List<string>();
-        
+
         if (!string.IsNullOrEmpty(prefix))
             parts.Add(prefix);
-        
+
         parts.Add(operationType.ToLower());
         parts.Add(ToCamelCase(fieldName));
 
@@ -283,9 +293,9 @@ public static class DynamicRegistryTool
     private static string GenerateOperationString(JsonElement field, string operationType, string fieldName)
     {
         var operation = new StringBuilder();
-        
+
         operation.AppendLine($"{operationType.ToLower()} {operationType}_{fieldName}(");
-        
+
         // Add parameters
         if (field.TryGetProperty("args", out var args) && args.ValueKind == JsonValueKind.Array)
         {
@@ -300,18 +310,18 @@ public static class DynamicRegistryTool
                     parameters.Add($"${paramName}: {paramType}");
                 }
             }
-            
+
             if (parameters.Count > 0)
             {
                 operation.AppendLine(string.Join(",\n  ", parameters));
             }
         }
-        
+
         operation.AppendLine(") {");
-        
+
         // Add field call
         operation.Append($"  {fieldName}");
-        
+
         // Add arguments if any
         if (field.TryGetProperty("args", out var fieldArgs) && fieldArgs.ValueKind == JsonValueKind.Array)
         {
@@ -324,27 +334,27 @@ public static class DynamicRegistryTool
                     argList.Add($"{paramName}: ${paramName}");
                 }
             }
-            
+
             if (argList.Count > 0)
             {
                 operation.Append($"({string.Join(", ", argList)})");
             }
         }
-        
+
         // Add basic field selection (could be enhanced)
         operation.AppendLine(" {");
         operation.AppendLine("    # Add your field selections here");
         operation.AppendLine("    # This is a template - customize the fields you need");
         operation.AppendLine("  }");
         operation.AppendLine("}");
-        
+
         return operation.ToString();
     }
 
     private static string GetFieldDescription(JsonElement field, string operationType, string fieldName)
     {
         var description = new StringBuilder();
-        
+
         if (field.TryGetProperty("description", out var desc) && desc.ValueKind == JsonValueKind.String)
         {
             description.Append(desc.GetString());

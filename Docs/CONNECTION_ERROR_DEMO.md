@@ -2,22 +2,27 @@
 
 ## Overview
 
-The GraphQL MCP Server now has **centralized HTTP client error handling** that provides explicit and actionable error messages when connection issues occur, preventing code continuation after errors and ensuring `EnsureSuccessStatusCode` is called on every request.
+The GraphQL MCP Server now has **centralized HTTP client error handling** that provides explicit and actionable error
+messages when connection issues occur, preventing code continuation after errors and ensuring `EnsureSuccessStatusCode`
+is called on every request.
 
 ## 🎯 Key Improvements
 
 ### 1. **Explicit Connection Error Handling**
+
 - **Network connectivity issues** are clearly identified
 - **DNS resolution failures** show specific error messages
 - **Endpoint unreachability** provides troubleshooting steps
 - **Connection refused errors** no longer show generic messages
 
 ### 2. **Prevents Code Continuation After Errors**
+
 - **Early error detection** stops execution immediately on connection failure
 - **No partial processing** when the endpoint is unreachable
 - **Clear error categorization** (Connection, HTTP, GraphQL, Unexpected)
 
 ### 3. **Centralized HTTP Execution**
+
 - **Single point of HTTP calling** eliminates code duplication
 - **Consistent error handling** across all GraphQL tools
 - **Automatic EnsureSuccessStatusCode** on every request
@@ -46,11 +51,13 @@ public static async Task<GraphQLResponse> ExecuteGraphQLRequestAsync(
 ## 📋 Before vs After Examples
 
 ### Before (Generic Error)
+
 ```
 GraphQL request failed: HttpRequestException
 ```
 
 ### After (Explicit Connection Error)
+
 ```
 # GraphQL Connection Error
 
@@ -68,6 +75,7 @@ GraphQL request failed: HttpRequestException
 ```
 
 ### HTTP Error Example
+
 ```
 # GraphQL HTTP Error
 
@@ -81,7 +89,9 @@ GraphQL request failed: HttpRequestException
 ```
 
 ## Troubleshooting Steps
+
 - **Check authentication** - Verify API keys, tokens, or credentials
+
 ```
 
 ## 🚀 Updated Tools
@@ -106,6 +116,7 @@ The following tools now use the centralized error handling:
 ```
 
 **Error Response:**
+
 ```
 # GraphQL Connection Error
 ❌ **Status:** Connection Failed
@@ -113,6 +124,7 @@ The following tools now use the centralized error handling:
 ```
 
 ### Test 2: Connection Refused
+
 ```json
 {
   "query": "{ __typename }",
@@ -122,6 +134,7 @@ The following tools now use the centralized error handling:
 ```
 
 **Error Response:**
+
 ```
 # GraphQL Connection Error
 ❌ **Status:** Connection Failed
@@ -129,6 +142,7 @@ The following tools now use the centralized error handling:
 ```
 
 ### Test 3: Timeout
+
 ```json
 {
   "query": "{ __typename }",
@@ -138,6 +152,7 @@ The following tools now use the centralized error handling:
 ```
 
 **Error Response:**
+
 ```
 # GraphQL Connection Error
 ❌ **Status:** Connection Failed
@@ -147,12 +162,14 @@ The following tools now use the centralized error handling:
 ## 💡 Benefits
 
 ### For Developers
+
 - **Clear error diagnosis** - Know exactly what went wrong
 - **Actionable troubleshooting** - Step-by-step resolution guidance
 - **Faster debugging** - No more generic "request failed" messages
 - **Consistent experience** - Same error handling across all tools
 
 ### For Production
+
 - **Better monitoring** - Connection issues are clearly categorized
 - **Improved reliability** - No partial processing on connection failures
 - **Enhanced security** - Proper HTTP status code validation
@@ -166,4 +183,5 @@ The following tools now use the centralized error handling:
 - `Tools/QueryValidationTools.cs` - Query testing with proper error handling
 - `Tools/PerformanceMonitoringTools.cs` - Performance testing with error handling
 
-The GraphQL MCP Server now provides professional-grade connection error handling that helps developers quickly identify and resolve connectivity issues.
+The GraphQL MCP Server now provides professional-grade connection error handling that helps developers quickly identify
+and resolve connectivity issues.
