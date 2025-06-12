@@ -11,7 +11,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class FieldUsageAnalyticsTools
 {
-    [McpServerTool, Description("Track which schema fields are actually being used")]
+    [McpServerTool, Description("Analyze GraphQL field usage patterns from query logs to identify unused schema fields")]
     public static async Task<string> AnalyzeFieldUsage(
         [Description("Log of executed queries as JSON array")]
         string queryLog,
@@ -109,7 +109,7 @@ public static class FieldUsageAnalyticsTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Generate field usage report from query patterns")]
+    [McpServerTool, Description("Create detailed reports showing which GraphQL fields are used in specific queries")]
     public static string GenerateUsageReport(
         [Description("GraphQL query to analyze usage patterns")]
         string query,
@@ -177,7 +177,7 @@ public static class FieldUsageAnalyticsTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Compare field usage patterns between different queries")]
+    [McpServerTool, Description("Compare field selection patterns between two GraphQL queries to identify optimization opportunities")]
     public static string CompareFieldUsage(
         [Description("First GraphQL query")] string query1,
         [Description("Second GraphQL query")] string query2,

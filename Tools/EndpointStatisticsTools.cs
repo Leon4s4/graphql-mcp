@@ -8,7 +8,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class EndpointStatisticsTools
 {
-    [McpServerTool, Description("Get statistics about registered endpoints and dynamic tools")]
+    [McpServerTool, Description("View detailed statistics about registered GraphQL endpoints and their generated tools")]
     public static string GetEndpointStatistics()
     {
         var service = EndpointRegistryService.Instance;

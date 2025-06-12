@@ -8,7 +8,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class UtilityTools
 {
-    [McpServerTool, Description("Format and prettify GraphQL queries")]
+    [McpServerTool, Description("Format GraphQL queries with proper indentation and readable structure")]
     public static string FormatQuery([Description("GraphQL query to format")] string query)
     {
         var formatted = new StringBuilder();
@@ -51,7 +51,7 @@ public static class UtilityTools
             .TrimEnd();
     }
 
-    [McpServerTool, Description("Minify GraphQL queries for production use")]
+    [McpServerTool, Description("Compress GraphQL queries by removing whitespace and comments for production use")]
     public static string MinifyQuery([Description("GraphQL query to minify")] string query)
     {
         var minified = Regex.Replace(query, @"#.*$", "", RegexOptions.Multiline);
@@ -93,7 +93,7 @@ public static class UtilityTools
         return cleaned.Trim();
     }
 
-    [McpServerTool, Description("Extract hardcoded values into variables")]
+    [McpServerTool, Description("Convert hardcoded values in queries to variables for reusability and type safety")]
     public static string ExtractVariables([Description("GraphQL query to extract variables from")] string query)
     {
         var result = new StringBuilder();
@@ -188,7 +188,7 @@ public static class UtilityTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Generate field aliases to avoid conflicts in complex queries")]
+    [McpServerTool, Description("Create field aliases to prevent naming conflicts when querying the same field multiple times")]
     public static string GenerateAliases([Description("GraphQL query to generate aliases for")] string query)
     {
         var result = new StringBuilder();

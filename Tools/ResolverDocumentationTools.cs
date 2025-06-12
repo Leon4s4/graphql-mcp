@@ -9,7 +9,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class ResolverDocumentationTools
 {
-    [McpServerTool, Description("Generate documentation for GraphQL resolvers based on schema analysis")]
+    [McpServerTool, Description("Create comprehensive documentation for GraphQL resolvers based on schema analysis")]
     public static async Task<string> GenerateResolverDocs(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Type name to document resolvers for (optional)")]
@@ -93,7 +93,7 @@ public static class ResolverDocumentationTools
         return documentation.ToString();
     }
 
-    [McpServerTool, Description("Generate resolver implementation templates for specific types")]
+    [McpServerTool, Description("Create boilerplate resolver code templates for GraphQL types with error handling")]
     public static async Task<string> GenerateResolverTemplates(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Type name to generate templates for")]
@@ -150,7 +150,7 @@ public static class ResolverDocumentationTools
         return templates.ToString();
     }
 
-    [McpServerTool, Description("Document resolver performance characteristics and optimization tips")]
+    [McpServerTool, Description("Analyze and document GraphQL resolver performance patterns with optimization recommendations")]
     public static async Task<string> DocumentResolverPerformance(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Type name to analyze (optional)")]

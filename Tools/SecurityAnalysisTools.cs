@@ -9,7 +9,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class SecurityAnalysisTools
 {
-    [McpServerTool, Description("Analyze query for security issues and complexity")]
+    [McpServerTool, Description("Analyze GraphQL queries for security vulnerabilities, depth attacks, and complexity issues")]
     public static async Task<string> AnalyzeQuerySecurity(
         [Description("GraphQL query to analyze")]
         string query,
@@ -124,7 +124,7 @@ public static class SecurityAnalysisTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Detect potential DoS attacks in GraphQL queries")]
+    [McpServerTool, Description("Identify potential denial-of-service attack patterns in GraphQL queries")]
     public static string DetectDoSPatterns(
         [Description("GraphQL query to analyze")]
         string query,

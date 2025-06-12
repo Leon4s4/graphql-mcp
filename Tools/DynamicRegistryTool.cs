@@ -13,7 +13,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class DynamicRegistryTool
 {
-    [McpServerTool, Description("List all registered dynamic tools")]
+    [McpServerTool, Description("View all auto-generated GraphQL operation tools organized by endpoint")]
     public static string ListDynamicTools()
     {
         var tools = EndpointRegistryService.Instance.GetAllDynamicTools().Values.ToList();
@@ -48,7 +48,7 @@ public static class DynamicRegistryTool
         return result.ToString();
     }
 
-    [McpServerTool, Description("Execute a dynamically generated GraphQL operation")]
+    [McpServerTool, Description("Execute a specific auto-generated GraphQL operation with type-safe variables")]
     public static async Task<string> ExecuteDynamicOperation(
         [Description("Name of the dynamic tool to execute")]
         string toolName,

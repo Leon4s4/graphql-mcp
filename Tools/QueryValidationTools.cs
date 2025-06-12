@@ -10,7 +10,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class QueryValidationTools
 {
-    [McpServerTool, Description("Test and validate GraphQL queries with detailed error reporting")]
+    [McpServerTool, Description("Test GraphQL queries with comprehensive validation including syntax, schema compliance, and execution")]
     public static async Task<string> TestQuery(
         [Description("GraphQL query to test")] string query,
         [Description("GraphQL endpoint URL")] string endpoint,
@@ -110,7 +110,7 @@ public static class QueryValidationTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Validate GraphQL query syntax and structure")]
+    [McpServerTool, Description("Perform syntax validation on GraphQL queries without schema or execution requirements")]
     public static string ValidateQuery([Description("GraphQL query to validate")] string query)
     {
         var result = new StringBuilder();

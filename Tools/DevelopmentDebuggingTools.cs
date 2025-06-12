@@ -7,7 +7,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class DevelopmentDebuggingTools
 {
-    [McpServerTool, Description("Analyze and explain what a GraphQL query does, including nested selections")]
+    [McpServerTool, Description("Provide detailed analysis of what a GraphQL query does, including field selections and data flow")]
     public static string ExplainQuery([Description("GraphQL query to analyze")] string query)
     {
         var explanation = new List<string>();
@@ -85,7 +85,7 @@ public static class DevelopmentDebuggingTools
         return string.Join("\n", explanation);
     }
 
-    [McpServerTool, Description("Suggest optimizations for GraphQL queries (field selection, avoiding over-fetching)")]
+    [McpServerTool, Description("Suggest performance and best practice improvements for GraphQL queries")]
     public static string OptimizeQuery([Description("GraphQL query to optimize")] string query)
     {
         var suggestions = new List<string>();
@@ -168,7 +168,7 @@ public static class DevelopmentDebuggingTools
         return string.Join("\n", suggestions);
     }
 
-    [McpServerTool, Description("Extract reusable fragments from complex queries")]
+    [McpServerTool, Description("Identify repeated field patterns and generate reusable GraphQL fragments")]
     public static string ExtractFragments([Description("GraphQL query to extract fragments from")] string query)
     {
         var result = new List<string>();
@@ -280,7 +280,7 @@ public static class DevelopmentDebuggingTools
         return string.Join("\n", result);
     }
 
-    [McpServerTool, Description("Calculate and report query complexity scores")]
+    [McpServerTool, Description("Calculate query complexity metrics including depth, field count, and performance score")]
     public static string AnalyzeQueryComplexity([Description("GraphQL query to analyze")] string query)
     {
         var analysis = new List<string>();

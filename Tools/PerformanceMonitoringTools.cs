@@ -11,7 +11,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class PerformanceMonitoringTools
 {
-    [McpServerTool, Description("Measure and report query execution times")]
+    [McpServerTool, Description("Measure GraphQL query execution time and generate performance reports")]
     public static async Task<string> MeasureQueryPerformance(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("GraphQL query to measure")]
@@ -144,7 +144,7 @@ public static class PerformanceMonitoringTools
         }
     }
 
-    [McpServerTool, Description("Analyze queries for N+1 problems and suggest DataLoader patterns")]
+    [McpServerTool, Description("Identify potential N+1 query problems and recommend DataLoader optimization patterns")]
     public static string AnalyzeDataLoaderPatterns([Description("GraphQL query to analyze")] string query)
     {
         try

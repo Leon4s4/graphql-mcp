@@ -9,7 +9,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class SchemaEvolutionTools
 {
-    [McpServerTool, Description("Detect breaking changes between schema versions")]
+    [McpServerTool, Description("Identify breaking changes between GraphQL schema versions with impact analysis")]
     public static async Task<string> DetectBreakingChanges(
         [Description("Old schema endpoint or SDL")]
         string oldSchema,
@@ -94,7 +94,7 @@ public static class SchemaEvolutionTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Track schema evolution metrics and trends")]
+    [McpServerTool, Description("Monitor GraphQL schema changes over time and generate evolution trend reports")]
     public static async Task<string> TrackSchemaEvolution(
         [Description("List of schema endpoints or versions as JSON array")]
         string schemaVersions,

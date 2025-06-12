@@ -7,7 +7,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static partial class BranchNamingTool
 {
-    [McpServerTool, Description("Generates a Git branch name from a ticket number and issue type")]
+    [McpServerTool, Description("Generate standardized Git branch names from ticket numbers and issue types")]
     public static string GenerateBranchName(
         [Description("Ticket description in format: [number*] some text. Example: 57818 Test the graphql feature on account")]
         string ticketDescription,

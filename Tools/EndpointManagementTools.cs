@@ -11,7 +11,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class EndpointManagementTools
 {
-    [McpServerTool, Description("Register a GraphQL endpoint to enable all GraphQL MCP tools and operations")]
+    [McpServerTool, Description("Register a GraphQL endpoint and automatically generate MCP tools for all available queries and mutations")]
     public static async Task<string> RegisterEndpoint(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Unique name for this endpoint")]
@@ -55,7 +55,7 @@ public static class EndpointManagementTools
         }
     }
 
-    [McpServerTool, Description("List all registered GraphQL endpoints")]
+    [McpServerTool, Description("View all registered GraphQL endpoints with their configuration and tool counts")]
     public static string GetAllEndpoints()
     {
         var endpoints = EndpointRegistryService.Instance.GetAllEndpoints();
@@ -93,7 +93,7 @@ public static class EndpointManagementTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Refresh tools for a registered endpoint (re-introspect schema)")]
+    [McpServerTool, Description("Update dynamic tools for an endpoint by re-introspecting its GraphQL schema")]
     public static async Task<string> RefreshEndpointTools(
         [Description("Name of the endpoint to refresh")]
         string endpointName)
@@ -111,7 +111,7 @@ public static class EndpointManagementTools
         return $"Refreshed tools for endpoint '{endpointName}'. Removed {toolsRemoved} existing tools. {result}";
     }
 
-    [McpServerTool, Description("Unregister a GraphQL endpoint and remove all its associated dynamic tools")]
+    [McpServerTool, Description("Remove a GraphQL endpoint and clean up all its auto-generated dynamic tools")]
     public static string UnregisterEndpoint(
         [Description("Name of the endpoint to unregister")]
         string endpointName)

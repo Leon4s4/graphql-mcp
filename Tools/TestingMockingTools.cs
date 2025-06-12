@@ -9,7 +9,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class TestingMockingTools
 {
-    [McpServerTool, Description("Generate mock data based on GraphQL schema types")]
+    [McpServerTool, Description("Generate realistic mock data that conforms to GraphQL schema type definitions")]
     public static async Task<string> GenerateMockData(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Type name to generate mock data for")]
@@ -65,7 +65,7 @@ public static class TestingMockingTools
         return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    [McpServerTool, Description("Generate unit tests for GraphQL queries")]
+    [McpServerTool, Description("Create automated unit tests for GraphQL queries with multiple testing frameworks")]
     public static string GenerateQueryTests(
         [Description("GraphQL query to generate tests for")]
         string query,
@@ -150,7 +150,7 @@ public static class TestingMockingTools
         return testCode.ToString();
     }
 
-    [McpServerTool, Description("Compare different versions of GraphQL schemas for breaking changes")]
+    [McpServerTool, Description("Analyze schema changes between versions and identify breaking changes for testing")]
     public static async Task<string> CompareSchemas(
         [Description("Original GraphQL endpoint URL")]
         string originalEndpoint,
@@ -246,7 +246,7 @@ public static class TestingMockingTools
         return comparison.ToString();
     }
 
-    [McpServerTool, Description("Generate comprehensive test suites for GraphQL queries and mutations")]
+    [McpServerTool, Description("Create complete test suites with unit, integration, and edge case tests for GraphQL operations")]
     public static async Task<string> GenerateTestSuite(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Query or mutation to test")]
@@ -293,7 +293,7 @@ public static class TestingMockingTools
         return testSuite.ToString();
     }
 
-    [McpServerTool, Description("Generate load testing scenarios for GraphQL endpoints")]
+    [McpServerTool, Description("Create performance and load testing scenarios for GraphQL endpoints with configurable parameters")]
     public static string GenerateLoadTests(
         [Description("GraphQL query for load testing")]
         string query,

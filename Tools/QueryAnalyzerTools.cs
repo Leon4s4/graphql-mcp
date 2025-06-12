@@ -9,7 +9,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class QueryAnalyzerTools
 {
-    [McpServerTool, Description("Perform comprehensive analysis of GraphQL queries including complexity, performance, and best practices")]
+    [McpServerTool, Description("Perform comprehensive analysis of GraphQL queries including complexity, performance impact, and best practice recommendations")]
     public static string AnalyzeQuery(
         [Description("GraphQL query to analyze")]
         string query,
@@ -110,7 +110,7 @@ public static class QueryAnalyzerTools
         return analysis.ToString();
     }
 
-    [McpServerTool, Description("Automatically build GraphQL queries based on schema and requirements")]
+    [McpServerTool, Description("Automatically construct GraphQL queries from schema types with intelligent field selection")]
     public static async Task<string> BuildQuery(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Root type to query (e.g., 'User', 'Product')")]

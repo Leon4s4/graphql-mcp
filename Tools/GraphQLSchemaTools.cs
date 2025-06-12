@@ -9,7 +9,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class GraphQlSchemaTools
 {
-    [McpServerTool, Description("Get a focused view of the GraphQL schema with specific type information")]
+    [McpServerTool, Description("Retrieve and format specific GraphQL schema information with filtering and type focus")]
     public static async Task<string> GetSchema(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Type name to focus on (optional)")]
@@ -89,7 +89,7 @@ public static class GraphQlSchemaTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Compare two GraphQL schemas and show differences")]
+    [McpServerTool, Description("Analyze differences between two GraphQL schemas with detailed change reporting")]
     public static async Task<string> CompareSchemas(
         [Description("First GraphQL endpoint URL")]
         string endpoint1,
@@ -163,7 +163,7 @@ public static class GraphQlSchemaTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Compare the same GraphQL request across two different services")]
+    [McpServerTool, Description("Execute the same GraphQL query on two endpoints and compare their responses")]
     public static async Task<string> CompareRequestResponses(
         [Description("GraphQL query to execute on both services")]
         string query,

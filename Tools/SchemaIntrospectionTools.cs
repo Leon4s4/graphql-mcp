@@ -9,7 +9,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class SchemaIntrospectionTools
 {
-    [McpServerTool, Description("Query the GraphQL schema to understand available types, fields, and operations")]
+    [McpServerTool, Description("Retrieve complete GraphQL schema information including types, fields, directives, and relationships")]
     public static async Task<string> IntrospectSchema(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("HTTP headers as JSON object (optional)")]
@@ -126,7 +126,7 @@ public static class SchemaIntrospectionTools
         return JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    [McpServerTool, Description("Extract and format schema documentation and field descriptions")]
+    [McpServerTool, Description("Generate comprehensive documentation from GraphQL schema descriptions and field metadata")]
     public static async Task<string> GetSchemaDocs(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Specific type name to get documentation for (optional)")]
@@ -230,7 +230,7 @@ public static class SchemaIntrospectionTools
         return string.Join("\n\n", docs);
     }
 
-    [McpServerTool, Description("Validate GraphQL queries against the schema without executing them")]
+    [McpServerTool, Description("Validate GraphQL query syntax and schema compliance without executing the query")]
     public static async Task<string> ValidateQuery(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("GraphQL query to validate")]

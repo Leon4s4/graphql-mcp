@@ -9,7 +9,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class ErrorExplainerTools
 {
-    [McpServerTool, Description("Explain GraphQL errors and provide solutions")]
+    [McpServerTool, Description("Analyze GraphQL error messages and provide actionable solutions and explanations")]
     public static string ExplainError(
         [Description("GraphQL error message or response")]
         string errorText,
@@ -97,7 +97,7 @@ public static class ErrorExplainerTools
         return explanation.ToString();
     }
 
-    [McpServerTool, Description("Validate GraphQL query syntax and structure")]
+    [McpServerTool, Description("Check GraphQL query syntax and structure for common formatting errors")]
     public static string ValidateQuery([Description("GraphQL query to validate")] string query)
     {
         var validation = new StringBuilder();

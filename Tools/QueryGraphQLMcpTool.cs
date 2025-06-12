@@ -11,7 +11,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class QueryGraphQlMcpTool
 {
-    [McpServerTool, Description("Execute GraphQL queries and mutations against registered endpoints")]
+    [McpServerTool, Description("Execute GraphQL queries and mutations with comprehensive error handling and formatted results")]
     public static async Task<string> QueryGraphQl(
         [Description("GraphQL query or mutation to execute")]
         string query,

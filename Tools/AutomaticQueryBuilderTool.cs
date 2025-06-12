@@ -11,7 +11,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class AutomaticQueryBuilderTool
 {
-    [McpServerTool, Description("Automatically build complete GraphQL queries with smart field selection")]
+    [McpServerTool, Description("Automatically generate complete GraphQL queries with intelligent field selection and depth control")]
     public static async Task<string> BuildSmartQuery(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Operation name (query field name)")]
@@ -39,7 +39,7 @@ public static class AutomaticQueryBuilderTool
         }
     }
 
-    [McpServerTool, Description("Build nested field selections for GraphQL types with automatic scalar detection")]
+    [McpServerTool, Description("Generate nested field selections for specific GraphQL types with configurable depth limits")]
     public static async Task<string> BuildNestedSelection(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Type name to build selection for")]

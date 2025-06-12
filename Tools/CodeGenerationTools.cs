@@ -10,7 +10,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class CodeGenerationTools
 {
-    [McpServerTool, Description("Generate C# classes/types from GraphQL schema")]
+    [McpServerTool, Description("Generate strongly-typed C# classes and models from GraphQL schema types")]
     public static async Task<string> GenerateTypes(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Namespace for generated classes")]
@@ -67,7 +67,7 @@ public static class CodeGenerationTools
         return generatedCode.ToString();
     }
 
-    [McpServerTool, Description("Generate strongly-typed client code for specific queries")]
+    [McpServerTool, Description("Create strongly-typed client classes with methods for executing specific GraphQL queries")]
     public static string GenerateClientCode(
         [Description("GraphQL query to generate client for")]
         string query,
@@ -166,7 +166,7 @@ public static class CodeGenerationTools
         return generatedCode.ToString();
     }
 
-    [McpServerTool, Description("Create fluent query builders for common operations")]
+    [McpServerTool, Description("Generate fluent API builders for constructing GraphQL queries programmatically")]
     public static async Task<string> GenerateQueryBuilder(
         [Description("GraphQL endpoint URL")] string endpoint,
         [Description("Root type to generate builder for (Query/Mutation)")]
