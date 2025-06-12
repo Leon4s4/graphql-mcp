@@ -13,15 +13,25 @@ public static class PerformanceMonitoringTools
 {
     [McpServerTool, Description("Measure GraphQL query execution time and generate performance reports")]
     public static async Task<string> MeasureQueryPerformance(
-        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("GraphQL query to measure")]
         string query,
         [Description("Number of test runs")] int runs = 5,
         [Description("Variables as JSON object (optional)")]
         string? variables = null,
-        [Description("HTTP headers as JSON object (optional)")]
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
         string? headers = null)
     {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
+
         try
         {
             var measurements = new List<TimeSpan>();
@@ -37,7 +47,7 @@ public static class PerformanceMonitoringTools
             var jsonContent = JsonSerializer.Serialize(requestBody);
 
             results.AppendLine("## Test Configuration");
-            results.AppendLine($"- **Endpoint:** {endpoint}");
+            results.AppendLine($"- **Endpoint:** {endpointName} ({endpointInfo.Url})");
             results.AppendLine($"- **Runs:** {runs}");
             results.AppendLine($"- **Query Length:** {query.Length} characters");
             results.AppendLine($"- **Has Variables:** {!string.IsNullOrWhiteSpace(variables)}");
@@ -47,7 +57,7 @@ public static class PerformanceMonitoringTools
             results.AppendLine("## Executing Performance Tests...\n");
             try
             {
-                await HttpClientHelper.ExecuteGraphQlRequestAsync(endpoint, requestBody, headers);
+                await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo.Url, requestBody, requestHeaders);
                 results.AppendLine("✅ Warmup run completed");
             }
             catch
@@ -61,7 +71,7 @@ public static class PerformanceMonitoringTools
                 var stopwatch = Stopwatch.StartNew();
                 try
                 {
-                    var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpoint, requestBody, headers);
+                    var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo.Url, requestBody, requestHeaders);
                     stopwatch.Stop();
 
                     if (result.IsSuccess)

@@ -11,10 +11,20 @@ public static class SchemaIntrospectionTools
 {
     [McpServerTool, Description("Retrieve complete GraphQL schema information including types, fields, directives, and relationships")]
     public static async Task<string> IntrospectSchema(
-        [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("HTTP headers as JSON object (optional)")]
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
         string? headers = null)
     {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
+
         var introspectionQuery = @"
                 query IntrospectionQuery {
                   __schema {
@@ -110,7 +120,7 @@ public static class SchemaIntrospectionTools
 
         var body = new { query = introspectionQuery };
 
-        var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpoint, body, headers);
+        var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo.Url, body, requestHeaders);
 
         if (!result.IsSuccess)
         {
@@ -128,13 +138,13 @@ public static class SchemaIntrospectionTools
 
     [McpServerTool, Description("Generate comprehensive documentation from GraphQL schema descriptions and field metadata")]
     public static async Task<string> GetSchemaDocs(
-        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Specific type name to get documentation for (optional)")]
         string? typeName = null,
         [Description("HTTP headers as JSON object (optional)")]
         string? headers = null)
     {
-        var schemaJson = await IntrospectSchema(endpoint, headers);
+        var schemaJson = await IntrospectSchema(endpointName, headers);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
@@ -232,14 +242,14 @@ public static class SchemaIntrospectionTools
 
     [McpServerTool, Description("Validate GraphQL query syntax and schema compliance without executing the query")]
     public static async Task<string> ValidateQuery(
-        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("GraphQL query to validate")]
         string query,
-        [Description("HTTP headers as JSON object (optional)")]
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
         string? headers = null)
     {
         // First get the schema
-        var schemaJson = await IntrospectSchema(endpoint, headers);
+        var schemaJson = await IntrospectSchema(endpointName, headers);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data))

@@ -13,14 +13,24 @@ public static class QueryValidationTools
     [McpServerTool, Description("Test GraphQL queries with comprehensive validation including syntax, schema compliance, and execution")]
     public static async Task<string> TestQuery(
         [Description("GraphQL query to test")] string query,
-        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Variables as JSON (optional)")]
         string? variables = null,
-        [Description("HTTP headers as JSON object (optional)")]
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
         string? headers = null,
         [Description("Validate query syntax only")]
         bool syntaxCheckOnly = false)
     {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
+
         var result = new StringBuilder();
         result.AppendLine("# GraphQL Query Test Report\n");
 
@@ -53,7 +63,7 @@ public static class QueryValidationTools
         result.AppendLine("## Schema Validation");
         try
         {
-            var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
+            var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
             var schemaErrors = ValidateQueryAgainstSchema(query, schemaJson);
 
             if (schemaErrors.Any())
@@ -81,7 +91,7 @@ public static class QueryValidationTools
         result.AppendLine("## Execution Test");
         try
         {
-            var executionResult = await ExecuteTestQuery(endpoint, query, variables, headers);
+            var executionResult = await ExecuteTestQuery(endpointInfo.Url, query, variables, requestHeaders);
             result.AppendLine(executionResult);
         }
         catch (Exception ex)

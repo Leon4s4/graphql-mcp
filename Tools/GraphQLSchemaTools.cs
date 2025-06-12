@@ -11,17 +11,22 @@ public static class GraphQlSchemaTools
 {
     [McpServerTool, Description("Retrieve and format specific GraphQL schema information with filtering and type focus")]
     public static async Task<string> GetSchema(
-        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Type name to focus on (optional)")]
         string? typeName = null,
         [Description("Include only query types")]
         bool queryOnly = false,
         [Description("Include only mutation types")]
-        bool mutationOnly = false,
-        [Description("HTTP headers as JSON object (optional)")]
-        string? headers = null)
+        bool mutationOnly = false)
     {
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        var headers = endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null;
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo.Url, headers);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
@@ -66,7 +71,7 @@ public static class GraphQlSchemaTools
             if (currentTypeName?.StartsWith("__") == true)
                 continue;
 
-            if (!string.IsNullOrEmpty(typeName) &&
+            if (!string.IsNullOrEmpty(typeName) && !string.IsNullOrEmpty(currentTypeName) &&
                 !currentTypeName.Equals(typeName, StringComparison.OrdinalIgnoreCase))
                 continue;
 
@@ -91,18 +96,29 @@ public static class GraphQlSchemaTools
 
     [McpServerTool, Description("Analyze differences between two GraphQL schemas with detailed change reporting")]
     public static async Task<string> CompareSchemas(
-        [Description("First GraphQL endpoint URL")]
-        string endpoint1,
-        [Description("Second GraphQL endpoint URL")]
-        string endpoint2,
-        [Description("HTTP headers for first endpoint as JSON (optional)")]
-        string? headers1 = null,
-        [Description("HTTP headers for second endpoint as JSON (optional)")]
-        string? headers2 = null)
+        [Description("Name of the first registered GraphQL endpoint")]
+        string endpointName1,
+        [Description("Name of the second registered GraphQL endpoint")]
+        string endpointName2)
     {
+        var endpointInfo1 = EndpointRegistryService.Instance.GetEndpointInfo(endpointName1);
+        if (endpointInfo1 == null)
+        {
+            return $"Error: Endpoint '{endpointName1}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        var endpointInfo2 = EndpointRegistryService.Instance.GetEndpointInfo(endpointName2);
+        if (endpointInfo2 == null)
+        {
+            return $"Error: Endpoint '{endpointName2}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        var headers1 = endpointInfo1.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo1.Headers) : null;
+        var headers2 = endpointInfo2.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo2.Headers) : null;
+
         // Get both schemas
-        var schema1Json = await SchemaIntrospectionTools.IntrospectSchema(endpoint1, headers1);
-        var schema2Json = await SchemaIntrospectionTools.IntrospectSchema(endpoint2, headers2);
+        var schema1Json = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo1.Url, headers1);
+        var schema2Json = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo2.Url, headers2);
 
         var schema1Data = JsonSerializer.Deserialize<JsonElement>(schema1Json);
         var schema2Data = JsonSerializer.Deserialize<JsonElement>(schema2Json);
@@ -117,8 +133,8 @@ public static class GraphQlSchemaTools
 
         var result = new StringBuilder();
         result.AppendLine("# Schema Comparison Report\n");
-        result.AppendLine($"**Schema 1:** {endpoint1}");
-        result.AppendLine($"**Schema 2:** {endpoint2}\n");
+        result.AppendLine($"**Schema 1:** {endpointName1} ({endpointInfo1.Url})");
+        result.AppendLine($"**Schema 2:** {endpointName2} ({endpointInfo2.Url})\n");
 
         // Compare types
         var types1 = GetTypeNames(schema1);
@@ -167,26 +183,37 @@ public static class GraphQlSchemaTools
     public static async Task<string> CompareRequestResponses(
         [Description("GraphQL query to execute on both services")]
         string query,
-        [Description("First GraphQL endpoint URL")]
-        string endpoint1,
-        [Description("Second GraphQL endpoint URL")]
-        string endpoint2,
+        [Description("Name of the first registered GraphQL endpoint")]
+        string endpointName1,
+        [Description("Name of the second registered GraphQL endpoint")]
+        string endpointName2,
         [Description("GraphQL variables as JSON object (optional)")]
         string? variables = null,
-        [Description("HTTP headers for first endpoint as JSON (optional)")]
-        string? headers1 = null,
-        [Description("HTTP headers for second endpoint as JSON (optional)")]
-        string? headers2 = null,
         [Description("Include response timing comparison")]
         bool includeTiming = true,
         [Description("Show detailed diff of response data")]
         bool detailedDiff = true)
     {
+        var endpointInfo1 = EndpointRegistryService.Instance.GetEndpointInfo(endpointName1);
+        if (endpointInfo1 == null)
+        {
+            return $"Error: Endpoint '{endpointName1}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        var endpointInfo2 = EndpointRegistryService.Instance.GetEndpointInfo(endpointName2);
+        if (endpointInfo2 == null)
+        {
+            return $"Error: Endpoint '{endpointName2}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        var headers1 = endpointInfo1.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo1.Headers) : null;
+        var headers2 = endpointInfo2.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo2.Headers) : null;
+
         var result = new StringBuilder();
         result.AppendLine("# GraphQL Request Comparison Report\n");
         result.AppendLine($"**Query:**\n```graphql\n{query}\n```\n");
-        result.AppendLine($"**Service 1:** {endpoint1}");
-        result.AppendLine($"**Service 2:** {endpoint2}\n");
+        result.AppendLine($"**Service 1:** {endpointName1} ({endpointInfo1.Url})");
+        result.AppendLine($"**Service 2:** {endpointName2} ({endpointInfo2.Url})\n");
 
         if (!string.IsNullOrEmpty(variables))
         {
@@ -195,11 +222,11 @@ public static class GraphQlSchemaTools
 
         // Execute request on both services with timing
         var stopwatch1 = System.Diagnostics.Stopwatch.StartNew();
-        var response1 = await ExecuteGraphQlRequest(endpoint1, query, variables, headers1);
+        var response1 = await ExecuteGraphQlRequest(endpointInfo1.Url, query, variables, headers1);
         stopwatch1.Stop();
 
         var stopwatch2 = System.Diagnostics.Stopwatch.StartNew();
-        var response2 = await ExecuteGraphQlRequest(endpoint2, query, variables, headers2);
+        var response2 = await ExecuteGraphQlRequest(endpointInfo2.Url, query, variables, headers2);
         stopwatch2.Stop();
 
         // Parse responses
@@ -257,7 +284,7 @@ public static class GraphQlSchemaTools
         {
             result.AppendLine("## Error Comparison\n");
 
-            if (hasErrors1)
+            if (hasErrors1 && errors1.HasValue)
             {
                 result.AppendLine("### Service 1 Errors");
                 foreach (var error in errors1.Value.EnumerateArray())
@@ -269,7 +296,7 @@ public static class GraphQlSchemaTools
                 result.AppendLine();
             }
 
-            if (hasErrors2)
+            if (hasErrors2 && errors2.HasValue)
             {
                 result.AppendLine("### Service 2 Errors");
                 foreach (var error in errors2.Value.EnumerateArray())

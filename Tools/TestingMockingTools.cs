@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
@@ -11,16 +12,26 @@ public static class TestingMockingTools
 {
     [McpServerTool, Description("Generate realistic mock data that conforms to GraphQL schema type definitions")]
     public static async Task<string> GenerateMockData(
-        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Type name to generate mock data for")]
         string typeName,
         [Description("Number of mock instances to generate")]
         int count = 1,
-        [Description("HTTP headers as JSON object (optional)")]
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
         string? headers = null)
     {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
+
         // Get schema introspection
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
