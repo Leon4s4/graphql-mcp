@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using Microsoft.Extensions.AI;
 using ModelContextProtocol.Server;
 
 namespace Tools;

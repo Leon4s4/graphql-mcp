@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Text;
-using Microsoft.Extensions.AI;
 using ModelContextProtocol.Server;
 
 namespace Tools;
