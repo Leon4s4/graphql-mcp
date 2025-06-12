@@ -11,7 +11,7 @@ public static class ResolverDocumentationTools
 {
     [McpServerTool, Description("Create comprehensive documentation for GraphQL resolvers based on schema analysis")]
     public static async Task<string> GenerateResolverDocs(
-        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Type name to document resolvers for (optional)")]
         string? typeName = null,
         [Description("Include field descriptions")]
@@ -20,11 +20,21 @@ public static class ResolverDocumentationTools
         bool includeArguments = true,
         [Description("Include return type information")]
         bool includeReturnTypes = true,
-        [Description("HTTP headers as JSON object (optional)")]
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
         string? headers = null)
     {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
+
         // Get schema introspection
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
@@ -95,18 +105,28 @@ public static class ResolverDocumentationTools
 
     [McpServerTool, Description("Create boilerplate resolver code templates for GraphQL types with error handling")]
     public static async Task<string> GenerateResolverTemplates(
-        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Type name to generate templates for")]
         string typeName,
         [Description("Programming language for templates")]
         string language = "csharp",
         [Description("Include error handling")]
         bool includeErrorHandling = true,
-        [Description("HTTP headers as JSON object (optional)")]
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
         string? headers = null)
     {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
+
         // Get schema introspection
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
@@ -152,17 +172,27 @@ public static class ResolverDocumentationTools
 
     [McpServerTool, Description("Analyze and document GraphQL resolver performance patterns with optimization recommendations")]
     public static async Task<string> DocumentResolverPerformance(
-        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Type name to analyze (optional)")]
         string? typeName = null,
-        [Description("HTTP headers as JSON object (optional)")]
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
         string? headers = null)
     {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
+
         var performanceDoc = new StringBuilder();
         performanceDoc.AppendLine("# GraphQL Resolver Performance Guide\n");
 
         // Get schema for analysis
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||

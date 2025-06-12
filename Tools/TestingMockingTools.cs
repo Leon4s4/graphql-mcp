@@ -163,18 +163,36 @@ public static class TestingMockingTools
 
     [McpServerTool, Description("Analyze schema changes between versions and identify breaking changes for testing")]
     public static async Task<string> CompareSchemas(
-        [Description("Original GraphQL endpoint URL")]
-        string originalEndpoint,
-        [Description("New GraphQL endpoint URL")]
-        string newEndpoint,
-        [Description("HTTP headers for original endpoint (optional)")]
+        [Description("Name of the original registered GraphQL endpoint")]
+        string originalEndpointName,
+        [Description("Name of the new registered GraphQL endpoint")]
+        string newEndpointName,
+        [Description("HTTP headers for original endpoint (optional - will override endpoint headers)")]
         string? originalHeaders = null,
-        [Description("HTTP headers for new endpoint (optional)")]
+        [Description("HTTP headers for new endpoint (optional - will override endpoint headers)")]
         string? newHeaders = null)
     {
+        var originalEndpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(originalEndpointName);
+        if (originalEndpointInfo == null)
+        {
+            return $"Error: Endpoint '{originalEndpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        var newEndpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(newEndpointName);
+        if (newEndpointInfo == null)
+        {
+            return $"Error: Endpoint '{newEndpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        // Use provided headers or fall back to endpoint headers
+        var originalRequestHeaders = !string.IsNullOrEmpty(originalHeaders) ? originalHeaders : 
+            (originalEndpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(originalEndpointInfo.Headers) : null);
+        var newRequestHeaders = !string.IsNullOrEmpty(newHeaders) ? newHeaders : 
+            (newEndpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(newEndpointInfo.Headers) : null);
+
         // Get both schemas
-        var originalSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(originalEndpoint, originalHeaders);
-        var newSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(newEndpoint, newHeaders);
+        var originalSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(originalEndpointName, originalRequestHeaders);
+        var newSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(newEndpointName, newRequestHeaders);
 
         var originalSchema = JsonSerializer.Deserialize<JsonElement>(originalSchemaJson);
         var newSchema = JsonSerializer.Deserialize<JsonElement>(newSchemaJson);
@@ -259,7 +277,7 @@ public static class TestingMockingTools
 
     [McpServerTool, Description("Create complete test suites with unit, integration, and edge case tests for GraphQL operations")]
     public static async Task<string> GenerateTestSuite(
-        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Query or mutation to test")]
         string query,
         [Description("Test framework (jest, mocha, xunit, nunit)")]
@@ -270,9 +288,19 @@ public static class TestingMockingTools
         bool includeErrorCases = true,
         [Description("Include performance tests")]
         bool includePerformance = false,
-        [Description("HTTP headers as JSON object (optional)")]
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
         string? headers = null)
     {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
+
         var testSuite = new StringBuilder();
         testSuite.AppendLine("# Generated Test Suite\n");
 

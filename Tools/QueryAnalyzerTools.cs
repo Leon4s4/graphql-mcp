@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
@@ -112,7 +113,7 @@ public static class QueryAnalyzerTools
 
     [McpServerTool, Description("Automatically construct GraphQL queries from schema types with intelligent field selection")]
     public static async Task<string> BuildQuery(
-        [Description("GraphQL endpoint URL")] string endpoint,
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Root type to query (e.g., 'User', 'Product')")]
         string rootType,
         [Description("Fields to include (comma-separated)")]
@@ -121,11 +122,21 @@ public static class QueryAnalyzerTools
         bool includeRelated = false,
         [Description("Maximum depth for nested objects")]
         int maxDepth = 3,
-        [Description("HTTP headers as JSON object (optional)")]
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
         string? headers = null)
     {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
+
         // Get schema to understand available fields
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
@@ -402,7 +413,7 @@ public static class QueryAnalyzerTools
             {
                 var name = field.GetProperty("name")
                     .GetString();
-                if (requestedFields.Contains(name))
+                if (name == null || requestedFields.Contains(name))
                     continue;
 
                 var fieldType = field.GetProperty("type");
