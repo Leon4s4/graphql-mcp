@@ -2,317 +2,378 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.AI;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class TestingMockingTools
 {
-    [McpServerTool, Description("Generate mock data based on GraphQL schema types")]
+    [McpServerTool, Description("Generate realistic mock data that conforms to GraphQL schema type definitions")]
     public static async Task<string> GenerateMockData(
-        [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("Type name to generate mock data for")] string typeName,
-        [Description("Number of mock instances to generate")] int count = 1,
-        [Description("HTTP headers as JSON object (optional)")] string? headers = null)
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
+        [Description("Type name to generate mock data for")]
+        string typeName,
+        [Description("Number of mock instances to generate")]
+        int count = 1,
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
+        string? headers = null)
     {
-      
-            // Get schema introspection
-            var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
-            var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
 
-            if (!schemaData.TryGetProperty("data", out var data) || 
-                !data.TryGetProperty("__schema", out var schema) ||
-                !schema.TryGetProperty("types", out var types))
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
+
+        // Get schema introspection
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+
+        if (!schemaData.TryGetProperty("data", out var data) ||
+            !data.TryGetProperty("__schema", out var schema) ||
+            !schema.TryGetProperty("types", out var types))
+        {
+            return "Failed to parse schema data for mock generation";
+        }
+
+        // Find the specified type
+        JsonElement? targetType = null;
+        foreach (var type in types.EnumerateArray())
+        {
+            if (type.TryGetProperty("name", out var nameElement) &&
+                nameElement.GetString()
+                    ?.Equals(typeName, StringComparison.OrdinalIgnoreCase) == true)
             {
-                return "Failed to parse schema data for mock generation";
+                targetType = type;
+                break;
             }
+        }
 
-            // Find the specified type
-            JsonElement? targetType = null;
-            foreach (var type in types.EnumerateArray())
-            {
-                if (type.TryGetProperty("name", out var nameElement) && 
-                    nameElement.GetString()?.Equals(typeName, StringComparison.OrdinalIgnoreCase) == true)
-                {
-                    targetType = type;
-                    break;
-                }
-            }
+        if (!targetType.HasValue)
+        {
+            return $"Type '{typeName}' not found in schema";
+        }
 
-            if (!targetType.HasValue)
-            {
-                return $"Type '{typeName}' not found in schema";
-            }
+        var mockData = new List<object>();
+        for (var i = 0; i < count; i++)
+        {
+            var mockInstance = GenerateMockInstance(targetType.Value, types, i);
+            mockData.Add(mockInstance);
+        }
 
-            var mockData = new List<object>();
-            for (int i = 0; i < count; i++)
-            {
-                var mockInstance = GenerateMockInstance(targetType.Value, types, i);
-                mockData.Add(mockInstance);
-            }
+        var result = new
+        {
+            type = typeName,
+            count = count,
+            data = mockData
+        };
 
-            var result = new
-            {
-                type = typeName,
-                count = count,
-                data = mockData
-            };
-
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    [McpServerTool, Description("Generate unit tests for GraphQL queries")]
+    [McpServerTool, Description("Create automated unit tests for GraphQL queries with multiple testing frameworks")]
     public static string GenerateQueryTests(
-        [Description("GraphQL query to generate tests for")] string query,
+        [Description("GraphQL query to generate tests for")]
+        string query,
         [Description("Test class name")] string testClassName = "GraphQLQueryTests",
-        [Description("Testing framework (NUnit/xUnit/MSTest)")] string framework = "xUnit")
+        [Description("Testing framework (NUnit/xUnit/MSTest)")]
+        string framework = "xUnit")
     {
-            var testCode = new StringBuilder();
-            
-            // Add using statements based on framework
-            switch (framework.ToLower())
-            {
-                case "xunit":
-                    testCode.AppendLine("using Xunit;");
-                    testCode.AppendLine("using System.Threading.Tasks;");
-                    testCode.AppendLine("using System.Net.Http;");
-                    testCode.AppendLine("using System.Text;");
-                    testCode.AppendLine("using System.Text.Json;");
-                    testCode.AppendLine("using Moq;");
-                    break;
-                case "nunit":
-                    testCode.AppendLine("using NUnit.Framework;");
-                    testCode.AppendLine("using System.Threading.Tasks;");
-                    testCode.AppendLine("using System.Net.Http;");
-                    testCode.AppendLine("using System.Text;");
-                    testCode.AppendLine("using System.Text.Json;");
-                    testCode.AppendLine("using Moq;");
-                    break;
-                case "mstest":
-                    testCode.AppendLine("using Microsoft.VisualStudio.TestTools.UnitTesting;");
-                    testCode.AppendLine("using System.Threading.Tasks;");
-                    testCode.AppendLine("using System.Net.Http;");
-                    testCode.AppendLine("using System.Text;");
-                    testCode.AppendLine("using System.Text.Json;");
-                    testCode.AppendLine("using Moq;");
-                    break;
-            }
+        var testCode = new StringBuilder();
 
-            testCode.AppendLine();
-            testCode.AppendLine("namespace Generated.Tests");
-            testCode.AppendLine("{");
+        // Add using statements based on framework
+        switch (framework.ToLower())
+        {
+            case "xunit":
+                testCode.AppendLine("using Xunit;");
+                testCode.AppendLine("using System.Threading.Tasks;");
+                testCode.AppendLine("using System.Net.Http;");
+                testCode.AppendLine("using System.Text;");
+                testCode.AppendLine("using System.Text.Json;");
+                testCode.AppendLine("using Moq;");
+                break;
+            case "nunit":
+                testCode.AppendLine("using NUnit.Framework;");
+                testCode.AppendLine("using System.Threading.Tasks;");
+                testCode.AppendLine("using System.Net.Http;");
+                testCode.AppendLine("using System.Text;");
+                testCode.AppendLine("using System.Text.Json;");
+                testCode.AppendLine("using Moq;");
+                break;
+            case "mstest":
+                testCode.AppendLine("using Microsoft.VisualStudio.TestTools.UnitTesting;");
+                testCode.AppendLine("using System.Threading.Tasks;");
+                testCode.AppendLine("using System.Net.Http;");
+                testCode.AppendLine("using System.Text;");
+                testCode.AppendLine("using System.Text.Json;");
+                testCode.AppendLine("using Moq;");
+                break;
+        }
 
-            // Add test class attribute for MSTest
-            if (framework.ToLower() == "mstest")
-            {
-                testCode.AppendLine("    [TestClass]");
-            }
+        testCode.AppendLine();
+        testCode.AppendLine("namespace Generated.Tests");
+        testCode.AppendLine("{");
 
-            testCode.AppendLine($"    public class {testClassName}");
-            testCode.AppendLine("    {");
+        // Add test class attribute for MSTest
+        if (framework.ToLower() == "mstest")
+        {
+            testCode.AppendLine("    [TestClass]");
+        }
 
-            // Extract operation details
-            var operationMatch = Regex.Match(query, @"^\s*(query|mutation|subscription)\s+(\w+)?", RegexOptions.IgnoreCase);
-            var operationType = operationMatch.Success ? operationMatch.Groups[1].Value.ToLower() : "query";
-            var operationName = operationMatch.Success && operationMatch.Groups[2].Success ? 
-                operationMatch.Groups[2].Value : "AnonymousOperation";
+        testCode.AppendLine($"    public class {testClassName}");
+        testCode.AppendLine("    {");
 
-            // Generate setup method
-            GenerateSetupMethod(testCode, framework);
+        // Extract operation details
+        var operationMatch = Regex.Match(query, @"^\s*(query|mutation|subscription)\s+(\w+)?", RegexOptions.IgnoreCase);
+        var operationType = operationMatch.Success
+            ? operationMatch.Groups[1]
+                .Value.ToLower()
+            : "query";
+        var operationName = operationMatch.Success && operationMatch.Groups[2].Success ? operationMatch.Groups[2].Value : "AnonymousOperation";
 
-            // Generate success test
-            GenerateSuccessTest(testCode, framework, operationName, query, operationType);
+        // Generate setup method
+        GenerateSetupMethod(testCode, framework);
 
-            // Generate error handling test
-            GenerateErrorTest(testCode, framework, operationName, query);
+        // Generate success test
+        GenerateSuccessTest(testCode, framework, operationName, query, operationType);
 
-            // Generate validation test
-            GenerateValidationTest(testCode, framework, operationName, query);
+        // Generate error handling test
+        GenerateErrorTest(testCode, framework, operationName, query);
 
-            // Generate variable test if query has variables
-            var variableMatches = Regex.Matches(query, @"\$(\w+):\s*([^,\)]+)", RegexOptions.IgnoreCase);
-            if (variableMatches.Count > 0)
-            {
-                GenerateVariableTest(testCode, framework, operationName, query, variableMatches);
-            }
+        // Generate validation test
+        GenerateValidationTest(testCode, framework, operationName, query);
 
-            testCode.AppendLine("    }");
-            testCode.AppendLine("}");
+        // Generate variable test if query has variables
+        var variableMatches = Regex.Matches(query, @"\$(\w+):\s*([^,\)]+)", RegexOptions.IgnoreCase);
+        if (variableMatches.Count > 0)
+        {
+            GenerateVariableTest(testCode, framework, operationName, query, variableMatches);
+        }
 
-            return testCode.ToString();
-       
+        testCode.AppendLine("    }");
+        testCode.AppendLine("}");
+
+        return testCode.ToString();
     }
 
-    [McpServerTool, Description("Compare different versions of GraphQL schemas for breaking changes")]
+    [McpServerTool, Description("Analyze schema changes between versions and identify breaking changes for testing")]
     public static async Task<string> CompareSchemas(
-        [Description("Original GraphQL endpoint URL")] string originalEndpoint,
-        [Description("New GraphQL endpoint URL")] string newEndpoint,
-        [Description("HTTP headers for original endpoint (optional)")] string? originalHeaders = null,
-        [Description("HTTP headers for new endpoint (optional)")] string? newHeaders = null)
+        [Description("Name of the original registered GraphQL endpoint")]
+        string originalEndpointName,
+        [Description("Name of the new registered GraphQL endpoint")]
+        string newEndpointName,
+        [Description("HTTP headers for original endpoint (optional - will override endpoint headers)")]
+        string? originalHeaders = null,
+        [Description("HTTP headers for new endpoint (optional - will override endpoint headers)")]
+        string? newHeaders = null)
     {
-            // Get both schemas
-            var originalSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(originalEndpoint, originalHeaders);
-            var newSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(newEndpoint, newHeaders);
+        var originalEndpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(originalEndpointName);
+        if (originalEndpointInfo == null)
+        {
+            return $"Error: Endpoint '{originalEndpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
 
-            var originalSchema = JsonSerializer.Deserialize<JsonElement>(originalSchemaJson);
-            var newSchema = JsonSerializer.Deserialize<JsonElement>(newSchemaJson);
+        var newEndpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(newEndpointName);
+        if (newEndpointInfo == null)
+        {
+            return $"Error: Endpoint '{newEndpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
 
-            var comparison = new StringBuilder();
-            comparison.AppendLine("# GraphQL Schema Comparison Report\n");
+        // Use provided headers or fall back to endpoint headers
+        var originalRequestHeaders = !string.IsNullOrEmpty(originalHeaders) ? originalHeaders : 
+            (originalEndpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(originalEndpointInfo.Headers) : null);
+        var newRequestHeaders = !string.IsNullOrEmpty(newHeaders) ? newHeaders : 
+            (newEndpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(newEndpointInfo.Headers) : null);
 
-            // Compare types
-            var originalTypes = ExtractTypesFromSchema(originalSchema);
-            var newTypes = ExtractTypesFromSchema(newSchema);
+        // Get both schemas
+        var originalSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(originalEndpointName, originalRequestHeaders);
+        var newSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(newEndpointName, newRequestHeaders);
 
-            // Breaking changes
-            var breakingChanges = new List<string>();
-            var nonBreakingChanges = new List<string>();
+        var originalSchema = JsonSerializer.Deserialize<JsonElement>(originalSchemaJson);
+        var newSchema = JsonSerializer.Deserialize<JsonElement>(newSchemaJson);
 
-            // Removed types (breaking)
-            var removedTypes = originalTypes.Keys.Except(newTypes.Keys);
-            foreach (var removedType in removedTypes)
+        var comparison = new StringBuilder();
+        comparison.AppendLine("# GraphQL Schema Comparison Report\n");
+
+        // Compare types
+        var originalTypes = ExtractTypesFromSchema(originalSchema);
+        var newTypes = ExtractTypesFromSchema(newSchema);
+
+        // Breaking changes
+        var breakingChanges = new List<string>();
+        var nonBreakingChanges = new List<string>();
+
+        // Removed types (breaking)
+        var removedTypes = originalTypes.Keys.Except(newTypes.Keys);
+        foreach (var removedType in removedTypes)
+        {
+            breakingChanges.Add($"🔴 Type `{removedType}` was removed");
+        }
+
+        // Added types (non-breaking)
+        var addedTypes = newTypes.Keys.Except(originalTypes.Keys);
+        foreach (var addedType in addedTypes)
+        {
+            nonBreakingChanges.Add($"✅ Type `{addedType}` was added");
+        }
+
+        // Changed types
+        var commonTypes = originalTypes.Keys.Intersect(newTypes.Keys);
+        foreach (var typeName in commonTypes)
+        {
+            var originalType = originalTypes[typeName];
+            var newType = newTypes[typeName];
+
+            CompareTypeChanges(typeName, originalType, newType, breakingChanges, nonBreakingChanges);
+        }
+
+        // Generate report
+        if (breakingChanges.Count > 0)
+        {
+            comparison.AppendLine("## 🚨 Breaking Changes");
+            foreach (var change in breakingChanges)
             {
-                breakingChanges.Add($"🔴 Type `{removedType}` was removed");
+                comparison.AppendLine($"- {change}");
             }
 
-            // Added types (non-breaking)
-            var addedTypes = newTypes.Keys.Except(originalTypes.Keys);
-            foreach (var addedType in addedTypes)
+            comparison.AppendLine();
+        }
+
+        if (nonBreakingChanges.Count > 0)
+        {
+            comparison.AppendLine("## ✅ Non-Breaking Changes");
+            foreach (var change in nonBreakingChanges)
             {
-                nonBreakingChanges.Add($"✅ Type `{addedType}` was added");
+                comparison.AppendLine($"- {change}");
             }
 
-            // Changed types
-            var commonTypes = originalTypes.Keys.Intersect(newTypes.Keys);
-            foreach (var typeName in commonTypes)
-            {
-                var originalType = originalTypes[typeName];
-                var newType = newTypes[typeName];
+            comparison.AppendLine();
+        }
 
-                CompareTypeChanges(typeName, originalType, newType, breakingChanges, nonBreakingChanges);
-            }
+        if (breakingChanges.Count == 0 && nonBreakingChanges.Count == 0)
+        {
+            comparison.AppendLine("## ✅ No Changes Detected");
+            comparison.AppendLine("The schemas are identical.");
+        }
+        else
+        {
+            comparison.AppendLine("## Summary");
+            comparison.AppendLine($"- Breaking changes: {breakingChanges.Count}");
+            comparison.AppendLine($"- Non-breaking changes: {nonBreakingChanges.Count}");
 
-            // Generate report
             if (breakingChanges.Count > 0)
             {
-                comparison.AppendLine("## 🚨 Breaking Changes");
-                foreach (var change in breakingChanges)
-                {
-                    comparison.AppendLine($"- {change}");
-                }
-                comparison.AppendLine();
+                comparison.AppendLine("\n⚠️ **This schema change contains breaking changes and requires careful deployment planning.**");
             }
+        }
 
-            if (nonBreakingChanges.Count > 0)
-            {
-                comparison.AppendLine("## ✅ Non-Breaking Changes");
-                foreach (var change in nonBreakingChanges)
-                {
-                    comparison.AppendLine($"- {change}");
-                }
-                comparison.AppendLine();
-            }
-
-            if (breakingChanges.Count == 0 && nonBreakingChanges.Count == 0)
-            {
-                comparison.AppendLine("## ✅ No Changes Detected");
-                comparison.AppendLine("The schemas are identical.");
-            }
-            else
-            {
-                comparison.AppendLine("## Summary");
-                comparison.AppendLine($"- Breaking changes: {breakingChanges.Count}");
-                comparison.AppendLine($"- Non-breaking changes: {nonBreakingChanges.Count}");
-                
-                if (breakingChanges.Count > 0)
-                {
-                    comparison.AppendLine("\n⚠️ **This schema change contains breaking changes and requires careful deployment planning.**");
-                }
-            }
-
-            return comparison.ToString();
+        return comparison.ToString();
     }
 
-    [McpServerTool, Description("Generate comprehensive test suites for GraphQL queries and mutations")]
+    [McpServerTool, Description("Create complete test suites with unit, integration, and edge case tests for GraphQL operations")]
     public static async Task<string> GenerateTestSuite(
-        [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("Query or mutation to test")] string query,
-        [Description("Test framework (jest, mocha, xunit, nunit)")] string framework = "jest",
-        [Description("Include integration tests")] bool includeIntegration = true,
-        [Description("Include error case tests")] bool includeErrorCases = true,
-        [Description("Include performance tests")] bool includePerformance = false,
-        [Description("HTTP headers as JSON object (optional)")] string? headers = null)
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
+        [Description("Query or mutation to test")]
+        string query,
+        [Description("Test framework (jest, mocha, xunit, nunit)")]
+        string framework = "jest",
+        [Description("Include integration tests")]
+        bool includeIntegration = true,
+        [Description("Include error case tests")]
+        bool includeErrorCases = true,
+        [Description("Include performance tests")]
+        bool includePerformance = false,
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
+        string? headers = null)
     {
-            var testSuite = new StringBuilder();
-            testSuite.AppendLine("# Generated Test Suite\n");
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
 
-            // Analyze the query to understand what we're testing
-            var operationInfo = AnalyzeOperation(query);
-            var operationType = operationInfo.Type;
-            var operationName = operationInfo.Name;
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
 
-            testSuite.AppendLine($"## Test Suite for {operationName} ({operationType})\n");
+        var testSuite = new StringBuilder();
+        testSuite.AppendLine("# Generated Test Suite\n");
 
-            switch (framework.ToLower())
-            {
-                case "jest":
-                    testSuite.AppendLine(GenerateJestTests(query, operationInfo, includeIntegration, includeErrorCases, includePerformance));
-                    break;
-                case "mocha":
-                    testSuite.AppendLine(GenerateMochaTests(query, operationInfo, includeIntegration, includeErrorCases, includePerformance));
-                    break;
-                case "xunit":
-                    testSuite.AppendLine(GenerateXUnitTests(query, operationInfo, includeIntegration, includeErrorCases, includePerformance));
-                    break;
-                case "nunit":
-                    testSuite.AppendLine(GenerateNUnitTests(query, operationInfo, includeIntegration, includeErrorCases, includePerformance));
-                    break;
-                default:
-                    return $"Framework '{framework}' not supported. Supported: jest, mocha, xunit, nunit";
-            }
+        // Analyze the query to understand what we're testing
+        var operationInfo = AnalyzeOperation(query);
+        var operationType = operationInfo.Type;
+        var operationName = operationInfo.Name;
 
-            return testSuite.ToString();
-        
+        testSuite.AppendLine($"## Test Suite for {operationName} ({operationType})\n");
+
+        switch (framework.ToLower())
+        {
+            case "jest":
+                testSuite.AppendLine(GenerateJestTests(query, operationInfo, includeIntegration, includeErrorCases, includePerformance));
+                break;
+            case "mocha":
+                testSuite.AppendLine(GenerateMochaTests(query, operationInfo, includeIntegration, includeErrorCases, includePerformance));
+                break;
+            case "xunit":
+                testSuite.AppendLine(GenerateXUnitTests(query, operationInfo, includeIntegration, includeErrorCases, includePerformance));
+                break;
+            case "nunit":
+                testSuite.AppendLine(GenerateNUnitTests(query, operationInfo, includeIntegration, includeErrorCases, includePerformance));
+                break;
+            default:
+                return $"Framework '{framework}' not supported. Supported: jest, mocha, xunit, nunit";
+        }
+
+        return testSuite.ToString();
     }
 
-    [McpServerTool, Description("Generate load testing scenarios for GraphQL endpoints")]
+    [McpServerTool, Description("Create performance and load testing scenarios for GraphQL endpoints with configurable parameters")]
     public static string GenerateLoadTests(
-        [Description("GraphQL query for load testing")] string query,
-        [Description("Load testing tool (k6, artillery, jmeter)")] string tool = "k6",
-        [Description("Number of virtual users")] int virtualUsers = 10,
-        [Description("Test duration in seconds")] int duration = 60,
-        [Description("Target requests per second")] int rps = 100)
+        [Description("GraphQL query for load testing")]
+        string query,
+        [Description("Load testing tool (k6, artillery, jmeter)")]
+        string tool = "k6",
+        [Description("Number of virtual users")]
+        int virtualUsers = 10,
+        [Description("Test duration in seconds")]
+        int duration = 60,
+        [Description("Target requests per second")]
+        int rps = 100)
     {
-      
-            var loadTest = new StringBuilder();
-            loadTest.AppendLine("# GraphQL Load Test Configuration\n");
+        var loadTest = new StringBuilder();
+        loadTest.AppendLine("# GraphQL Load Test Configuration\n");
 
-            switch (tool.ToLower())
-            {
-                case "k6":
-                    loadTest.AppendLine(GenerateK6LoadTest(query, virtualUsers, duration, rps));
-                    break;
-                case "artillery":
-                    loadTest.AppendLine(GenerateArtilleryLoadTest(query, virtualUsers, duration, rps));
-                    break;
-                case "jmeter":
-                    loadTest.AppendLine("## JMeter Configuration");
-                    loadTest.AppendLine("*JMeter configuration requires GUI setup. See JMeter documentation for GraphQL testing.*");
-                    break;
-                default:
-                    return $"Load testing tool '{tool}' not supported. Supported: k6, artillery, jmeter";
-            }
+        switch (tool.ToLower())
+        {
+            case "k6":
+                loadTest.AppendLine(GenerateK6LoadTest(query, virtualUsers, duration, rps));
+                break;
+            case "artillery":
+                loadTest.AppendLine(GenerateArtilleryLoadTest(query, virtualUsers, duration, rps));
+                break;
+            case "jmeter":
+                loadTest.AppendLine("## JMeter Configuration");
+                loadTest.AppendLine("*JMeter configuration requires GUI setup. See JMeter documentation for GraphQL testing.*");
+                break;
+            default:
+                return $"Load testing tool '{tool}' not supported. Supported: k6, artillery, jmeter";
+        }
 
-            return loadTest.ToString();
+        return loadTest.ToString();
     }
 
     private static object GenerateMockInstance(JsonElement type, JsonElement allTypes, int index)
     {
         var mockData = new Dictionary<string, object?>();
-        var typeName = type.GetProperty("name").GetString() ?? "";
-        var kind = type.GetProperty("kind").GetString();
+        var typeName = type.GetProperty("name")
+            .GetString() ?? "";
+        var kind = type.GetProperty("kind")
+            .GetString();
 
         if (kind == "OBJECT" || kind == "INPUT_OBJECT")
         {
@@ -321,7 +382,7 @@ public static class TestingMockingTools
             {
                 foreach (var field in fields.EnumerateArray())
                 {
-                    if (field.TryGetProperty("name", out var fieldName) && 
+                    if (field.TryGetProperty("name", out var fieldName) &&
                         field.TryGetProperty("type", out var fieldType))
                     {
                         var fieldNameStr = fieldName.GetString() ?? "";
@@ -338,7 +399,7 @@ public static class TestingMockingTools
     private static object? GenerateMockValue(JsonElement typeElement, JsonElement allTypes, string fieldName, int index)
     {
         var typeInfo = ParseTypeInfo(typeElement);
-        
+
         return typeInfo.BaseType switch
         {
             "String" => GenerateMockString(fieldName, index),
@@ -369,18 +430,21 @@ public static class TestingMockingTools
         // Find the type in the schema
         foreach (var type in allTypes.EnumerateArray())
         {
-            if (type.TryGetProperty("name", out var nameElement) && 
-                nameElement.GetString()?.Equals(typeName, StringComparison.OrdinalIgnoreCase) == true)
+            if (type.TryGetProperty("name", out var nameElement) &&
+                nameElement.GetString()
+                    ?.Equals(typeName, StringComparison.OrdinalIgnoreCase) == true)
             {
                 if (type.TryGetProperty("kind", out var kind) && kind.GetString() == "ENUM")
                 {
                     if (type.TryGetProperty("enumValues", out var enumValues) && enumValues.ValueKind == JsonValueKind.Array)
                     {
-                        var values = enumValues.EnumerateArray().ToList();
+                        var values = enumValues.EnumerateArray()
+                            .ToList();
                         if (values.Count > 0)
                         {
                             var selectedValue = values[index % values.Count];
-                            return selectedValue.GetProperty("name").GetString();
+                            return selectedValue.GetProperty("name")
+                                .GetString();
                         }
                     }
                 }
@@ -410,7 +474,7 @@ public static class TestingMockingTools
         {
             isList = true;
             currentType = currentType.GetProperty("ofType");
-            
+
             if (currentType.TryGetProperty("kind", out kind) && kind.GetString() == "NON_NULL")
             {
                 currentType = currentType.GetProperty("ofType");
@@ -418,7 +482,7 @@ public static class TestingMockingTools
         }
 
         var baseType = currentType.TryGetProperty("name", out var name) ? name.GetString() ?? "String" : "String";
-        
+
         return (baseType, isNonNull, isList);
     }
 
@@ -460,6 +524,7 @@ public static class TestingMockingTools
                 testCode.AppendLine("        }");
                 break;
         }
+
         testCode.AppendLine();
     }
 
@@ -509,7 +574,7 @@ public static class TestingMockingTools
         var testAttribute = framework.ToLower() switch
         {
             "xunit" => "[Fact]",
-            "nunit" => "[Test]", 
+            "nunit" => "[Test]",
             "mstest" => "[TestMethod]",
             _ => "[Test]"
         };
@@ -597,7 +662,8 @@ public static class TestingMockingTools
         foreach (Match match in variableMatches)
         {
             var varName = match.Groups[1].Value;
-            var varType = match.Groups[2].Value.Trim();
+            var varType = match.Groups[2]
+                .Value.Trim();
             var mockValue = GenerateMockVariableValue(varType);
             testCode.AppendLine($"                [\"{varName}\"] = {mockValue},");
         }
@@ -618,8 +684,10 @@ public static class TestingMockingTools
 
     private static string GenerateMockVariableValue(string graphqlType)
     {
-        var baseType = graphqlType.TrimEnd('!').Replace("[", "").Replace("]", "");
-        
+        var baseType = graphqlType.TrimEnd('!')
+            .Replace("[", "")
+            .Replace("]", "");
+
         return baseType switch
         {
             "String" => "\"test_value\"",
@@ -634,8 +702,8 @@ public static class TestingMockingTools
     private static Dictionary<string, JsonElement> ExtractTypesFromSchema(JsonElement schema)
     {
         var types = new Dictionary<string, JsonElement>();
-        
-        if (schema.TryGetProperty("data", out var data) && 
+
+        if (schema.TryGetProperty("data", out var data) &&
             data.TryGetProperty("__schema", out var schemaNode) &&
             schemaNode.TryGetProperty("types", out var typesArray))
         {
@@ -651,15 +719,15 @@ public static class TestingMockingTools
                 }
             }
         }
-        
+
         return types;
     }
 
-    private static void CompareTypeChanges(string typeName, JsonElement originalType, JsonElement newType, 
+    private static void CompareTypeChanges(string typeName, JsonElement originalType, JsonElement newType,
         List<string> breakingChanges, List<string> nonBreakingChanges)
     {
         // Compare fields for OBJECT types
-        if (originalType.TryGetProperty("fields", out var originalFields) && 
+        if (originalType.TryGetProperty("fields", out var originalFields) &&
             newType.TryGetProperty("fields", out var newFields))
         {
             var originalFieldNames = ExtractFieldNames(originalFields);
@@ -681,7 +749,7 @@ public static class TestingMockingTools
         }
 
         // Compare enum values for ENUM types
-        if (originalType.TryGetProperty("enumValues", out var originalEnumValues) && 
+        if (originalType.TryGetProperty("enumValues", out var originalEnumValues) &&
             newType.TryGetProperty("enumValues", out var newEnumValues))
         {
             var originalValueNames = ExtractEnumValueNames(originalEnumValues);
@@ -713,6 +781,7 @@ public static class TestingMockingTools
                 fieldNames.Add(name.GetString() ?? "");
             }
         }
+
         return fieldNames;
     }
 
@@ -726,6 +795,7 @@ public static class TestingMockingTools
                 valueNames.Add(name.GetString() ?? "");
             }
         }
+
         return valueNames;
     }
 
@@ -733,9 +803,11 @@ public static class TestingMockingTools
     {
         // Basic analysis to determine operation type and name
         var operationMatch = Regex.Match(query, @"^\s*(query|mutation|subscription)\s+(\w+)?", RegexOptions.IgnoreCase);
-        var operationType = operationMatch.Success ? operationMatch.Groups[1].Value.ToLower() : "query";
-        var operationName = operationMatch.Success && operationMatch.Groups[2].Success ? 
-            operationMatch.Groups[2].Value : "AnonymousOperation";
+        var operationType = operationMatch.Success
+            ? operationMatch.Groups[1]
+                .Value.ToLower()
+            : "query";
+        var operationName = operationMatch.Success && operationMatch.Groups[2].Success ? operationMatch.Groups[2].Value : "AnonymousOperation";
 
         return (operationType, operationName);
     }
@@ -764,14 +836,15 @@ public static class TestingMockingTools
         tests.AppendLine();
         tests.AppendLine("  it('should return a successful response', async () => {");
         tests.AppendLine("    const query = `");
-        tests.AppendLine(query.Replace("`", "\\`").Replace("${", "\\${"));
+        tests.AppendLine(query.Replace("`", "\\`")
+            .Replace("${", "\\${"));
         tests.AppendLine("    `;");
         tests.AppendLine("    const response = await request(endpoint, query);");
         tests.AppendLine();
         tests.AppendLine("    expect(response).toHaveProperty('data');");
         tests.AppendLine("  });");
         tests.AppendLine();
-        
+
         // Error case test
         if (includeErrorCases)
         {
@@ -793,7 +866,8 @@ public static class TestingMockingTools
         {
             tests.AppendLine("  it('should complete within acceptable time', async () => {");
             tests.AppendLine("    const query = `");
-            tests.AppendLine(query.Replace("`", "\\`").Replace("${", "\\${"));
+            tests.AppendLine(query.Replace("`", "\\`")
+                .Replace("${", "\\${"));
             tests.AppendLine("    `;");
             tests.AppendLine("    const start = Date.now();");
             tests.AppendLine("    await request(endpoint, query);");
@@ -811,7 +885,7 @@ public static class TestingMockingTools
     private static string GenerateMochaTests(string query, (string Type, string Name) operationInfo, bool includeIntegration, bool includeErrorCases, bool includePerformance)
     {
         var tests = new StringBuilder();
-        
+
         tests.AppendLine("const { request, gql } = require('graphql-request');");
         tests.AppendLine("const { expect } = require('chai');");
         tests.AppendLine();
@@ -848,7 +922,7 @@ public static class TestingMockingTools
     private static string GenerateXUnitTests(string query, (string Type, string Name) operationInfo, bool includeIntegration, bool includeErrorCases, bool includePerformance)
     {
         var tests = new StringBuilder();
-        
+
         tests.AppendLine("using System;");
         tests.AppendLine("using System.Net.Http;");
         tests.AppendLine("using System.Text;");
@@ -915,7 +989,7 @@ public static class TestingMockingTools
     private static string GenerateNUnitTests(string query, (string Type, string Name) operationInfo, bool includeIntegration, bool includeErrorCases, bool includePerformance)
     {
         var tests = new StringBuilder();
-        
+
         tests.AppendLine("using System;");
         tests.AppendLine("using System.Net.Http;");
         tests.AppendLine("using System.Text;");
@@ -962,14 +1036,14 @@ public static class TestingMockingTools
         tests.AppendLine("        Assert.That(result.TryGetProperty(\"data\", out _), Is.True);");
         tests.AppendLine("    }");
         tests.AppendLine("}");
-        
+
         return tests.ToString();
     }
 
     private static string GenerateK6LoadTest(string query, int virtualUsers, int duration, int rps)
     {
         var loadTest = new StringBuilder();
-        
+
         loadTest.AppendLine("## K6 Load Test Script");
         loadTest.AppendLine();
         loadTest.AppendLine("```javascript");
@@ -1007,14 +1081,14 @@ public static class TestingMockingTools
         loadTest.AppendLine($"  sleep(1 / {rps}); // Rate limiting");
         loadTest.AppendLine("}");
         loadTest.AppendLine("```");
-        
+
         return loadTest.ToString();
     }
 
     private static string GenerateArtilleryLoadTest(string query, int virtualUsers, int duration, int rps)
     {
         var loadTest = new StringBuilder();
-        
+
         loadTest.AppendLine("## Artillery Load Test Configuration");
         loadTest.AppendLine();
         loadTest.AppendLine("```yaml");
@@ -1039,8 +1113,9 @@ public static class TestingMockingTools
         {
             loadTest.AppendLine($"              {line}");
         }
+
         loadTest.AppendLine("```");
-        
+
         return loadTest.ToString();
     }
 }

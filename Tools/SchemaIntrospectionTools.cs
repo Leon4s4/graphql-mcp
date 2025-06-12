@@ -1,21 +1,16 @@
 using System.ComponentModel;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.AI;
+using Graphql.Mcp.DTO;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
-namespace Tools;
+namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class SchemaIntrospectionTools
 {
-    [McpServerTool, Description("Query the GraphQL schema to understand available types, fields, and operations")]
-    public static async Task<string> IntrospectSchema(
-        [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("HTTP headers as JSON object (optional)")] string? headers = null)
-    {
-       
-            var introspectionQuery = @"
+    private const string IntrospectionQuery = @"
                 query IntrospectionQuery {
                   __schema {
                     queryType { name }
@@ -106,19 +101,46 @@ public static class SchemaIntrospectionTools
                       }
                     }
                   }
-                }";        
-                
-        var body = new { query = introspectionQuery };
-        
-        // Use centralized HTTP execution with proper connection error handling
-        var result = await HttpClientHelper.ExecuteGraphQLRequestAsync(endpoint, body, headers);
-        
+                }";
+
+    [McpServerTool, Description("Retrieve complete GraphQL schema information including types, fields, directives, and relationships")]
+    public static async Task<string> IntrospectSchema(
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
+        string? headers = null)
+    {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        return await IntrospectSchemaInternal(endpointInfo, headers);
+    }
+
+    /// <summary>
+    /// Internal method for schema introspection that can be used by other tools
+    /// </summary>
+    public static async Task<string> IntrospectSchema(GraphQlEndpointInfo endpointInfo, string? headers = null)
+    {
+        return await IntrospectSchemaInternal(endpointInfo, headers);
+    }
+
+    private static async Task<string> IntrospectSchemaInternal(GraphQlEndpointInfo endpointInfo, string? headers)
+    {
+        // Use provided headers or fall back to endpoint headers
+        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
+            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
+
+        var body = new { query = IntrospectionQuery };
+
+        var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo.Url, body, requestHeaders);
+
         if (!result.IsSuccess)
         {
             return result.FormatForDisplay();
         }
 
-        // Check for GraphQL errors in the introspection response
         var data = JsonSerializer.Deserialize<JsonElement>(result.Content!);
         if (data.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array && errors.GetArrayLength() > 0)
         {
@@ -128,167 +150,208 @@ public static class SchemaIntrospectionTools
         return JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    [McpServerTool, Description("Extract and format schema documentation and field descriptions")]
+    [McpServerTool, Description("Generate comprehensive documentation from GraphQL schema descriptions and field metadata")]
     public static async Task<string> GetSchemaDocs(
-        [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("Specific type name to get documentation for (optional)")] string? typeName = null,
-        [Description("HTTP headers as JSON object (optional)")] string? headers = null)
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
+        [Description("Specific type name to get documentation for (optional)")]
+        string? typeName = null,
+        [Description("HTTP headers as JSON object (optional)")]
+        string? headers = null)
     {
-       
-            var schemaJson = await IntrospectSchema(endpoint, headers);
-            var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
 
-            if (!schemaData.TryGetProperty("data", out var data) || 
-                !data.TryGetProperty("__schema", out var schema) ||
-                !schema.TryGetProperty("types", out var types))
-            {
-                return "Failed to parse schema data";
-            }
-
-            var docs = new List<string>();
-            
-            foreach (var type in types.EnumerateArray())
-            {
-                if (!type.TryGetProperty("name", out var nameElement) || 
-                    nameElement.GetString()?.StartsWith("__") == true)
-                    continue;
-
-                var currentTypeName = nameElement.GetString() ?? "";
-                
-                if (!string.IsNullOrWhiteSpace(typeName) && 
-                    !currentTypeName.Equals(typeName, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var typeDoc = new List<string>();
-                typeDoc.Add($"## Type: {currentTypeName}");
-                
-                if (type.TryGetProperty("description", out var desc) && desc.ValueKind == JsonValueKind.String)
-                {
-                    typeDoc.Add($"**Description:** {desc.GetString()}");
-                }
-
-                if (type.TryGetProperty("kind", out var kind))
-                {
-                    typeDoc.Add($"**Kind:** {kind.GetString()}");
-                }
-
-                if (type.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
-                {
-                    typeDoc.Add("### Fields:");
-                    foreach (var field in fields.EnumerateArray())
-                    {
-                        if (field.TryGetProperty("name", out var fieldName))
-                        {
-                            var fieldInfo = $"- **{fieldName.GetString()}**";
-                            
-                            if (field.TryGetProperty("type", out var fieldType))
-                            {
-                                fieldInfo += $": {FormatType(fieldType)}";
-                            }
-                            
-                            if (field.TryGetProperty("description", out var fieldDesc) && fieldDesc.ValueKind == JsonValueKind.String)
-                            {
-                                fieldInfo += $" - {fieldDesc.GetString()}";
-                            }
-                            
-                            if (field.TryGetProperty("isDeprecated", out var deprecated) && deprecated.GetBoolean())
-                            {
-                                fieldInfo += " **[DEPRECATED]**";
-                                if (field.TryGetProperty("deprecationReason", out var reason) && reason.ValueKind == JsonValueKind.String)
-                                {
-                                    fieldInfo += $" - {reason.GetString()}";
-                                }
-                            }
-                            
-                            typeDoc.Add($"  {fieldInfo}");
-                        }
-                    }
-                }
-
-                if (type.TryGetProperty("enumValues", out var enumValues) && enumValues.ValueKind == JsonValueKind.Array)
-                {
-                    typeDoc.Add("### Enum Values:");
-                    foreach (var enumValue in enumValues.EnumerateArray())
-                    {
-                        if (enumValue.TryGetProperty("name", out var enumName))
-                        {
-                            var enumInfo = $"- **{enumName.GetString()}**";
-                            
-                            if (enumValue.TryGetProperty("description", out var enumDesc) && enumDesc.ValueKind == JsonValueKind.String)
-                            {
-                                enumInfo += $" - {enumDesc.GetString()}";
-                            }
-                            
-                            typeDoc.Add($"  {enumInfo}");
-                        }
-                    }
-                }
-
-                docs.Add(string.Join("\n", typeDoc));
-            }
-
-            return string.Join("\n\n", docs);
-       
+        return await GetSchemaDocsInternal(endpointInfo, typeName, headers);
     }
 
-    [McpServerTool, Description("Validate GraphQL queries against the schema without executing them")]
-    public static async Task<string> ValidateQuery(
-        [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("GraphQL query to validate")] string query,
-        [Description("HTTP headers as JSON object (optional)")] string? headers = null)
+    /// <summary>
+    /// Internal method for generating schema documentation that can be used by other tools
+    /// </summary>
+    public static async Task<string> GetSchemaDocs(GraphQlEndpointInfo endpointInfo, string? typeName = null, string? headers = null)
     {
-      
-            // First get the schema
-            var schemaJson = await IntrospectSchema(endpoint, headers);
-            var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        return await GetSchemaDocsInternal(endpointInfo, typeName, headers);
+    }
 
-            if (!schemaData.TryGetProperty("data", out var data))
+    private static async Task<string> GetSchemaDocsInternal(GraphQlEndpointInfo endpointInfo, string? typeName, string? headers)
+    {
+        var schemaJson = await IntrospectSchema(endpointInfo, headers);
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+
+        if (!schemaData.TryGetProperty("data", out var data) ||
+            !data.TryGetProperty("__schema", out var schema) ||
+            !schema.TryGetProperty("types", out var types))
+        {
+            return "Failed to parse schema data";
+        }
+
+        var docs = new List<string>();
+
+        foreach (var type in types.EnumerateArray())
+        {
+            if (!type.TryGetProperty("name", out var nameElement) ||
+                nameElement.GetString()
+                    ?.StartsWith("__") == true)
+                continue;
+
+            var currentTypeName = nameElement.GetString() ?? "";
+
+            if (!string.IsNullOrWhiteSpace(typeName) &&
+                !currentTypeName.Equals(typeName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var typeDoc = new List<string>();
+            typeDoc.Add($"## Type: {currentTypeName}");
+
+            if (type.TryGetProperty("description", out var desc) && desc.ValueKind == JsonValueKind.String)
             {
-                return "Failed to get schema for validation";
+                typeDoc.Add($"**Description:** {desc.GetString()}");
             }
 
-            // Basic validation checks
-            var validationErrors = new List<string>();
-
-            // Check for basic syntax issues
-            if (string.IsNullOrWhiteSpace(query))
+            if (type.TryGetProperty("kind", out var kind))
             {
-                validationErrors.Add("Query cannot be empty");
+                typeDoc.Add($"**Kind:** {kind.GetString()}");
             }
 
-            // Check for balanced braces
-            var openBraces = query.Count(c => c == '{');
-            var closeBraces = query.Count(c => c == '}');
-            if (openBraces != closeBraces)
+            if (type.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
             {
-                validationErrors.Add($"Mismatched braces: {openBraces} opening, {closeBraces} closing");
-            }
-
-            // Check for balanced parentheses
-            var openParens = query.Count(c => c == '(');
-            var closeParens = query.Count(c => c == ')');
-            if (openParens != closeParens)
-            {
-                validationErrors.Add($"Mismatched parentheses: {openParens} opening, {closeParens} closing");
-            }
-
-            // Check operation type
-            var operationMatch = Regex.Match(query, @"^\s*(query|mutation|subscription)", RegexOptions.IgnoreCase);
-            if (!operationMatch.Success)
-            {
-                // Check if it's an anonymous query
-                if (!query.TrimStart().StartsWith("{"))
+                typeDoc.Add("### Fields:");
+                foreach (var field in fields.EnumerateArray())
                 {
-                    validationErrors.Add("Invalid operation type. Must be query, mutation, subscription, or anonymous query starting with '{'");
+                    if (field.TryGetProperty("name", out var fieldName))
+                    {
+                        var fieldInfo = $"- **{fieldName.GetString()}**";
+
+                        if (field.TryGetProperty("type", out var fieldType))
+                        {
+                            fieldInfo += $": {FormatType(fieldType)}";
+                        }
+
+                        if (field.TryGetProperty("description", out var fieldDesc) && fieldDesc.ValueKind == JsonValueKind.String)
+                        {
+                            fieldInfo += $" - {fieldDesc.GetString()}";
+                        }
+
+                        if (field.TryGetProperty("isDeprecated", out var deprecated) && deprecated.GetBoolean())
+                        {
+                            fieldInfo += " **[DEPRECATED]**";
+                            if (field.TryGetProperty("deprecationReason", out var reason) && reason.ValueKind == JsonValueKind.String)
+                            {
+                                fieldInfo += $" - {reason.GetString()}";
+                            }
+                        }
+
+                        typeDoc.Add($"  {fieldInfo}");
+                    }
                 }
             }
 
-            if (validationErrors.Count > 0)
+            if (type.TryGetProperty("enumValues", out var enumValues) && enumValues.ValueKind == JsonValueKind.Array)
             {
-                return $"Validation failed:\n- {string.Join("\n- ", validationErrors)}";
+                typeDoc.Add("### Enum Values:");
+                foreach (var enumValue in enumValues.EnumerateArray())
+                {
+                    if (enumValue.TryGetProperty("name", out var enumName))
+                    {
+                        var enumInfo = $"- **{enumName.GetString()}**";
+
+                        if (enumValue.TryGetProperty("description", out var enumDesc) && enumDesc.ValueKind == JsonValueKind.String)
+                        {
+                            enumInfo += $" - {enumDesc.GetString()}";
+                        }
+
+                        typeDoc.Add($"  {enumInfo}");
+                    }
+                }
             }
 
-            return "Query passed basic validation checks. For full validation, consider executing the query against the server.";
+            docs.Add(string.Join("\n", typeDoc));
+        }
+
+        return string.Join("\n\n", docs);
+    }
+
+    [McpServerTool, Description("Validate GraphQL query syntax and schema compliance without executing the query")]
+    public static async Task<string> ValidateQuery(
+        [Description("Name of the registered GraphQL endpoint")] string endpointName,
+        [Description("GraphQL query to validate")]
+        string query,
+        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
+        string? headers = null)
+    {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+        }
+
+        return await ValidateQueryInternal(endpointInfo, query, headers);
+    }
+
+    /// <summary>
+    /// Internal method for query validation that can be used by other tools
+    /// </summary>
+    public static async Task<string> ValidateQuery(GraphQlEndpointInfo endpointInfo, string query, string? headers = null)
+    {
+        return await ValidateQueryInternal(endpointInfo, query, headers);
+    }
+
+    private static async Task<string> ValidateQueryInternal(GraphQlEndpointInfo endpointInfo, string query, string? headers)
+    {
+        // First get the schema
+        var schemaJson = await IntrospectSchema(endpointInfo, headers);
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+
+        if (!schemaData.TryGetProperty("data", out var data))
+        {
+            return "Failed to get schema for validation";
+        }
+
+        // Basic validation checks
+        var validationErrors = new List<string>();
+
+        // Check for basic syntax issues
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            validationErrors.Add("Query cannot be empty");
+        }
+
+        // Check for balanced braces
+        var openBraces = query.Count(c => c == '{');
+        var closeBraces = query.Count(c => c == '}');
+        if (openBraces != closeBraces)
+        {
+            validationErrors.Add($"Mismatched braces: {openBraces} opening, {closeBraces} closing");
+        }
+
+        // Check for balanced parentheses
+        var openParens = query.Count(c => c == '(');
+        var closeParens = query.Count(c => c == ')');
+        if (openParens != closeParens)
+        {
+            validationErrors.Add($"Mismatched parentheses: {openParens} opening, {closeParens} closing");
+        }
+
+        // Check operation type
+        var operationMatch = Regex.Match(query, @"^\s*(query|mutation|subscription)", RegexOptions.IgnoreCase);
+        if (!operationMatch.Success)
+        {
+            // Check if it's an anonymous query
+            if (!query.TrimStart()
+                    .StartsWith("{"))
+            {
+                validationErrors.Add("Invalid operation type. Must be query, mutation, subscription, or anonymous query starting with '{'");
+            }
+        }
+
+        if (validationErrors.Count > 0)
+        {
+            return $"Validation failed:\n- {string.Join("\n- ", validationErrors)}";
+        }
+
+        return "Query passed basic validation checks. For full validation, consider executing the query against the server.";
     }
 
     private static string FormatType(JsonElement typeElement)
@@ -297,7 +360,7 @@ public static class SchemaIntrospectionTools
             return "Unknown";
 
         var kindStr = kind.GetString();
-        
+
         switch (kindStr)
         {
             case "NON_NULL":
@@ -305,18 +368,21 @@ public static class SchemaIntrospectionTools
                 {
                     return FormatType(ofType) + "!";
                 }
+
                 break;
             case "LIST":
                 if (typeElement.TryGetProperty("ofType", out var listOfType))
                 {
                     return "[" + FormatType(listOfType) + "]";
                 }
+
                 break;
             default:
                 if (typeElement.TryGetProperty("name", out var name))
                 {
                     return name.GetString() ?? "Unknown";
                 }
+
                 break;
         }
 
