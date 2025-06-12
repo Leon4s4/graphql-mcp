@@ -29,12 +29,9 @@ public static class DynamicToolRegistry
 
         try
         {
-            // Parse headers using the helper method
             var (requestHeaders, headerError) = JsonHelpers.ParseHeadersJson(headers);
             if (headerError != null)
-            {
                 return headerError;
-            }
 
             var endpointInfo = new GraphQlEndpointInfo
             {
@@ -45,12 +42,9 @@ public static class DynamicToolRegistry
                 ToolPrefix = toolPrefix
             };
 
-            // Register endpoint using singleton service
             EndpointRegistryService.Instance.RegisterEndpoint(endpointName, endpointInfo);
 
-            // Generate tools from schema
-            var result = await GenerateToolsFromSchema(endpointInfo);
-            return result;
+            return await GenerateToolsFromSchema(endpointInfo);
         }
         catch (Exception ex)
         {
