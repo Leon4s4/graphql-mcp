@@ -36,6 +36,23 @@ public static class GraphQlSchemaHelper
         return GenerateResultMessage(toolsGenerated, endpointInfo);
     }
 
+    /// <summary>
+    /// Retrieves and validates schema from GraphQL endpoint
+    /// </summary>
+    public static async Task<JsonElement> GetSchemaAsync(string endpoint, string? headers)
+    {
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+
+        if (!schemaData.TryGetProperty("data", out var data) ||
+            !data.TryGetProperty("__schema", out var schema))
+        {
+            throw new InvalidOperationException("Failed to retrieve schema data");
+        }
+
+        return schema;
+    }
+
     private static async Task<JsonElement?> GetSchemaFromEndpoint(string url, string? headersJson)
     {
         var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(url, headersJson);
@@ -93,5 +110,41 @@ public static class GraphQlSchemaHelper
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Finds an operation field in the schema by name
+    /// </summary>
+    public static JsonElement FindOperationField(JsonElement schema, string operationName)
+    {
+        // Find the Query type
+        if (!schema.TryGetProperty("queryType", out var queryTypeRef) ||
+            !queryTypeRef.TryGetProperty("name", out var queryTypeName))
+        {
+            throw new InvalidOperationException("No Query type found in schema");
+        }
+
+        var queryType = FindTypeByName(schema, queryTypeName.GetString() ?? "Query");
+        if (!queryType.HasValue)
+        {
+            throw new InvalidOperationException("Query type not found in schema types");
+        }
+
+        // Find the specific operation field
+        if (!queryType.Value.TryGetProperty("fields", out var fields))
+        {
+            throw new InvalidOperationException("No fields found in Query type");
+        }
+
+        foreach (var field in fields.EnumerateArray())
+        {
+            if (field.TryGetProperty("name", out var nameElement) &&
+                nameElement.GetString() == operationName)
+            {
+                return field;
+            }
+        }
+
+        throw new InvalidOperationException($"Operation '{operationName}' not found in Query type");
     }
 }

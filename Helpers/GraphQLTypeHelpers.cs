@@ -56,4 +56,58 @@ public static class GraphQlTypeHelpers
 
         return csharpType;
     }
+
+    /// <summary>
+    /// Gets the named type name by unwrapping NonNull and List wrappers
+    /// </summary>
+    public static string GetNamedTypeName(JsonElement type)
+    {
+        // Unwrap NonNull and List types to get the actual type name
+        var current = type;
+        while (current.TryGetProperty("ofType", out var ofType) && ofType.ValueKind != JsonValueKind.Null)
+        {
+            current = ofType;
+        }
+
+        if (current.TryGetProperty("name", out var name))
+        {
+            return name.GetString() ?? "";
+        }
+
+        return "";
+    }
+
+    /// <summary>
+    /// Checks if a type name represents a scalar type
+    /// </summary>
+    public static bool IsScalarType(string typeName)
+    {
+        var scalarTypes = new[]
+        {
+            "String", "Int", "Float", "Boolean", "ID",
+            // Common custom scalars
+            "DateTime", "Date", "Time", "JSON", "Upload", "Long", "Decimal"
+        };
+        return scalarTypes.Contains(typeName);
+    }
+
+    /// <summary>
+    /// Finds a type by name in the schema
+    /// </summary>
+    public static JsonElement? FindTypeByName(JsonElement schema, string typeName)
+    {
+        if (!schema.TryGetProperty("types", out var types))
+            return null;
+
+        foreach (var type in types.EnumerateArray())
+        {
+            if (type.TryGetProperty("name", out var name) &&
+                name.GetString() == typeName)
+            {
+                return type;
+            }
+        }
+
+        return null;
+    }
 }

@@ -65,4 +65,25 @@ public static class JsonHelpers
             return (new Dictionary<string, string>(), $"Error parsing headers JSON: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Parse GraphQL variables from JSON string into a dictionary
+    /// </summary>
+    /// <param name="variables">JSON string containing variables</param>
+    /// <returns>Dictionary of parsed variables or empty dictionary if parsing fails</returns>
+    public static Dictionary<string, object> ParseVariables(string variables)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(variables))
+                return new Dictionary<string, object>();
+
+            using var document = JsonDocument.Parse(variables);
+            return JsonElementToDictionary(document.RootElement);
+        }
+        catch
+        {
+            return new Dictionary<string, object>();
+        }
+    }
 }

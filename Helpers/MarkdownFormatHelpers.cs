@@ -68,4 +68,46 @@ public static class MarkdownFormatHelpers
         sb.AppendLine();
         return sb.ToString();
     }
+
+    /// <summary>
+    /// Formats a GraphQL query result with configuration details
+    /// </summary>
+    public static string FormatQueryResult(string query, string operationName, int maxDepth, bool includeAllScalars, string? variables)
+    {
+        var result = new StringBuilder();
+        result.AppendLine("# Automatically Generated GraphQL Query\n");
+        result.AppendLine("## Query");
+        result.AppendLine("```graphql");
+        result.AppendLine(query);
+        result.AppendLine("```\n");
+
+        result.AppendLine("## Configuration");
+        result.AppendLine($"- **Operation:** {operationName}");
+        result.AppendLine($"- **Max Depth:** {maxDepth}");
+        result.AppendLine($"- **Include All Scalars:** {includeAllScalars}");
+
+        if (!string.IsNullOrEmpty(variables))
+        {
+            result.AppendLine($"- **Variables:** {variables}");
+        }
+
+        return result.ToString();
+    }
+
+    /// <summary>
+    /// Formats a nested field selection result for GraphQL types
+    /// </summary>
+    public static string FormatNestedSelectionResult(string selection, string typeName)
+    {
+        var result = new StringBuilder();
+        result.AppendLine($"# Nested Field Selection for {typeName}\n");
+        result.AppendLine("## Field Selection");
+        result.AppendLine("```graphql");
+        result.AppendLine("{");
+        result.Append(selection);
+        result.AppendLine("}");
+        result.AppendLine("```");
+
+        return result.ToString();
+    }
 }

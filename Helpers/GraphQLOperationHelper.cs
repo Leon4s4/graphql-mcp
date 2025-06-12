@@ -112,4 +112,173 @@ public static class GraphQLOperationHelper
             return responseContent;
         }
     }
+
+    /// <summary>
+    /// Builds a complete GraphQL query with variables and field selection
+    /// </summary>
+    public static string BuildGraphQLQuery(JsonElement operationField, JsonElement schema, string operationName, 
+        int maxDepth, bool includeAllScalars, Dictionary<string, object> parsedVariables)
+    {
+        var queryBuilder = new StringBuilder();
+        
+        // Build query header with variables
+        AppendQueryHeader(queryBuilder, operationName, parsedVariables);
+        
+        // Build operation with arguments and field selection
+        AppendOperationBody(queryBuilder, operationField, schema, operationName, maxDepth, includeAllScalars, parsedVariables);
+        
+        queryBuilder.AppendLine("}");
+        return queryBuilder.ToString();
+    }
+
+    /// <summary>
+    /// Appends the query header with variable definitions
+    /// </summary>
+    public static void AppendQueryHeader(StringBuilder queryBuilder, string operationName, Dictionary<string, object> parsedVariables)
+    {
+        if (parsedVariables.Count > 0)
+        {
+            var varDefs = string.Join(", ", parsedVariables.Select(kvp => $"${kvp.Key}: {kvp.Value}"));
+            queryBuilder.AppendLine($"query Get{operationName}({varDefs}) {{");
+        }
+        else
+        {
+            queryBuilder.AppendLine($"query Get{operationName} {{");
+        }
+    }
+
+    /// <summary>
+    /// Appends the operation body with arguments and field selection
+    /// </summary>
+    public static void AppendOperationBody(StringBuilder queryBuilder, JsonElement operationField, JsonElement schema,
+        string operationName, int maxDepth, bool includeAllScalars, Dictionary<string, object> parsedVariables)
+    {
+        var fieldSelection = BuildOperationFieldSelection(operationField, schema, maxDepth, includeAllScalars, operationName);
+        
+        queryBuilder.Append($"  {operationName}");
+
+        // Add arguments if we have variables
+        if (parsedVariables.Count > 0)
+        {
+            var args = string.Join(", ", parsedVariables.Select(kvp => $"{kvp.Key}: ${kvp.Key}"));
+            queryBuilder.Append($"({args})");
+        }
+
+        queryBuilder.AppendLine(" {");
+        queryBuilder.Append(fieldSelection);
+        queryBuilder.AppendLine("  }");
+    }
+
+    /// <summary>
+    /// Builds field selection for an operation
+    /// </summary>
+    public static string BuildOperationFieldSelection(JsonElement operationField, JsonElement schema, int maxDepth, bool includeAllScalars, string operationName)
+    {
+        // Get the return type of the operation field
+        if (!operationField.TryGetProperty("type", out var fieldType))
+        {
+            return "    # No return type found\n";
+        }
+
+        var typeName = GraphQlTypeHelpers.GetNamedTypeName(fieldType);
+        if (string.IsNullOrEmpty(typeName))
+        {
+            return "    # Invalid return type\n";
+        }
+
+        // Check if this is a scalar type
+        if (GraphQlTypeHelpers.IsScalarType(typeName))
+        {
+            // For scalar operations, no nested selection needed
+            return "";
+        }
+
+        // Find the type definition for object/interface types
+        var typeDefinition = GraphQlTypeHelpers.FindTypeByName(schema, typeName);
+        if (!typeDefinition.HasValue)
+        {
+            return "    # Type definition not found\n";
+        }
+
+        // Build nested selections starting from depth 1 (inside the operation)
+        var nestedSelection = BuildNestedFieldSelection(typeDefinition.Value, schema, maxDepth, 1, includeAllScalars);
+        return nestedSelection;
+    }
+
+    /// <summary>
+    /// Builds nested field selection for GraphQL types
+    /// </summary>
+    public static string BuildNestedFieldSelection(JsonElement type, JsonElement schema, int maxDepth, int currentDepth, bool includeAllScalars = true)
+    {
+        if (currentDepth > maxDepth)
+        {
+            return "";
+        }
+
+        var selection = new StringBuilder();
+        var indent = new string(' ', currentDepth * 2);
+
+        if (!type.TryGetProperty("kind", out var kindElement))
+        {
+            return "";
+        }
+
+        var kind = kindElement.GetString();
+
+        // Only process OBJECT and INTERFACE types
+        if (kind != "OBJECT" && kind != "INTERFACE")
+        {
+            return "";
+        }
+
+        if (!type.TryGetProperty("fields", out var fields))
+        {
+            return "";
+        }
+
+        foreach (var field in fields.EnumerateArray())
+        {
+            if (!field.TryGetProperty("name", out var nameElement))
+                continue;
+
+            var fieldName = nameElement.GetString();
+            if (fieldName?.StartsWith("__") == true)
+                continue;
+
+            if (!field.TryGetProperty("type", out var fieldType))
+                continue;
+
+            var fieldTypeName = GraphQlTypeHelpers.GetNamedTypeName(fieldType);
+            var isScalar = GraphQlTypeHelpers.IsScalarType(fieldTypeName);
+
+            if (isScalar)
+            {
+                // Only include scalar fields if the flag is set
+                if (includeAllScalars)
+                {
+                    selection.AppendLine($"{indent}{fieldName}");
+                }
+            }
+            else
+            {
+                // This is an object type, recurse if we haven't hit max depth
+                if (currentDepth < maxDepth)
+                {
+                    var nestedType = GraphQlTypeHelpers.FindTypeByName(schema, fieldTypeName);
+                    if (nestedType.HasValue)
+                    {
+                        var nestedSelection = BuildNestedFieldSelection(nestedType.Value, schema, maxDepth, currentDepth + 1, includeAllScalars);
+                        if (!string.IsNullOrEmpty(nestedSelection))
+                        {
+                            selection.AppendLine($"{indent}{fieldName} {{");
+                            selection.Append(nestedSelection);
+                            selection.AppendLine($"{indent}}}");
+                        }
+                    }
+                }
+            }
+        }
+
+        return selection.ToString();
+    }
 }
