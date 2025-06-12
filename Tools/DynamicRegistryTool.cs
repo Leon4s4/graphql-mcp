@@ -287,7 +287,7 @@ public static class DynamicRegistryTool
         if (string.IsNullOrEmpty(input))
             return input;
 
-        return char.ToLowerInvariant(input[0]) + input.Substring(1);
+        return char.ToLowerInvariant(input[0]) + input[1..];
     }
 
     private static string GenerateOperationString(JsonElement field, string operationType, string fieldName)

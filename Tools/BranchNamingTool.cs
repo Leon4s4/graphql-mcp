@@ -22,7 +22,7 @@ public static partial class BranchNamingTool
 
         var ticketNumber = numberMatch.Groups[1].Value;
 
-        var description = ticketDescription.Substring(numberMatch.Index + numberMatch.Length)
+        var description = ticketDescription[(numberMatch.Index + numberMatch.Length)..]
             .Trim();
 
 
