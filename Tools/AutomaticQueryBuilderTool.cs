@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
@@ -10,7 +11,7 @@ namespace Graphql.Mcp.Tools;
 /// Equivalent to Python's build_nested_selection and build_selection functionality
 /// </summary>
 [McpServerToolType]
-public static class AutomaticQueryBuilder
+public static class AutomaticQueryBuilderTool
 {
     [McpServerTool, Description("Automatically build complete GraphQL queries with smart field selection")]
     public static async Task<string> BuildSmartQuery(

@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Graphql.Mcp.Tools;
+namespace Graphql.Mcp.Helpers;
 
 /// <summary>
 /// Utility helpers for converting <see cref="JsonElement"/> values
@@ -24,7 +24,7 @@ public static class JsonHelpers
     /// <summary>
     /// Convert a <see cref="JsonElement"/> to a corresponding CLR object.
     /// </summary>
-    public static object JsonElementToObject(JsonElement element)
+    private static object JsonElementToObject(JsonElement element)
     {
         return element.ValueKind switch
         {
@@ -37,5 +37,29 @@ public static class JsonHelpers
             JsonValueKind.Object => JsonElementToDictionary(element),
             _ => element.ToString()
         };
+    }
+    
+    /// <summary>
+    /// Parse a JSON string into a dictionary of string key-value pairs.
+    /// Returns empty dictionary if input is null/empty.
+    /// </summary>
+    /// <param name="jsonString">JSON string to parse</param>
+    /// <returns>Dictionary of headers or empty dictionary if input is null/empty</returns>
+    public static (Dictionary<string, string> Headers, string? ErrorMessage) ParseHeadersJson(string? jsonString)
+    {
+        var headers = new Dictionary<string, string>();
+        
+        if (string.IsNullOrEmpty(jsonString))
+            return (headers, null);
+        
+        try
+        {
+            headers = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonString) ?? new();
+            return (headers, null);
+        }
+        catch (JsonException ex)
+        {
+            return (new Dictionary<string, string>(), $"Error parsing headers JSON: {ex.Message}");
+        }
     }
 }

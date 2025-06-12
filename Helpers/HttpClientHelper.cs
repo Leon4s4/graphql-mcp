@@ -2,7 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 
-namespace Graphql.Mcp.Tools;
+namespace Graphql.Mcp.Helpers;
 
 /// <summary>
 /// Utility class for configuring HttpClient instances with proper header handling

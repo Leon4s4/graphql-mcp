@@ -1,4 +1,6 @@
-namespace Graphql.Mcp.Tools;
+using Graphql.Mcp.Tools;
+
+namespace Graphql.Mcp.Helpers;
 
 /// <summary>
 /// Implementation of IGraphQLHttpClient that uses IHttpClientFactory for proper HttpClient lifecycle management

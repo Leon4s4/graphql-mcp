@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
@@ -28,24 +29,18 @@ public static class DynamicToolRegistry
 
         try
         {
-            var headerDict = new Dictionary<string, string>();
-            if (!string.IsNullOrEmpty(headers))
+            // Parse headers using the helper method
+            var (requestHeaders, headerError) = JsonHelpers.ParseHeadersJson(headers);
+            if (headerError != null)
             {
-                try
-                {
-                    headerDict = JsonSerializer.Deserialize<Dictionary<string, string>>(headers) ?? new();
-                }
-                catch (JsonException ex)
-                {
-                    return $"Error parsing headers JSON: {ex.Message}";
-                }
+                return headerError;
             }
 
             var endpointInfo = new GraphQlEndpointInfo
             {
                 Name = endpointName,
                 Url = endpoint,
-                Headers = headerDict,
+                Headers = requestHeaders,
                 AllowMutations = allowMutations,
                 ToolPrefix = toolPrefix
             };
