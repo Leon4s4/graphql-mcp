@@ -86,10 +86,7 @@ public static class DynamicRegistryTool
                 operationName = toolInfo.OperationName
             };
 
-            var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(
-                endpointInfo.Url,
-                request,
-                endpointInfo.Headers);
+            var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, request);
 
             return !result.IsSuccess ? result.FormatForDisplay() : GraphQLOperationHelper.FormatGraphQlResponse(result.Content!);
         }

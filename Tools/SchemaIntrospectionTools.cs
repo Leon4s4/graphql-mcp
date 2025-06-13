@@ -105,9 +105,7 @@ public static class SchemaIntrospectionTools
 
     [McpServerTool, Description("Retrieve complete GraphQL schema information including types, fields, directives, and relationships")]
     public static async Task<string> IntrospectSchema(
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        [Description("Name of the registered GraphQL endpoint")] string endpointName)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -115,26 +113,22 @@ public static class SchemaIntrospectionTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        return await IntrospectSchemaInternal(endpointInfo, headers);
+        return await IntrospectSchemaInternal(endpointInfo);
     }
 
     /// <summary>
     /// Internal method for schema introspection that can be used by other tools
     /// </summary>
-    public static async Task<string> IntrospectSchema(GraphQlEndpointInfo endpointInfo, string? headers = null)
+    public static async Task<string> IntrospectSchema(GraphQlEndpointInfo endpointInfo)
     {
-        return await IntrospectSchemaInternal(endpointInfo, headers);
+        return await IntrospectSchemaInternal(endpointInfo);
     }
 
-    private static async Task<string> IntrospectSchemaInternal(GraphQlEndpointInfo endpointInfo, string? headers)
+    private static async Task<string> IntrospectSchemaInternal(GraphQlEndpointInfo endpointInfo)
     {
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
-
         var body = new { query = IntrospectionQuery };
 
-        var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo.Url, body, requestHeaders);
+        var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, body);
 
         if (!result.IsSuccess)
         {
@@ -154,9 +148,7 @@ public static class SchemaIntrospectionTools
     public static async Task<string> GetSchemaDocs(
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Specific type name to get documentation for (optional)")]
-        string? typeName = null,
-        [Description("HTTP headers as JSON object (optional)")]
-        string? headers = null)
+        string? typeName = null)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -164,20 +156,20 @@ public static class SchemaIntrospectionTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        return await GetSchemaDocsInternal(endpointInfo, typeName, headers);
+        return await GetSchemaDocsInternal(endpointInfo, typeName);
     }
 
     /// <summary>
     /// Internal method for generating schema documentation that can be used by other tools
     /// </summary>
-    public static async Task<string> GetSchemaDocs(GraphQlEndpointInfo endpointInfo, string? typeName = null, string? headers = null)
+    public static async Task<string> GetSchemaDocs(GraphQlEndpointInfo endpointInfo, string? typeName = null)
     {
-        return await GetSchemaDocsInternal(endpointInfo, typeName, headers);
+        return await GetSchemaDocsInternal(endpointInfo, typeName);
     }
 
-    private static async Task<string> GetSchemaDocsInternal(GraphQlEndpointInfo endpointInfo, string? typeName, string? headers)
+    private static async Task<string> GetSchemaDocsInternal(GraphQlEndpointInfo endpointInfo, string? typeName)
     {
-        var schemaJson = await IntrospectSchema(endpointInfo, headers);
+        var schemaJson = await IntrospectSchema(endpointInfo);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
@@ -277,9 +269,7 @@ public static class SchemaIntrospectionTools
     public static async Task<string> ValidateQuery(
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("GraphQL query to validate")]
-        string query,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        string query)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -287,21 +277,21 @@ public static class SchemaIntrospectionTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        return await ValidateQueryInternal(endpointInfo, query, headers);
+        return await ValidateQueryInternal(endpointInfo, query);
     }
 
     /// <summary>
     /// Internal method for query validation that can be used by other tools
     /// </summary>
-    public static async Task<string> ValidateQuery(GraphQlEndpointInfo endpointInfo, string query, string? headers = null)
+    public static async Task<string> ValidateQuery(GraphQlEndpointInfo endpointInfo, string query)
     {
-        return await ValidateQueryInternal(endpointInfo, query, headers);
+        return await ValidateQueryInternal(endpointInfo, query);
     }
 
-    private static async Task<string> ValidateQueryInternal(GraphQlEndpointInfo endpointInfo, string query, string? headers)
+    private static async Task<string> ValidateQueryInternal(GraphQlEndpointInfo endpointInfo, string query)
     {
         // First get the schema
-        var schemaJson = await IntrospectSchema(endpointInfo, headers);
+        var schemaJson = await IntrospectSchema(endpointInfo);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data))

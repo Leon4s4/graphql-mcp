@@ -16,19 +16,13 @@ public static class FieldUsageAnalyticsTools
         [Description("Log of executed queries as JSON array")]
         string queryLog,
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
-        [Description("Show unused fields")] bool showUnused = true,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        [Description("Show unused fields")] bool showUnused = true)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
         {
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
-
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
 
         var result = new StringBuilder();
         result.AppendLine("# Field Usage Analytics Report\n");
@@ -39,7 +33,7 @@ public static class FieldUsageAnalyticsTools
             return "Error: No queries found in log";
         }
 
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
         var schemaFields = await ExtractSchemaFields(schemaJson);
 
         var usageStats = AnalyzeFieldUsageFromQueries(queries, schemaFields);

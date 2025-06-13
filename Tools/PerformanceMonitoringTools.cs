@@ -18,19 +18,13 @@ public static class PerformanceMonitoringTools
         string query,
         [Description("Number of test runs")] int runs = 5,
         [Description("Variables as JSON object (optional)")]
-        string? variables = null,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        string? variables = null)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
         {
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
-
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
 
         try
         {
@@ -57,7 +51,7 @@ public static class PerformanceMonitoringTools
             results.AppendLine("## Executing Performance Tests...\n");
             try
             {
-                await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo.Url, requestBody, requestHeaders);
+                await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, requestBody);
                 results.AppendLine("✅ Warmup run completed");
             }
             catch
@@ -71,7 +65,7 @@ public static class PerformanceMonitoringTools
                 var stopwatch = Stopwatch.StartNew();
                 try
                 {
-                    var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo.Url, requestBody, requestHeaders);
+                    var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, requestBody);
                     stopwatch.Stop();
 
                     if (result.IsSuccess)

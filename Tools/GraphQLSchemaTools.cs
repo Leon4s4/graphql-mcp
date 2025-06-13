@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
+using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
@@ -25,8 +26,7 @@ public static class GraphQlSchemaTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        var headers = endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null;
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo, headers);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
@@ -113,12 +113,9 @@ public static class GraphQlSchemaTools
             return $"Error: Endpoint '{endpointName2}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        var headers1 = endpointInfo1.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo1.Headers) : null;
-        var headers2 = endpointInfo2.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo2.Headers) : null;
-
         // Get both schemas
-        var schema1Json = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo1, headers1);
-        var schema2Json = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo2, headers2);
+        var schema1Json = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo1);
+        var schema2Json = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo2);
 
         var schema1Data = JsonSerializer.Deserialize<JsonElement>(schema1Json);
         var schema2Data = JsonSerializer.Deserialize<JsonElement>(schema2Json);
@@ -206,9 +203,6 @@ public static class GraphQlSchemaTools
             return $"Error: Endpoint '{endpointName2}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        var headers1 = endpointInfo1.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo1.Headers) : null;
-        var headers2 = endpointInfo2.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo2.Headers) : null;
-
         var result = new StringBuilder();
         result.AppendLine("# GraphQL Request Comparison Report\n");
         result.AppendLine($"**Query:**\n```graphql\n{query}\n```\n");
@@ -222,11 +216,11 @@ public static class GraphQlSchemaTools
 
         // Execute request on both services with timing
         var stopwatch1 = System.Diagnostics.Stopwatch.StartNew();
-        var response1 = await ExecuteGraphQlRequest(endpointInfo1.Url, query, variables, headers1);
+        var response1 = await ExecuteGraphQlRequest(endpointInfo1, query, variables);
         stopwatch1.Stop();
 
         var stopwatch2 = System.Diagnostics.Stopwatch.StartNew();
-        var response2 = await ExecuteGraphQlRequest(endpointInfo2.Url, query, variables, headers2);
+        var response2 = await ExecuteGraphQlRequest(endpointInfo2, query, variables);
         stopwatch2.Stop();
 
         // Parse responses
@@ -414,7 +408,7 @@ public static class GraphQlSchemaTools
         return result.ToString();
     }
 
-    private static async Task<string> ExecuteGraphQlRequest(string endpoint, string query, string? variables, string? headers)
+    private static async Task<string> ExecuteGraphQlRequest(GraphQlEndpointInfo endpointInfo, string query, string? variables)
     {
         var requestBody = new
         {
@@ -422,7 +416,7 @@ public static class GraphQlSchemaTools
             variables = !string.IsNullOrEmpty(variables) ? JsonSerializer.Deserialize<object>(variables) : null
         };
 
-        var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpoint, requestBody, headers);
+        var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, requestBody);
 
         if (!result.IsSuccess)
         {

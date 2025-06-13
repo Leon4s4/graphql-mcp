@@ -64,7 +64,7 @@ public static class QueryGraphQlMcpTool
             };
 
             // Use centralized HTTP execution with proper error handling
-            var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo.Url, request, endpointInfo.Headers);
+            var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, request);
             return result.FormatForDisplay();
         }
         catch (Exception ex)

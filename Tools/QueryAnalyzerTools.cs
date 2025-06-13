@@ -121,9 +121,7 @@ public static class QueryAnalyzerTools
         [Description("Include related objects")]
         bool includeRelated = false,
         [Description("Maximum depth for nested objects")]
-        int maxDepth = 3,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        int maxDepth = 3)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -131,12 +129,8 @@ public static class QueryAnalyzerTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
-
         // Get schema to understand available fields
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
