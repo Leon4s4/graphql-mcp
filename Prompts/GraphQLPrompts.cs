@@ -5,7 +5,7 @@ using ModelContextProtocol.Server;
 namespace Graphql.Mcp.Prompts;
 
 [McpServerPromptType]
-public static class GraphQlPrompts
+public class GraphQlPrompts
 {
     [McpServerPrompt, Description("Generate optimized GraphQL queries based on requirements and schema analysis")]
     public static string GenerateQuery(

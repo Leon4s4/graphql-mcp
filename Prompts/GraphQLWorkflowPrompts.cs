@@ -5,7 +5,7 @@ using ModelContextProtocol.Server;
 namespace Graphql.Mcp.Prompts;
 
 [McpServerPromptType]
-public static class GraphQlWorkflowPrompts
+public class GraphQlWorkflowPrompts
 {
     [McpServerPrompt, Description("Guide for implementing GraphQL best practices in development workflows")]
     public static string DevelopmentWorkflow(
