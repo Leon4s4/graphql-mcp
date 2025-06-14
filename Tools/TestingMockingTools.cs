@@ -16,9 +16,7 @@ public static class TestingMockingTools
         [Description("Type name to generate mock data for")]
         string typeName,
         [Description("Number of mock instances to generate")]
-        int count = 1,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        int count = 1)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -26,12 +24,8 @@ public static class TestingMockingTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
-
         // Get schema introspection
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
@@ -166,11 +160,7 @@ public static class TestingMockingTools
         [Description("Name of the original registered GraphQL endpoint")]
         string originalEndpointName,
         [Description("Name of the new registered GraphQL endpoint")]
-        string newEndpointName,
-        [Description("HTTP headers for original endpoint (optional - will override endpoint headers)")]
-        string? originalHeaders = null,
-        [Description("HTTP headers for new endpoint (optional - will override endpoint headers)")]
-        string? newHeaders = null)
+        string newEndpointName)
     {
         var originalEndpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(originalEndpointName);
         if (originalEndpointInfo == null)
@@ -184,15 +174,9 @@ public static class TestingMockingTools
             return $"Error: Endpoint '{newEndpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        // Use provided headers or fall back to endpoint headers
-        var originalRequestHeaders = !string.IsNullOrEmpty(originalHeaders) ? originalHeaders : 
-            (originalEndpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(originalEndpointInfo.Headers) : null);
-        var newRequestHeaders = !string.IsNullOrEmpty(newHeaders) ? newHeaders : 
-            (newEndpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(newEndpointInfo.Headers) : null);
-
         // Get both schemas
-        var originalSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(originalEndpointName, originalRequestHeaders);
-        var newSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(newEndpointName, newRequestHeaders);
+        var originalSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(originalEndpointInfo);
+        var newSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(newEndpointInfo);
 
         var originalSchema = JsonSerializer.Deserialize<JsonElement>(originalSchemaJson);
         var newSchema = JsonSerializer.Deserialize<JsonElement>(newSchemaJson);
@@ -287,19 +271,13 @@ public static class TestingMockingTools
         [Description("Include error case tests")]
         bool includeErrorCases = true,
         [Description("Include performance tests")]
-        bool includePerformance = false,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        bool includePerformance = false)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
         {
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
-
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
 
         var testSuite = new StringBuilder();
         testSuite.AppendLine("# Generated Test Suite\n");

@@ -19,9 +19,7 @@ public static class ResolverDocumentationTools
         [Description("Include argument details")]
         bool includeArguments = true,
         [Description("Include return type information")]
-        bool includeReturnTypes = true,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        bool includeReturnTypes = true)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -29,12 +27,8 @@ public static class ResolverDocumentationTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
-
         // Get schema introspection
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
@@ -111,9 +105,7 @@ public static class ResolverDocumentationTools
         [Description("Programming language for templates")]
         string language = "csharp",
         [Description("Include error handling")]
-        bool includeErrorHandling = true,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        bool includeErrorHandling = true)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -121,12 +113,8 @@ public static class ResolverDocumentationTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
-
         // Get schema introspection
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
@@ -174,9 +162,7 @@ public static class ResolverDocumentationTools
     public static async Task<string> DocumentResolverPerformance(
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Type name to analyze (optional)")]
-        string? typeName = null,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        string? typeName = null)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -184,15 +170,11 @@ public static class ResolverDocumentationTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
-
         var performanceDoc = new StringBuilder();
         performanceDoc.AppendLine("# GraphQL Resolver Performance Guide\n");
 
         // Get schema for analysis
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||

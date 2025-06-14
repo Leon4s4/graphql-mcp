@@ -21,9 +21,7 @@ public static class AutomaticQueryBuilderTool
         [Description("Include all scalar fields automatically")]
         bool includeAllScalars = true,
         [Description("Variables as JSON object (optional)")]
-        string? variables = null,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        string? variables = null)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -31,13 +29,9 @@ public static class AutomaticQueryBuilderTool
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
-
         try
         {
-            var schema = await GraphQlSchemaHelper.GetSchemaAsync(endpointInfo.Url, requestHeaders);
+            var schema = await GraphQlSchemaHelper.GetSchemaAsync(endpointInfo);
             var operationField = GraphQlSchemaHelper.FindOperationField(schema, operationName);
             var parsedVariables = JsonHelpers.ParseVariables(variables ?? string.Empty);
             var query = GraphQLOperationHelper.BuildGraphQLQuery(operationField, schema, operationName, maxDepth, includeAllScalars, parsedVariables);
@@ -57,9 +51,7 @@ public static class AutomaticQueryBuilderTool
         string typeName,
         [Description("Maximum nesting depth")] int maxDepth = 3,
         [Description("Current depth (for recursive calls)")]
-        int currentDepth = 1,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        int currentDepth = 1)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -67,13 +59,9 @@ public static class AutomaticQueryBuilderTool
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
-
         try
         {
-            var schema = await GraphQlSchemaHelper.GetSchemaAsync(endpointInfo.Url, requestHeaders);
+            var schema = await GraphQlSchemaHelper.GetSchemaAsync(endpointInfo);
             var type = GraphQlTypeHelpers.FindTypeByName(schema, typeName);
             
             if (!type.HasValue)

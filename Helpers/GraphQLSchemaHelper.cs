@@ -15,12 +15,10 @@ public static class GraphQlSchemaHelper
     /// </summary>
     public static async Task<string> GenerateToolsFromSchema(GraphQlEndpointInfo endpointInfo)
     {
-        var headersJson = endpointInfo.Headers.Count > 0
-            ? JsonSerializer.Serialize(endpointInfo.Headers)
-            : null;
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
-        var schema = await GetSchemaFromEndpoint(endpointInfo.Url, headersJson);
-        if (schema == null)
+        if (!schemaData.TryGetProperty("data", out var data) || !data.TryGetProperty("__schema", out var schema))
         {
             return "Failed to parse schema introspection data";
         }
@@ -28,10 +26,10 @@ public static class GraphQlSchemaHelper
         var toolsGenerated = 0;
         
         // Process Query type
-        toolsGenerated += ProcessRootType(schema.Value, "queryType", "Query", endpointInfo, true);
+        toolsGenerated += ProcessRootType(schema, "queryType", "Query", endpointInfo, true);
         
         // Process Mutation type (only if mutations are allowed)
-        toolsGenerated += ProcessRootType(schema.Value, "mutationType", "Mutation", endpointInfo, endpointInfo.AllowMutations);
+        toolsGenerated += ProcessRootType(schema, "mutationType", "Mutation", endpointInfo, endpointInfo.AllowMutations);
 
         return GenerateResultMessage(toolsGenerated, endpointInfo);
     }
@@ -39,28 +37,15 @@ public static class GraphQlSchemaHelper
     /// <summary>
     /// Retrieves and validates schema from GraphQL endpoint
     /// </summary>
-    public static async Task<JsonElement> GetSchemaAsync(string endpoint, string? headers)
+    public static async Task<JsonElement> GetSchemaAsync(GraphQlEndpointInfo endpointInfo)
     {
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpoint, headers);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
             !data.TryGetProperty("__schema", out var schema))
         {
             throw new InvalidOperationException("Failed to retrieve schema data");
-        }
-
-        return schema;
-    }
-
-    private static async Task<JsonElement?> GetSchemaFromEndpoint(string url, string? headersJson)
-    {
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(url, headersJson);
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
-
-        if (!schemaData.TryGetProperty("data", out var data) || !data.TryGetProperty("__schema", out var schema))
-        {
-            return null;
         }
 
         return schema;

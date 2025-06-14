@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Graphql.Mcp.DTO;
 
 namespace Graphql.Mcp.Helpers;
 
@@ -182,6 +183,18 @@ public static class HttpClientHelper
         {
             response?.Dispose();
         }
+    }
+
+    /// <summary>
+    /// Executes a GraphQL request using endpoint information with comprehensive error handling and connection validation
+    /// </summary>
+    /// <param name="endpointInfo">The GraphQL endpoint information containing URL and headers</param>
+    /// <param name="requestBody">The GraphQL request body (query, variables, etc.)</param>
+    /// <param name="timeout">Optional timeout override</param>
+    /// <returns>GraphQLResponse containing either success data or detailed error information</returns>
+    public static async Task<GraphQlResponse> ExecuteGraphQlRequestAsync(GraphQlEndpointInfo endpointInfo, object requestBody, TimeSpan? timeout = null)
+    {
+        return await ExecuteGraphQlRequestAsync(endpointInfo.Url, requestBody, endpointInfo.Headers, timeout);
     }
 
     /// <summary>

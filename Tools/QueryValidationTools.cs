@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
@@ -16,8 +17,6 @@ public static class QueryValidationTools
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Variables as JSON (optional)")]
         string? variables = null,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null,
         [Description("Validate query syntax only")]
         bool syntaxCheckOnly = false)
     {
@@ -26,10 +25,6 @@ public static class QueryValidationTools
         {
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
-
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
 
         var result = new StringBuilder();
         result.AppendLine("# GraphQL Query Test Report\n");
@@ -63,7 +58,7 @@ public static class QueryValidationTools
         result.AppendLine("## Schema Validation");
         try
         {
-            var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
+            var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
             var schemaErrors = ValidateQueryAgainstSchema(query, schemaJson);
 
             if (schemaErrors.Any())
@@ -91,7 +86,7 @@ public static class QueryValidationTools
         result.AppendLine("## Execution Test");
         try
         {
-            var executionResult = await ExecuteTestQuery(endpointInfo.Url, query, variables, requestHeaders);
+            var executionResult = await ExecuteTestQuery(endpointInfo, query, variables);
             result.AppendLine(executionResult);
         }
         catch (Exception ex)
@@ -304,7 +299,7 @@ public static class QueryValidationTools
         return errors;
     }
 
-    private static async Task<string> ExecuteTestQuery(string endpoint, string query, string? variables, string? headers)
+    private static async Task<string> ExecuteTestQuery(GraphQlEndpointInfo endpointInfo, string query, string? variables)
     {
         try
         {
@@ -315,7 +310,7 @@ public static class QueryValidationTools
             };
 
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpoint, requestBody, headers);
+            var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, requestBody);
             stopwatch.Stop();
 
             var response = new StringBuilder();

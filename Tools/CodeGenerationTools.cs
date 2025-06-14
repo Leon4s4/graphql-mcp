@@ -14,9 +14,7 @@ public static class CodeGenerationTools
     public static async Task<string> GenerateTypes(
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Namespace for generated classes")]
-        string namespaceName = "Generated.GraphQL",
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        string namespaceName = "Generated.GraphQL")
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -24,11 +22,7 @@ public static class CodeGenerationTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
-
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
@@ -180,9 +174,7 @@ public static class CodeGenerationTools
     public static async Task<string> GenerateQueryBuilder(
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Root type to generate builder for (Query/Mutation)")]
-        string rootType = "Query",
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        string rootType = "Query")
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -190,12 +182,8 @@ public static class CodeGenerationTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
-
         // Get schema to understand available fields
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, requestHeaders);
+        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
         var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
         var generatedCode = new StringBuilder();

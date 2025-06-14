@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
@@ -17,19 +18,13 @@ public static class SecurityAnalysisTools
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Max query depth allowed")]
         int maxDepth = 10,
-        [Description("Max query complexity")] int maxComplexity = 1000,
-        [Description("HTTP headers as JSON object (optional - will override endpoint headers)")]
-        string? headers = null)
+        [Description("Max query complexity")] int maxComplexity = 1000)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
         {
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
-
-        // Use provided headers or fall back to endpoint headers
-        var requestHeaders = !string.IsNullOrEmpty(headers) ? headers : 
-            (endpointInfo.Headers.Count > 0 ? JsonSerializer.Serialize(endpointInfo.Headers) : null);
 
         var result = new StringBuilder();
         result.AppendLine("# GraphQL Security Analysis Report\n");
@@ -116,7 +111,7 @@ public static class SecurityAnalysisTools
         // 6. Schema-based Security Analysis (if schema available)
         try
         {
-            var schemaAnalysis = await AnalyzeSchemaBasedSecurity(query, endpointName, requestHeaders);
+            var schemaAnalysis = await AnalyzeSchemaBasedSecurity(query, endpointInfo);
             result.AppendLine("## Schema-based Security Analysis");
             result.AppendLine(schemaAnalysis);
         }
@@ -313,11 +308,11 @@ public static class SecurityAnalysisTools
         return risks;
     }
 
-    private static async Task<string> AnalyzeSchemaBasedSecurity(string query, string endpointName, string? headers)
+    private static async Task<string> AnalyzeSchemaBasedSecurity(string query, GraphQlEndpointInfo endpointInfo)
     {
         try
         {
-            var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointName, headers);
+            var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
             var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
 
             var result = new StringBuilder();
