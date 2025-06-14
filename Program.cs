@@ -1,4 +1,5 @@
 ﻿using Graphql.Mcp.Helpers;
+using Graphql.Mcp.Prompts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -9,6 +10,8 @@ builder.Logging.AddConsole(consoleLogOptions => consoleLogOptions.LogToStandardE
 builder.Services
     .AddMcpServer()
     .WithStdioServerTransport()
+    .WithPrompts<GraphQlPrompts>()
+    .WithPrompts<GraphQlWorkflowPrompts>()
     .WithToolsFromAssembly();
 
 builder.Services.AddHttpClient("GraphQLClient", client => { client.Timeout = TimeSpan.FromSeconds(30); });
