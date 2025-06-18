@@ -28,8 +28,11 @@ public static class ResolverDocumentationTools
         }
 
         // Get schema introspection
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        if (!schemaResult.IsSuccess)
+            return schemaResult.FormatForDisplay();
+
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaResult.Content!);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
             !data.TryGetProperty("__schema", out var schema))
@@ -114,8 +117,11 @@ public static class ResolverDocumentationTools
         }
 
         // Get schema introspection
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        if (!schemaResult.IsSuccess)
+            return schemaResult.FormatForDisplay();
+
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaResult.Content!);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
             !data.TryGetProperty("__schema", out var schema))
@@ -174,8 +180,11 @@ public static class ResolverDocumentationTools
         performanceDoc.AppendLine("# GraphQL Resolver Performance Guide\n");
 
         // Get schema for analysis
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        if (!schemaResult.IsSuccess)
+            return schemaResult.FormatForDisplay();
+
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaResult.Content!);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
             !data.TryGetProperty("__schema", out var schema))

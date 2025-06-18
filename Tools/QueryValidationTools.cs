@@ -58,25 +58,31 @@ public static class QueryValidationTools
         result.AppendLine("## Schema Validation");
         try
         {
-            var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
-            var schemaErrors = ValidateQueryAgainstSchema(query, schemaJson);
-
-            if (schemaErrors.Any())
+            var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+            if (!schemaResult.IsSuccess)
             {
-                result.AppendLine("❌ **Status:** Schema validation errors\n");
-                result.AppendLine("**Errors:**");
-                foreach (var error in schemaErrors)
-                {
-                    result.AppendLine($"- {error}");
-                }
-
-                result.AppendLine();
+                result.AppendLine(schemaResult.FormatForDisplay());
             }
             else
             {
-                result.AppendLine("✅ **Status:** Query is valid against schema\n");
+                var schemaErrors = ValidateQueryAgainstSchema(query, schemaResult.Content!);
+
+                if (schemaErrors.Any())
+                {
+                    result.AppendLine("❌ **Status:** Schema validation errors\n");
+                    result.AppendLine("**Errors:**");
+                    foreach (var error in schemaErrors)
+                    {
+                        result.AppendLine($"- {error}");
+                    }
+
+                    result.AppendLine();
+                }
+                else
+                {
+                    result.AppendLine("✅ **Status:** Query is valid against schema\n");
+                }
             }
-        }
         catch (Exception ex)
         {
             result.AppendLine($"⚠️ **Status:** Could not validate against schema: {ex.Message}\n");

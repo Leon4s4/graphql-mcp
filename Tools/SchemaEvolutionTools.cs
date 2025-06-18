@@ -164,8 +164,11 @@ public static class SchemaEvolutionTools
             // Check if it's a URL
             if (Uri.TryCreate(schemaSource, UriKind.Absolute, out _))
             {
-                var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(schemaSource);
-                var data = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+                var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(schemaSource);
+                if (!schemaResult.IsSuccess)
+                    return null;
+
+                var data = JsonSerializer.Deserialize<JsonElement>(schemaResult.Content!);
                 if (data.TryGetProperty("data", out var schemaData))
                 {
                     return schemaData;

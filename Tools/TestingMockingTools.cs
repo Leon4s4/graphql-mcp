@@ -25,8 +25,11 @@ public static class TestingMockingTools
         }
 
         // Get schema introspection
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        if (!schemaResult.IsSuccess)
+            return schemaResult.FormatForDisplay();
+
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaResult.Content!);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
             !data.TryGetProperty("__schema", out var schema) ||
@@ -175,11 +178,15 @@ public static class TestingMockingTools
         }
 
         // Get both schemas
-        var originalSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(originalEndpointInfo);
-        var newSchemaJson = await SchemaIntrospectionTools.IntrospectSchema(newEndpointInfo);
+        var originalResult = await SchemaIntrospectionTools.IntrospectSchema(originalEndpointInfo);
+        if (!originalResult.IsSuccess)
+            return originalResult.FormatForDisplay();
+        var newResult = await SchemaIntrospectionTools.IntrospectSchema(newEndpointInfo);
+        if (!newResult.IsSuccess)
+            return newResult.FormatForDisplay();
 
-        var originalSchema = JsonSerializer.Deserialize<JsonElement>(originalSchemaJson);
-        var newSchema = JsonSerializer.Deserialize<JsonElement>(newSchemaJson);
+        var originalSchema = JsonSerializer.Deserialize<JsonElement>(originalResult.Content!);
+        var newSchema = JsonSerializer.Deserialize<JsonElement>(newResult.Content!);
 
         var comparison = new StringBuilder();
         comparison.AppendLine("# GraphQL Schema Comparison Report\n");
