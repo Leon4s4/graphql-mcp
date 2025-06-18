@@ -83,6 +83,7 @@ public static class QueryValidationTools
                     result.AppendLine("✅ **Status:** Query is valid against schema\n");
                 }
             }
+        }
         catch (Exception ex)
         {
             result.AppendLine($"⚠️ **Status:** Could not validate against schema: {ex.Message}\n");
