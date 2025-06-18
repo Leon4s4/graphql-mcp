@@ -26,8 +26,11 @@ public static class GraphQlSchemaTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        if (!schemaResult.IsSuccess)
+            return schemaResult.FormatForDisplay();
+
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaResult.Content!);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
             !data.TryGetProperty("__schema", out var schema))
@@ -114,11 +117,15 @@ public static class GraphQlSchemaTools
         }
 
         // Get both schemas
-        var schema1Json = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo1);
-        var schema2Json = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo2);
+        var schema1Result = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo1);
+        if (!schema1Result.IsSuccess)
+            return schema1Result.FormatForDisplay();
+        var schema2Result = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo2);
+        if (!schema2Result.IsSuccess)
+            return schema2Result.FormatForDisplay();
 
-        var schema1Data = JsonSerializer.Deserialize<JsonElement>(schema1Json);
-        var schema2Data = JsonSerializer.Deserialize<JsonElement>(schema2Json);
+        var schema1Data = JsonSerializer.Deserialize<JsonElement>(schema1Result.Content!);
+        var schema2Data = JsonSerializer.Deserialize<JsonElement>(schema2Result.Content!);
 
         if (!schema1Data.TryGetProperty("data", out var data1) ||
             !data1.TryGetProperty("__schema", out var schema1) ||

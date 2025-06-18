@@ -33,8 +33,11 @@ public static class FieldUsageAnalyticsTools
             return "Error: No queries found in log";
         }
 
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
-        var schemaFields = await ExtractSchemaFields(schemaJson);
+        var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        if (!schemaResult.IsSuccess)
+            return schemaResult.FormatForDisplay();
+
+        var schemaFields = await ExtractSchemaFields(schemaResult.Content!);
 
         var usageStats = AnalyzeFieldUsageFromQueries(queries, schemaFields);
 

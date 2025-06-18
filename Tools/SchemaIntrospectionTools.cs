@@ -104,13 +104,13 @@ public static class SchemaIntrospectionTools
                 }";
 
     [McpServerTool, Description("Retrieve complete GraphQL schema information including types, fields, directives, and relationships")]
-    public static async Task<string> IntrospectSchema(
+    public static async Task<GraphQlResponse> IntrospectSchema(
         [Description("Name of the registered GraphQL endpoint")] string endpointName)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
         {
-            return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
+            return GraphQlResponse.ConnectionError($"Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.");
         }
 
         return await IntrospectSchemaInternal(endpointInfo);
@@ -119,29 +119,15 @@ public static class SchemaIntrospectionTools
     /// <summary>
     /// Internal method for schema introspection that can be used by other tools
     /// </summary>
-    public static async Task<string> IntrospectSchema(GraphQlEndpointInfo endpointInfo)
+    public static async Task<GraphQlResponse> IntrospectSchema(GraphQlEndpointInfo endpointInfo)
     {
         return await IntrospectSchemaInternal(endpointInfo);
     }
 
-    private static async Task<string> IntrospectSchemaInternal(GraphQlEndpointInfo endpointInfo)
+    private static async Task<GraphQlResponse> IntrospectSchemaInternal(GraphQlEndpointInfo endpointInfo)
     {
         var body = new { query = IntrospectionQuery };
-
-        var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, body);
-
-        if (!result.IsSuccess)
-        {
-            return result.FormatForDisplay();
-        }
-
-        var data = JsonSerializer.Deserialize<JsonElement>(result.Content!);
-        if (data.TryGetProperty("errors", out var errors) && errors.ValueKind == JsonValueKind.Array && errors.GetArrayLength() > 0)
-        {
-            return $"Schema introspection failed with errors:\n{JsonSerializer.Serialize(errors, new JsonSerializerOptions { WriteIndented = true })}";
-        }
-
-        return JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+        return await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, body);
     }
 
     [McpServerTool, Description("Generate comprehensive documentation from GraphQL schema descriptions and field metadata")]
@@ -169,8 +155,11 @@ public static class SchemaIntrospectionTools
 
     private static async Task<string> GetSchemaDocsInternal(GraphQlEndpointInfo endpointInfo, string? typeName)
     {
-        var schemaJson = await IntrospectSchema(endpointInfo);
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        var schemaResult = await IntrospectSchema(endpointInfo);
+        if (!schemaResult.IsSuccess)
+            return schemaResult.FormatForDisplay();
+
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaResult.Content!);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
             !data.TryGetProperty("__schema", out var schema) ||
@@ -291,8 +280,11 @@ public static class SchemaIntrospectionTools
     private static async Task<string> ValidateQueryInternal(GraphQlEndpointInfo endpointInfo, string query)
     {
         // First get the schema
-        var schemaJson = await IntrospectSchema(endpointInfo);
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        var schemaResult = await IntrospectSchema(endpointInfo);
+        if (!schemaResult.IsSuccess)
+            return schemaResult.FormatForDisplay();
+
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaResult.Content!);
 
         if (!schemaData.TryGetProperty("data", out var data))
         {

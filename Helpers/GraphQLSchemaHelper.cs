@@ -15,8 +15,11 @@ public static class GraphQlSchemaHelper
     /// </summary>
     public static async Task<string> GenerateToolsFromSchema(GraphQlEndpointInfo endpointInfo)
     {
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        if (!schemaResult.IsSuccess)
+            return schemaResult.FormatForDisplay();
+
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaResult.Content!);
 
         if (!schemaData.TryGetProperty("data", out var data) || !data.TryGetProperty("__schema", out var schema))
         {
@@ -39,8 +42,11 @@ public static class GraphQlSchemaHelper
     /// </summary>
     public static async Task<JsonElement> GetSchemaAsync(GraphQlEndpointInfo endpointInfo)
     {
-        var schemaJson = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaJson);
+        var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        if (!schemaResult.IsSuccess)
+            throw new InvalidOperationException(schemaResult.FormatForDisplay());
+
+        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaResult.Content!);
 
         if (!schemaData.TryGetProperty("data", out var data) ||
             !data.TryGetProperty("__schema", out var schema))
