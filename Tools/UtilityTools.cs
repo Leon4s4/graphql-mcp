@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 using System.Text.RegularExpressions;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
@@ -19,7 +20,7 @@ public static class UtilityTools
         foreach (var line in lines)
         {
             var trimmedLine = line.Trim();
-            
+
             if (string.IsNullOrWhiteSpace(trimmedLine))
             {
                 formatted.AppendLine();
@@ -259,6 +260,35 @@ public static class UtilityTools
         }
 
         return result.ToString();
+    }
+
+    [McpServerTool, Description("Provide comprehensive GraphQL utilities with intelligent formatting, optimization, transformation, and development assistance. This advanced utility suite offers complete GraphQL workflow support with smart automation and best practices.")]
+    public static async Task<string> UtilityOperationsComprehensive(
+        [Description("GraphQL query or operation to process")]
+        string operation,
+        [Description("Utility operation: 'format' for formatting, 'optimize' for optimization, 'transform' for transformation, 'validate' for validation, 'analyze' for analysis")]
+        string utilityType = "format",
+        [Description("Include advanced formatting options and style preferences")]
+        bool includeAdvancedFormatting = true,
+        [Description("Include optimization suggestions and improvements")]
+        bool includeOptimizations = true,
+        [Description("Output format: 'readable' for human-readable, 'compact' for minimal, 'production' for optimized")]
+        string outputFormat = "readable")
+    {
+        try
+        {
+            var smartResponse = await SmartResponseService.Instance.CreateUtilityOperationsResponseAsync(
+                operation, utilityType, includeAdvancedFormatting, includeOptimizations, outputFormat);
+
+            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+        }
+        catch (Exception ex)
+        {
+            return await SmartResponseService.Instance.CreateErrorResponseAsync(
+                "UtilityOperationError",
+                ex.Message,
+                new { operation, utilityType, outputFormat });
+        }
     }
 
     private static int CountChars(string input, char target)

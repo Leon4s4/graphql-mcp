@@ -13,7 +13,7 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class GraphQlSchemaTools
 {
-    private static readonly StrawberryShakeSchemaService _schemaService = new();
+    private static readonly StrawberryShakeSchemaService SchemaService = new();
     [McpServerTool, Description("Retrieve and format specific GraphQL schema information with advanced filtering, type focus, and detailed documentation. This tool provides comprehensive schema exploration including: complete type definitions with fields and arguments, filtered views by operation type (Query/Mutation/Subscription), focused analysis on specific types and their relationships, formatted output with proper GraphQL syntax, field descriptions and deprecation information, type relationships and inheritance hierarchies, directive usage and custom scalars. Essential for API discovery and integration planning.")]
     public static async Task<string> GetSchema(
         [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
@@ -31,7 +31,7 @@ public static class GraphQlSchemaTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        var schemaResult = await _schemaService.GetSchemaAsync(endpointInfo);
+        var schemaResult = await SchemaService.GetSchemaAsync(endpointInfo);
         if (!schemaResult.IsSuccess)
         {
             return $"Failed to retrieve schema: {schemaResult.ErrorMessage}";
@@ -42,7 +42,7 @@ public static class GraphQlSchemaTools
         result.AppendLine("# GraphQL Schema\n");
 
         // Get root types using StrawberryShake
-        var rootTypes = _schemaService.GetRootTypes(schema);
+        var rootTypes = SchemaService.GetRootTypes(schema);
         
         result.AppendLine("## Root Types");
         result.AppendLine($"- **Query:** {rootTypes.QueryType}");
@@ -50,7 +50,7 @@ public static class GraphQlSchemaTools
         result.AppendLine($"- **Subscription:** {rootTypes.SubscriptionType ?? "None"}\n");
 
         // Get type definitions
-        var typeDefinitions = _schemaService.GetTypeDefinitions(schema);
+        var typeDefinitions = SchemaService.GetTypeDefinitions(schema);
         
         // Filter types based on parameters
         var filteredTypes = typeDefinitions.Where(def =>
@@ -80,7 +80,7 @@ public static class GraphQlSchemaTools
         result.AppendLine("## Types\n");
         foreach (var typeDef in filteredTypes)
         {
-            result.AppendLine(_schemaService.FormatTypeDefinition(typeDef));
+            result.AppendLine(SchemaService.FormatTypeDefinition(typeDef));
             result.AppendLine();
         }
 
@@ -106,7 +106,7 @@ public static class GraphQlSchemaTools
             return $"Error: Endpoint '{endpointName2}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        var comparison = await _schemaService.CompareSchemas(endpointInfo1, endpointInfo2);
+        var comparison = await SchemaService.CompareSchemas(endpointInfo1, endpointInfo2);
         if (!comparison.IsSuccess)
         {
             return $"Schema comparison failed: {comparison.ErrorMessage}";

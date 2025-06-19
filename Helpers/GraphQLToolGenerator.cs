@@ -9,7 +9,7 @@ namespace Graphql.Mcp.Helpers;
 /// <summary>
 /// Helper class for generating GraphQL tools
 /// </summary>
-public static class GraphQLToolGenerator
+public static class GraphQlToolGenerator
 {
     /// <summary>
     /// Generates tools for a specific GraphQL type (HotChocolate version)
@@ -25,8 +25,8 @@ public static class GraphQLToolGenerator
                 var fieldName = field.Name.Value;
                 var toolName = GenerateToolName(endpointInfo.ToolPrefix, operationType, fieldName);
 
-                var operation = GraphQLOperationHelper.GenerateOperationString(field, operationType, fieldName);
-                var description = GraphQLOperationHelper.GetFieldDescription(field, operationType, fieldName);
+                var operation = GraphQlOperationHelper.GenerateOperationString(field, operationType, fieldName);
+                var description = GraphQlOperationHelper.GetFieldDescription(field, operationType, fieldName);
                 var operationName = $"{operationType}_{fieldName}";
 
                 var toolInfo = new DynamicToolInfo
@@ -93,8 +93,8 @@ public static class GraphQLToolGenerator
             var fieldNameStr = fieldName.GetString() ?? "";
             var toolName = GenerateToolName(endpointInfo.ToolPrefix, operationType, fieldNameStr);
 
-            var operation = GraphQLOperationHelper.GenerateOperationString(field, operationType, fieldNameStr);
-            var description = GraphQLOperationHelper.GetFieldDescription(field, operationType, fieldNameStr);
+            var operation = GraphQlOperationHelper.GenerateOperationString(field, operationType, fieldNameStr);
+            var description = GraphQlOperationHelper.GetFieldDescription(field, operationType, fieldNameStr);
             var operationName = $"{operationType}_{fieldNameStr}";
 
             var toolInfo = new DynamicToolInfo

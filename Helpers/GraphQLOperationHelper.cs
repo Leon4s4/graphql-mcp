@@ -9,7 +9,7 @@ namespace Graphql.Mcp.Helpers;
 /// <summary>
 /// Helper class for GraphQL operation generation and formatting
 /// </summary>
-public static class GraphQLOperationHelper
+public static class GraphQlOperationHelper
 {
     /// <summary>
     /// Generates a GraphQL operation string (HotChocolate version) with enhanced field selection
@@ -310,7 +310,7 @@ public static class GraphQLOperationHelper
     /// <summary>
     /// Builds a complete GraphQL query with variables and field selection
     /// </summary>
-    public static string BuildGraphQLQuery(JsonElement operationField, JsonElement schema, string operationName, 
+    public static string BuildGraphQlQuery(JsonElement operationField, JsonElement schema, string operationName, 
         int maxDepth, bool includeAllScalars, Dictionary<string, object> parsedVariables)
     {
         var queryBuilder = new StringBuilder();

@@ -176,7 +176,8 @@ public static class CodeGenerationTools
 
     [McpServerTool, Description("Generate fluent API builders for constructing GraphQL queries programmatically")]
     public static async Task<string> GenerateQueryBuilder(
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
+        [Description("Name of the registered GraphQL endpoint")]
+        string endpointName,
         [Description("Root type to generate builder for (Query/Mutation)")]
         string rootType = "Query")
     {
@@ -306,6 +307,38 @@ public static class CodeGenerationTools
         generatedCode.AppendLine("}");
 
         return generatedCode.ToString();
+    }
+
+    [McpServerTool, Description("Generate comprehensive, production-ready code from GraphQL schemas with intelligent type mapping, best practices implementation, documentation generation, and advanced code organization. This enterprise-grade code generation tool provides complete development acceleration.")]
+    public static async Task<string> GenerateCodeComprehensive(
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("Code generation target: 'csharp' for C# classes, 'typescript' for TypeScript, 'client' for client code, 'server' for server stubs")]
+        string codeTarget = "csharp",
+        [Description("C# namespace for generated classes. Example: 'MyApp.GraphQL.Types'")]
+        string namespaceName = "Generated.GraphQL",
+        [Description("Include comprehensive documentation and code comments")]
+        bool includeDocumentation = true,
+        [Description("Include validation attributes and error handling")]
+        bool includeValidation = true,
+        [Description("Generate client query helpers and utilities")]
+        bool includeClientUtilities = false)
+    {
+        try
+        {
+            var smartResponse = await SmartResponseService.Instance.CreateCodeGenerationResponseAsync(
+                endpointName, codeTarget, namespaceName, includeDocumentation, includeValidation, includeClientUtilities);
+
+            var formatted = await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+            return formatted?.ToString() ?? "No response generated";
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = await SmartResponseService.Instance.CreateErrorResponseAsync(
+                $"CodeGenerationError: {ex.Message} (Endpoint: {endpointName}, Target: {codeTarget})",
+                ex);
+            return errorResponse?.ToString() ?? $"Error: {ex.Message}";
+        }
     }
 
     private static string GenerateClass(JsonElement type, bool isInput)

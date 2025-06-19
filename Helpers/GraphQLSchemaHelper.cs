@@ -1,7 +1,7 @@
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Graphql.Mcp.DTO;
-using Graphql.Mcp.Tools;
 using HotChocolate.Language;
 
 namespace Graphql.Mcp.Helpers;
@@ -11,20 +11,21 @@ namespace Graphql.Mcp.Helpers;
 /// </summary>
 public static class GraphQlSchemaHelper
 {
-    private static readonly StrawberryShakeSchemaService _schemaService = new();
+    private static readonly StrawberryShakeSchemaService SchemaService = new();
+
     /// <summary>
     /// Generates tools from a GraphQL schema
     /// </summary>
     public static async Task<string> GenerateToolsFromSchema(GraphQlEndpointInfo endpointInfo)
     {
-        var schemaResult = await _schemaService.GetSchemaAsync(endpointInfo);
+        var schemaResult = await SchemaService.GetSchemaAsync(endpointInfo);
         if (!schemaResult.IsSuccess)
             return $"Failed to retrieve schema: {schemaResult.ErrorMessage}";
 
         var schema = schemaResult.Schema!;
-        var rootTypes = _schemaService.GetRootTypes(schema);
+        var rootTypes = SchemaService.GetRootTypes(schema);
         var toolsGenerated = 0;
-        
+
         // Debug information
         var debugInfo = new StringBuilder();
         debugInfo.AppendLine($"Schema root types detected:");
@@ -33,12 +34,12 @@ public static class GraphQlSchemaHelper
         debugInfo.AppendLine($"- Subscription: {rootTypes.SubscriptionType ?? "None"}");
         debugInfo.AppendLine($"- Allow Mutations: {endpointInfo.AllowMutations}");
         debugInfo.AppendLine();
-        
+
         // Process Query type
-        var queryType = _schemaService.FindTypeDefinition<ObjectTypeDefinitionNode>(schema, rootTypes.QueryType);
+        var queryType = SchemaService.FindTypeDefinition<ObjectTypeDefinitionNode>(schema, rootTypes.QueryType);
         if (queryType != null)
         {
-            var queryToolsCount = GraphQLToolGenerator.GenerateToolsForType(queryType, "Query", endpointInfo);
+            var queryToolsCount = GraphQlToolGenerator.GenerateToolsForType(queryType, "Query", endpointInfo);
             toolsGenerated += queryToolsCount;
             debugInfo.AppendLine($"Generated {queryToolsCount} query tools from {queryType.Fields.Count} fields");
         }
@@ -46,14 +47,14 @@ public static class GraphQlSchemaHelper
         {
             debugInfo.AppendLine($"Warning: Could not find Query type '{rootTypes.QueryType}' in schema");
         }
-        
+
         // Process Mutation type (only if mutations are allowed)
         if (endpointInfo.AllowMutations && !string.IsNullOrEmpty(rootTypes.MutationType))
         {
-            var mutationType = _schemaService.FindTypeDefinition<ObjectTypeDefinitionNode>(schema, rootTypes.MutationType);
+            var mutationType = SchemaService.FindTypeDefinition<ObjectTypeDefinitionNode>(schema, rootTypes.MutationType);
             if (mutationType != null)
             {
-                var mutationToolsCount = GraphQLToolGenerator.GenerateToolsForType(mutationType, "Mutation", endpointInfo);
+                var mutationToolsCount = GraphQlToolGenerator.GenerateToolsForType(mutationType, "Mutation", endpointInfo);
                 toolsGenerated += mutationToolsCount;
                 debugInfo.AppendLine($"Generated {mutationToolsCount} mutation tools from {mutationType.Fields.Count} fields");
             }
@@ -73,7 +74,7 @@ public static class GraphQlSchemaHelper
 
         debugInfo.AppendLine();
         debugInfo.AppendLine(GenerateResultMessage(toolsGenerated, endpointInfo));
-        
+
         return debugInfo.ToString();
     }
 
@@ -82,7 +83,8 @@ public static class GraphQlSchemaHelper
     /// </summary>
     public static async Task<JsonElement> GetSchemaAsync(GraphQlEndpointInfo endpointInfo)
     {
-        var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        // Call IntrospectSchemaInternal directly since we have the endpoint info object
+        var schemaResult = await IntrospectSchemaInternal(endpointInfo);
         if (!schemaResult.IsSuccess)
             throw new InvalidOperationException(schemaResult.FormatForDisplay());
 
@@ -102,7 +104,7 @@ public static class GraphQlSchemaHelper
         if (!shouldProcess)
             return 0;
 
-        if (!schema.TryGetProperty(typeRefName, out var typeRef) || 
+        if (!schema.TryGetProperty(typeRefName, out var typeRef) ||
             !typeRef.TryGetProperty("name", out var typeName))
             return 0;
 
@@ -110,7 +112,7 @@ public static class GraphQlSchemaHelper
         if (!rootType.HasValue)
             return 0;
 
-        return GraphQLToolGenerator.GenerateToolsForType(rootType.Value, defaultTypeName, endpointInfo);
+        return GraphQlToolGenerator.GenerateToolsForType(rootType.Value, defaultTypeName, endpointInfo);
     }
 
     private static string GenerateResultMessage(int toolsGenerated, GraphQlEndpointInfo endpointInfo)
@@ -177,5 +179,147 @@ public static class GraphQlSchemaHelper
         }
 
         throw new InvalidOperationException($"Operation '{operationName}' not found in Query type");
+    }
+
+    //TODO: leonardo
+    /// <summary>
+    /// Internal method to introspect schema from GraphQL endpoint
+    /// </summary>
+    public static async Task<GraphQlResponse> IntrospectSchemaInternal(GraphQlEndpointInfo endpointInfo)
+    {
+        using var httpClient = new HttpClient();
+
+        // Add headers from endpoint info
+        if (endpointInfo.Headers?.Count > 0)
+        {
+            foreach (var header in endpointInfo.Headers)
+            {
+                httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
+            }
+        }
+
+        var introspectionQuery = CreateIntrospectionQuery();
+
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync(endpointInfo.Url, new
+            {
+                query = introspectionQuery
+            });
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                return GraphQlResponse.Success(responseContent);
+            }
+            else
+            {
+                return GraphQlResponse.HttpError(response.StatusCode, response.ReasonPhrase ?? "Unknown error", responseContent);
+            }
+        }
+        catch (Exception ex)
+        {
+            return GraphQlResponse.ConnectionError($"Connection failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Creates the standard GraphQL introspection query
+    /// </summary>
+    private static string CreateIntrospectionQuery()
+    {
+        return @"
+            query IntrospectionQuery {
+                __schema {
+                    queryType { name }
+                    mutationType { name }
+                    subscriptionType { name }
+                    types {
+                        ...FullType
+                    }
+                    directives {
+                        name
+                        description
+                        locations
+                        args {
+                            ...InputValue
+                        }
+                    }
+                }
+            }
+
+            fragment FullType on __Type {
+                kind
+                name
+                description
+                fields(includeDeprecated: true) {
+                    name
+                    description
+                    args {
+                        ...InputValue
+                    }
+                    type {
+                        ...TypeRef
+                    }
+                    isDeprecated
+                    deprecationReason
+                }
+                inputFields {
+                    ...InputValue
+                }
+                interfaces {
+                    ...TypeRef
+                }
+                enumValues(includeDeprecated: true) {
+                    name
+                    description
+                    isDeprecated
+                    deprecationReason
+                }
+                possibleTypes {
+                    ...TypeRef
+                }
+            }
+
+            fragment InputValue on __InputValue {
+                name
+                description
+                type { ...TypeRef }
+                defaultValue
+            }
+
+            fragment TypeRef on __Type {
+                kind
+                name
+                ofType {
+                    kind
+                    name
+                    ofType {
+                        kind
+                        name
+                        ofType {
+                            kind
+                            name
+                            ofType {
+                                kind
+                                name
+                                ofType {
+                                    kind
+                                    name
+                                    ofType {
+                                        kind
+                                        name
+                                        ofType {
+                                            kind
+                                            name
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }";
     }
 }

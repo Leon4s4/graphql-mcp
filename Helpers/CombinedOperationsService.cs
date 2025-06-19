@@ -10,7 +10,7 @@ namespace Graphql.Mcp.Helpers;
 /// </summary>
 public sealed class CombinedOperationsService
 {
-    private static readonly Lazy<CombinedOperationsService> _instance = new(() => new CombinedOperationsService());
+    private static readonly Lazy<CombinedOperationsService> LazyInstance = new(() => new CombinedOperationsService());
     
     private readonly ConcurrentDictionary<string, object> _schemaCache = new();
     private readonly ConcurrentDictionary<string, DateTime> _cacheTimestamps = new();
@@ -20,7 +20,7 @@ public sealed class CombinedOperationsService
     private readonly TimeSpan _cacheExpiry = TimeSpan.FromMinutes(30);
     private readonly object _cacheLock = new();
 
-    public static CombinedOperationsService Instance => _instance.Value;
+    public static CombinedOperationsService Instance => LazyInstance.Value;
 
     private CombinedOperationsService() { }
 
@@ -167,20 +167,20 @@ public sealed class CombinedOperationsService
 
     #region Batch Operations
 
-    public async Task<List<object>> ExecuteBatchOperationsAsync(
+    public async Task<List<BatchOperationResult>> ExecuteBatchOperationsAsync(
         List<BatchOperation> operations,
         bool parallel = false,
         bool continueOnError = true,
         int timeoutSeconds = 30)
     {
-        var results = new List<object>();
+        var results = new List<BatchOperationResult>();
         var startTime = DateTime.UtcNow;
 
         try
         {
             if (parallel)
             {
-                var tasks = operations.Select<BatchOperation, Task<object>>(async (op, index) =>
+                var tasks = operations.Select<BatchOperation, Task<BatchOperationResult>>(async (op, index) =>
                 {
                     var opStartTime = DateTime.UtcNow;
                     try
@@ -191,12 +191,16 @@ public sealed class CombinedOperationsService
                         RecordPerformanceMetric(op.Endpoint, op.Name ?? $"Operation_{index}", 
                             DateTime.UtcNow - opStartTime, true);
                         
-                        return new { 
-                            name = op.Name ?? $"Operation_{index}", 
-                            index, 
-                            success = true, 
-                            result,
-                            executionTime = DateTime.UtcNow - opStartTime
+                        return new BatchOperationResult
+                        { 
+                            Name = op.Name ?? $"Operation_{index}", 
+                            Index = index, 
+                            Success = true, 
+                            Data = result,
+                            ExecutionTime = DateTime.UtcNow - opStartTime,
+                            Endpoint = op.Endpoint,
+                            Query = op.Query,
+                            Variables = op.Variables
                         };
                     }
                     catch (Exception ex)
@@ -205,18 +209,22 @@ public sealed class CombinedOperationsService
                             DateTime.UtcNow - opStartTime, false);
                         
                         if (!continueOnError) throw;
-                        return new { 
-                            name = op.Name ?? $"Operation_{index}", 
-                            index, 
-                            success = false, 
-                            error = ex.Message,
-                            executionTime = DateTime.UtcNow - opStartTime
+                        return new BatchOperationResult
+                        { 
+                            Name = op.Name ?? $"Operation_{index}", 
+                            Index = index, 
+                            Success = false, 
+                            Error = ex.Message,
+                            ExecutionTime = DateTime.UtcNow - opStartTime,
+                            Endpoint = op.Endpoint,
+                            Query = op.Query,
+                            Variables = op.Variables
                         };
                     }
                 });
 
                 var taskResults = await Task.WhenAll(tasks);
-                results.AddRange(taskResults.Cast<object>());
+                results.AddRange(taskResults);
             }
             else
             {
@@ -236,12 +244,16 @@ public sealed class CombinedOperationsService
                         RecordPerformanceMetric(op.Endpoint, op.Name ?? $"Operation_{i}", 
                             DateTime.UtcNow - opStartTime, true);
                         
-                        results.Add(new { 
-                            name = op.Name ?? $"Operation_{i}", 
-                            index = i, 
-                            success = true, 
-                            result,
-                            executionTime = DateTime.UtcNow - opStartTime
+                        results.Add(new BatchOperationResult 
+                        { 
+                            Name = op.Name ?? $"Operation_{i}", 
+                            Index = i, 
+                            Success = true, 
+                            Data = result,
+                            ExecutionTime = DateTime.UtcNow - opStartTime,
+                            Endpoint = op.Endpoint,
+                            Query = op.Query,
+                            Variables = op.Variables
                         });
                     }
                     catch (Exception ex)
@@ -249,12 +261,16 @@ public sealed class CombinedOperationsService
                         RecordPerformanceMetric(op.Endpoint, op.Name ?? $"Operation_{i}", 
                             DateTime.UtcNow - opStartTime, false);
                         
-                        var errorResult = new { 
-                            name = op.Name ?? $"Operation_{i}", 
-                            index = i, 
-                            success = false, 
-                            error = ex.Message,
-                            executionTime = DateTime.UtcNow - opStartTime
+                        var errorResult = new BatchOperationResult 
+                        { 
+                            Name = op.Name ?? $"Operation_{i}", 
+                            Index = i, 
+                            Success = false, 
+                            Error = ex.Message,
+                            ExecutionTime = DateTime.UtcNow - opStartTime,
+                            Endpoint = op.Endpoint,
+                            Query = op.Query,
+                            Variables = op.Variables
                         };
                         results.Add(errorResult);
                         
@@ -265,7 +281,15 @@ public sealed class CombinedOperationsService
         }
         catch (Exception ex)
         {
-            results.Add(new { error = $"Batch execution failed: {ex.Message}" });
+            results.Add(new BatchOperationResult 
+            { 
+                Name = "BatchExecutionError",
+                Index = -1,
+                Success = false,
+                Error = $"Batch execution failed: {ex.Message}",
+                ExecutionTime = DateTime.UtcNow - startTime,
+                Endpoint = "System"
+            });
         }
 
         return results;
@@ -275,22 +299,25 @@ public sealed class CombinedOperationsService
 
     #region Schema Analysis
 
-    public async Task<object> AnalyzeSchemaComplexityAsync(string endpoint, GraphQlEndpointInfo endpointInfo)
+    public async Task<SchemaAnalysisResult> AnalyzeSchemaComplexityAsync(string endpoint, GraphQlEndpointInfo endpointInfo)
     {
+        var startTime = DateTime.UtcNow;
         var schema = await GetCachedSchemaAsync(endpoint, endpointInfo, true, 10);
         
         // Perform complexity analysis
-        return new
+        return new SchemaAnalysisResult
         {
-            endpoint,
-            complexity = CalculateComplexityMetrics(schema),
-            recommendations = GenerateOptimizationRecommendations(schema),
-            analyzedAt = DateTime.UtcNow
+            Endpoint = endpoint,
+            Complexity = CalculateComplexityMetrics(schema),
+            Recommendations = GenerateOptimizationRecommendations(schema),
+            AnalyzedAt = DateTime.UtcNow,
+            AnalysisDuration = DateTime.UtcNow - startTime
         };
     }
 
-    public async Task<object> CompareEndpointSchemasAsync(string endpoint1, string endpoint2)
+    public async Task<EndpointComparisonResult> CompareEndpointSchemasAsync(string endpoint1, string endpoint2)
     {
+        var startTime = DateTime.UtcNow;
         var info1 = EndpointRegistryService.Instance.GetEndpointInfo(endpoint1);
         var info2 = EndpointRegistryService.Instance.GetEndpointInfo(endpoint2);
 
@@ -302,12 +329,23 @@ public sealed class CombinedOperationsService
         var schema1 = await GetCachedSchemaAsync(endpoint1, info1, true, 5);
         var schema2 = await GetCachedSchemaAsync(endpoint2, info2, true, 5);
 
-        return new
+        var perf1 = GetPerformanceMetrics(endpoint1);
+        var perf2 = GetPerformanceMetrics(endpoint2);
+
+        return new EndpointComparisonResult
         {
-            endpoint1,
-            endpoint2,
-            comparison = PerformSchemaComparison(schema1, schema2),
-            comparedAt = DateTime.UtcNow
+            Endpoint1 = endpoint1,
+            Endpoint2 = endpoint2,
+            Comparison = PerformSchemaComparison(schema1, schema2),
+            PerformanceComparison = new PerformanceComparisonResult
+            {
+                Endpoint1AvgResponseTime = GetPropertyValue(perf1, "averageExecutionTime", 0.0),
+                Endpoint2AvgResponseTime = GetPropertyValue(perf2, "averageExecutionTime", 0.0),
+                Endpoint1SuccessRate = GetPropertyValue(perf1, "successRate", 0.0),
+                Endpoint2SuccessRate = GetPropertyValue(perf2, "successRate", 0.0)
+            },
+            ComparedAt = DateTime.UtcNow,
+            ComparisonDuration = DateTime.UtcNow - startTime
         };
     }
 
@@ -393,7 +431,7 @@ public sealed class CombinedOperationsService
         };
     }
 
-    private BatchOperation ProcessResultChaining(BatchOperation operation, List<object> previousResults)
+    private BatchOperation ProcessResultChaining(BatchOperation operation, List<BatchOperationResult> previousResults)
     {
         var processedQuery = operation.Query;
         
@@ -403,7 +441,7 @@ public sealed class CombinedOperationsService
             var placeholder = $"{{result.{i}}}";
             if (processedQuery.Contains(placeholder))
             {
-                var resultJson = JsonSerializer.Serialize(previousResults[i]);
+                var resultJson = JsonSerializer.Serialize(previousResults[i].Data);
                 processedQuery = processedQuery.Replace(placeholder, resultJson);
             }
             
@@ -413,7 +451,7 @@ public sealed class CombinedOperationsService
             {
                 // This would need more sophisticated implementation for deep field access
                 // For now, just replace with the full result
-                processedQuery = processedQuery.Replace($"{{result.{i}.data}}", JsonSerializer.Serialize(previousResults[i]));
+                processedQuery = processedQuery.Replace($"{{result.{i}.data}}", JsonSerializer.Serialize(previousResults[i].Data));
             }
         }
 
@@ -426,17 +464,19 @@ public sealed class CombinedOperationsService
         };
     }
 
-    private object CalculateComplexityMetrics(object schema)
+    private SchemaComplexityResult CalculateComplexityMetrics(object schema)
     {
         // Simplified complexity calculation
-        return new
+        return new SchemaComplexityResult
         {
-            estimatedComplexity = "medium",
-            typeCount = 0,
-            fieldCount = 0,
-            maxDepth = 0,
-            circularReferences = false,
-            recommendations = new List<string>()
+            EstimatedComplexity = "medium",
+            TypeCount = 0,
+            FieldCount = 0,
+            MaxDepth = 0,
+            CircularReferences = false,
+            Recommendations = new List<string>(),
+            ComplexityScore = 50,
+            AverageFieldsPerType = 0.0
         };
     }
 
@@ -450,15 +490,16 @@ public sealed class CombinedOperationsService
         };
     }
 
-    private object PerformSchemaComparison(object schema1, object schema2)
+    private SchemaComparisonResult PerformSchemaComparison(object schema1, object schema2)
     {
-        return new
+        return new SchemaComparisonResult
         {
-            compatible = true,
-            differences = new List<string>(),
-            breakingChanges = new List<string>(),
-            addedTypes = new List<string>(),
-            removedTypes = new List<string>()
+            Compatible = true,
+            Differences = new List<string>(),
+            BreakingChanges = new List<string>(),
+            AddedTypes = new List<string>(),
+            RemovedTypes = new List<string>(),
+            CompatibilityRating = "Fully Compatible"
         };
     }
 

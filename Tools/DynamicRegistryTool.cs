@@ -116,7 +116,7 @@ Tool Naming Convention:
 
             var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, request);
 
-            return !result.IsSuccess ? result.FormatForDisplay() : GraphQLOperationHelper.FormatGraphQlResponse(result.Content!);
+            return !result.IsSuccess ? result.FormatForDisplay() : GraphQlOperationHelper.FormatGraphQlResponse(result.Content!);
         }
         catch (Exception ex)
         {

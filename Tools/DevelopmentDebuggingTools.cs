@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.RegularExpressions;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
@@ -344,6 +345,37 @@ public static class DevelopmentDebuggingTools
         }
 
         return string.Join("\n", analysis);
+    }
+
+    [McpServerTool, Description("Perform comprehensive development debugging with intelligent query analysis, performance diagnostics, schema validation, error investigation, and development workflow optimization. This advanced debugging tool provides complete development support.")]
+    public static async Task<string> DebugDevelopmentIssuesComprehensive(
+        [Description("GraphQL query string to debug and analyze")]
+        string query,
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("Debug focus: 'performance' for speed issues, 'errors' for error investigation, 'schema' for schema problems, 'workflow' for development process")]
+        string debugFocus = "comprehensive",
+        [Description("Include interactive debugging session with step-by-step analysis")]
+        bool includeInteractiveDebugging = true,
+        [Description("Include performance profiling and bottleneck detection")]
+        bool includePerformanceProfiling = true,
+        [Description("Error context for debugging specific issues")]
+        string? errorContext = null)
+    {
+        try
+        {
+            var smartResponse = await SmartResponseService.Instance.CreateDevelopmentDebuggingResponseAsync(
+                query, endpointName, debugFocus, includeInteractiveDebugging, includePerformanceProfiling, errorContext);
+
+            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+        }
+        catch (Exception ex)
+        {
+            return await SmartResponseService.Instance.CreateErrorResponseAsync(
+                "DevelopmentDebuggingError",
+                ex.Message,
+                new { query, endpointName, debugFocus });
+        }
     }
 
     private static List<string> ExtractFieldSelections(string query)

@@ -25,7 +25,7 @@ public static class JsonHelpers
     /// <summary>
     /// Convert a <see cref="JsonElement"/> to a corresponding CLR object.
     /// </summary>
-    private static object JsonElementToObject(JsonElement element)
+    public static object JsonElementToObject(JsonElement element)
     {
         return element.ValueKind switch
         {

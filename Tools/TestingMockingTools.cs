@@ -352,6 +352,37 @@ public static class TestingMockingTools
         return loadTest.ToString();
     }
 
+    [McpServerTool, Description("Generate comprehensive test suites with realistic mock data, edge case scenarios, performance tests, and validation testing. This advanced testing tool provides complete test coverage for GraphQL APIs with intelligent test generation and execution.")]
+    public static async Task<string> GenerateTestSuiteComprehensive(
+        [Description("Name of the registered GraphQL endpoint")] 
+        string endpointName,
+        [Description("Test suite type: 'unit' for unit tests, 'integration' for API tests, 'performance' for load tests, 'comprehensive' for all types")]
+        string testSuiteType = "comprehensive",
+        [Description("Include realistic mock data generation")]
+        bool includeMockData = true,
+        [Description("Include edge case and error scenario testing")]
+        bool includeEdgeCases = true,
+        [Description("Include performance and load testing scenarios")]
+        bool includePerformanceTests = false,
+        [Description("Testing framework: 'xunit' for C#, 'jest' for JavaScript, 'pytest' for Python")]
+        string testingFramework = "xunit")
+    {
+        try
+        {
+            var smartResponse = await SmartResponseService.Instance.CreateTestSuiteResponseAsync(
+                endpointName, testSuiteType, includeMockData, includeEdgeCases, includePerformanceTests, testingFramework);
+            
+            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+        }
+        catch (Exception ex)
+        {
+            return await SmartResponseService.Instance.CreateErrorResponseAsync(
+                "TestSuiteGenerationError", 
+                ex.Message,
+                new { endpointName, testSuiteType, testingFramework });
+        }
+    }
+
     private static object GenerateMockInstance(JsonElement type, JsonElement allTypes, int index)
     {
         var mockData = new Dictionary<string, object?>();
