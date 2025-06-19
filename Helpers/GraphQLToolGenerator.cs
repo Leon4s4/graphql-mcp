@@ -1,5 +1,8 @@
 using System.Text.Json;
+using System.Collections.Generic;
+using System.Linq;
 using Graphql.Mcp.DTO;
+using HotChocolate.Language;
 
 namespace Graphql.Mcp.Helpers;
 
@@ -9,7 +12,62 @@ namespace Graphql.Mcp.Helpers;
 public static class GraphQLToolGenerator
 {
     /// <summary>
-    /// Generates tools for a specific GraphQL type
+    /// Generates tools for a specific GraphQL type (HotChocolate version)
+    /// </summary>
+    public static int GenerateToolsForType(ObjectTypeDefinitionNode typeDefinition, string operationType, GraphQlEndpointInfo endpointInfo)
+    {
+        var toolsGenerated = 0;
+
+        foreach (var field in typeDefinition.Fields)
+        {
+            var fieldName = field.Name.Value;
+            var toolName = GenerateToolName(endpointInfo.ToolPrefix, operationType, fieldName);
+
+            var operation = GraphQLOperationHelper.GenerateOperationString(field, operationType, fieldName);
+            var description = GraphQLOperationHelper.GetFieldDescription(field, operationType, fieldName);
+            var operationName = $"{operationType}_{fieldName}";
+
+            var toolInfo = new DynamicToolInfo
+            {
+                ToolName = toolName,
+                EndpointName = endpointInfo.Name,
+                OperationType = operationType,
+                OperationName = operationName,
+                Operation = operation,
+                Description = description,
+                // We'll need to convert this to JsonElement or create a new field for HotChocolate types
+                SchemaFieldDefinition = ConvertFieldToJsonElement(field)
+            };
+
+            EndpointRegistryService.Instance.RegisterDynamicTool(toolName, toolInfo);
+            toolsGenerated++;
+        }
+
+        return toolsGenerated;
+    }
+
+    /// <summary>
+    /// Converts HotChocolate FieldDefinitionNode to JsonElement for backward compatibility
+    /// </summary>
+    private static JsonElement ConvertFieldToJsonElement(FieldDefinitionNode field)
+    {
+        // For now, return a minimal JsonElement - we might want to improve this later
+        var jsonString = $$"""
+        {
+            "name": "{{field.Name.Value}}",
+            "description": "{{field.Description?.Value ?? ""}}",
+            "type": {
+                "kind": "NAMED_TYPE",
+                "name": "String"
+            }
+        }
+        """;
+        
+        return JsonSerializer.Deserialize<JsonElement>(jsonString);
+    }
+
+    /// <summary>
+    /// Generates tools for a specific GraphQL type (legacy JsonElement version)
     /// </summary>
     public static int GenerateToolsForType(JsonElement type, string operationType, GraphQlEndpointInfo endpointInfo)
     {
