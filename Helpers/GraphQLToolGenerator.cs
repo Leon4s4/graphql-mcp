@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Collections.Generic;
+using System.Linq;
 using Graphql.Mcp.DTO;
 using HotChocolate.Language;
 

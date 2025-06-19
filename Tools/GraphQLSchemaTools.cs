@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
+using System.Linq;
+using System.Collections.Generic;
 using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;

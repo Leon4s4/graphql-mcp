@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using HotChocolate.Language;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace Graphql.Mcp.Helpers;
 
