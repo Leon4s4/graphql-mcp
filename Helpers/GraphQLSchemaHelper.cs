@@ -25,11 +25,26 @@ public static class GraphQlSchemaHelper
         var rootTypes = _schemaService.GetRootTypes(schema);
         var toolsGenerated = 0;
         
+        // Debug information
+        var debugInfo = new StringBuilder();
+        debugInfo.AppendLine($"Schema root types detected:");
+        debugInfo.AppendLine($"- Query: {rootTypes.QueryType}");
+        debugInfo.AppendLine($"- Mutation: {rootTypes.MutationType ?? "None"}");
+        debugInfo.AppendLine($"- Subscription: {rootTypes.SubscriptionType ?? "None"}");
+        debugInfo.AppendLine($"- Allow Mutations: {endpointInfo.AllowMutations}");
+        debugInfo.AppendLine();
+        
         // Process Query type
         var queryType = _schemaService.FindTypeDefinition<ObjectTypeDefinitionNode>(schema, rootTypes.QueryType);
         if (queryType != null)
         {
-            toolsGenerated += GraphQLToolGenerator.GenerateToolsForType(queryType, "Query", endpointInfo);
+            var queryToolsCount = GraphQLToolGenerator.GenerateToolsForType(queryType, "Query", endpointInfo);
+            toolsGenerated += queryToolsCount;
+            debugInfo.AppendLine($"Generated {queryToolsCount} query tools from {queryType.Fields.Count} fields");
+        }
+        else
+        {
+            debugInfo.AppendLine($"Warning: Could not find Query type '{rootTypes.QueryType}' in schema");
         }
         
         // Process Mutation type (only if mutations are allowed)
@@ -38,11 +53,28 @@ public static class GraphQlSchemaHelper
             var mutationType = _schemaService.FindTypeDefinition<ObjectTypeDefinitionNode>(schema, rootTypes.MutationType);
             if (mutationType != null)
             {
-                toolsGenerated += GraphQLToolGenerator.GenerateToolsForType(mutationType, "Mutation", endpointInfo);
+                var mutationToolsCount = GraphQLToolGenerator.GenerateToolsForType(mutationType, "Mutation", endpointInfo);
+                toolsGenerated += mutationToolsCount;
+                debugInfo.AppendLine($"Generated {mutationToolsCount} mutation tools from {mutationType.Fields.Count} fields");
+            }
+            else
+            {
+                debugInfo.AppendLine($"Warning: Could not find Mutation type '{rootTypes.MutationType}' in schema");
             }
         }
+        else if (!endpointInfo.AllowMutations)
+        {
+            debugInfo.AppendLine("Mutations are disabled for this endpoint");
+        }
+        else
+        {
+            debugInfo.AppendLine("No mutation type found in schema");
+        }
 
-        return GenerateResultMessage(toolsGenerated, endpointInfo);
+        debugInfo.AppendLine();
+        debugInfo.AppendLine(GenerateResultMessage(toolsGenerated, endpointInfo));
+        
+        return debugInfo.ToString();
     }
 
     /// <summary>

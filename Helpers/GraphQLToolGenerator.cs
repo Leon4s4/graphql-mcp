@@ -20,27 +20,36 @@ public static class GraphQLToolGenerator
 
         foreach (var field in typeDefinition.Fields)
         {
-            var fieldName = field.Name.Value;
-            var toolName = GenerateToolName(endpointInfo.ToolPrefix, operationType, fieldName);
-
-            var operation = GraphQLOperationHelper.GenerateOperationString(field, operationType, fieldName);
-            var description = GraphQLOperationHelper.GetFieldDescription(field, operationType, fieldName);
-            var operationName = $"{operationType}_{fieldName}";
-
-            var toolInfo = new DynamicToolInfo
+            try
             {
-                ToolName = toolName,
-                EndpointName = endpointInfo.Name,
-                OperationType = operationType,
-                OperationName = operationName,
-                Operation = operation,
-                Description = description,
-                // We'll need to convert this to JsonElement or create a new field for HotChocolate types
-                SchemaFieldDefinition = ConvertFieldToJsonElement(field)
-            };
+                var fieldName = field.Name.Value;
+                var toolName = GenerateToolName(endpointInfo.ToolPrefix, operationType, fieldName);
 
-            EndpointRegistryService.Instance.RegisterDynamicTool(toolName, toolInfo);
-            toolsGenerated++;
+                var operation = GraphQLOperationHelper.GenerateOperationString(field, operationType, fieldName);
+                var description = GraphQLOperationHelper.GetFieldDescription(field, operationType, fieldName);
+                var operationName = $"{operationType}_{fieldName}";
+
+                var toolInfo = new DynamicToolInfo
+                {
+                    ToolName = toolName,
+                    EndpointName = endpointInfo.Name,
+                    OperationType = operationType,
+                    OperationName = operationName,
+                    Operation = operation,
+                    Description = description,
+                    // We'll need to convert this to JsonElement or create a new field for HotChocolate types
+                    SchemaFieldDefinition = ConvertFieldToJsonElement(field)
+                };
+
+                EndpointRegistryService.Instance.RegisterDynamicTool(toolName, toolInfo);
+                toolsGenerated++;
+            }
+            catch (Exception ex)
+            {
+                // Log error but continue with next field instead of failing completely
+                // In a production system, you might want to use a proper logging framework
+                System.Diagnostics.Debug.WriteLine($"Error generating tool for field {field.Name.Value}: {ex.Message}");
+            }
         }
 
         return toolsGenerated;

@@ -263,6 +263,34 @@ public class StrawberryShakeSchemaService
         if (!introspectionData.TryGetProperty("__schema", out var schema))
             throw new InvalidOperationException("Invalid introspection result");
 
+        // Add schema definition if we have explicit root types
+        if (schema.TryGetProperty("queryType", out var queryType) &&
+            queryType.TryGetProperty("name", out var queryTypeName))
+        {
+            var schemaDefParts = new List<string>();
+            schemaDefParts.Add($"query: {queryTypeName.GetString()}");
+            
+            if (schema.TryGetProperty("mutationType", out var mutationType) &&
+                mutationType.TryGetProperty("name", out var mutationTypeName))
+            {
+                schemaDefParts.Add($"mutation: {mutationTypeName.GetString()}");
+            }
+            
+            if (schema.TryGetProperty("subscriptionType", out var subscriptionType) &&
+                subscriptionType.TryGetProperty("name", out var subscriptionTypeName))
+            {
+                schemaDefParts.Add($"subscription: {subscriptionTypeName.GetString()}");
+            }
+            
+            sdl.AppendLine("schema {");
+            foreach (var part in schemaDefParts)
+            {
+                sdl.AppendLine($"  {part}");
+            }
+            sdl.AppendLine("}");
+            sdl.AppendLine();
+        }
+
         // Add type definitions
         if (schema.TryGetProperty("types", out var types))
         {
@@ -283,6 +311,34 @@ public class StrawberryShakeSchemaService
                         break;
                     case "ENUM":
                         sdl.AppendLine(ConvertEnumType(type));
+                        break;
+                    case "SCALAR":
+                        // Only add custom scalars, not built-in ones
+                        var scalarName = type.GetProperty("name").GetString();
+                        if (!string.IsNullOrEmpty(scalarName) && 
+                            !new[] { "String", "Int", "Float", "Boolean", "ID" }.Contains(scalarName))
+                        {
+                            sdl.AppendLine($"scalar {scalarName}");
+                        }
+                        break;
+                    case "INTERFACE":
+                        // For now, just convert as object type - could be enhanced later
+                        sdl.AppendLine(ConvertObjectType(type));
+                        break;
+                    case "UNION":
+                        // Simple union conversion
+                        var unionName = type.GetProperty("name").GetString();
+                        if (type.TryGetProperty("possibleTypes", out var possibleTypes))
+                        {
+                            var typeNames = possibleTypes.EnumerateArray()
+                                .Select(t => t.GetProperty("name").GetString())
+                                .Where(n => !string.IsNullOrEmpty(n));
+                            sdl.AppendLine($"union {unionName} = {string.Join(" | ", typeNames)}");
+                        }
+                        break;
+                    case "INPUT_OBJECT":
+                        // Convert input object type
+                        sdl.AppendLine(ConvertInputType(type));
                         break;
                     // Add other types as needed
                 }
@@ -379,6 +435,38 @@ public class StrawberryShakeSchemaService
                 }
                 
                 result.AppendLine($"  {valueName}");
+            }
+        }
+        
+        result.AppendLine("}");
+        return result.ToString();
+    }
+
+    private string ConvertInputType(JsonElement type)
+    {
+        var result = new StringBuilder();
+        var typeName = type.GetProperty("name").GetString();
+        
+        if (type.TryGetProperty("description", out var desc) && !string.IsNullOrEmpty(desc.GetString()))
+        {
+            result.AppendLine($"\"\"\"{desc.GetString()}\"\"\"");
+        }
+        
+        result.AppendLine($"input {typeName} {{");
+        
+        if (type.TryGetProperty("inputFields", out var fields))
+        {
+            foreach (var field in fields.EnumerateArray())
+            {
+                var fieldName = field.GetProperty("name").GetString();
+                var fieldType = ConvertTypeReference(field.GetProperty("type"));
+                
+                if (field.TryGetProperty("description", out var fieldDesc) && !string.IsNullOrEmpty(fieldDesc.GetString()))
+                {
+                    result.AppendLine($"  \"\"\"{fieldDesc.GetString()}\"\"\"");
+                }
+                
+                result.AppendLine($"  {fieldName}: {fieldType}");
             }
         }
         
