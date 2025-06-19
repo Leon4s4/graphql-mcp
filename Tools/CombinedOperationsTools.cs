@@ -13,7 +13,6 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class CombinedOperationsTools
 {
-    private static readonly CombinedOperationsService Service = CombinedOperationsService.Instance;
 
     [McpServerTool, Description(@"Complete GraphQL service management tool that combines multiple operations in a single call.
 
@@ -59,7 +58,7 @@ Benefits:
             switch (action.ToLower())
             {
                 case "get_schema":
-                    result["schema"] = await Service.GetCachedSchemaAsync(endpoint, endpointInfo, includeMutations, maxDepth);
+                    result["schema"] = await CombinedOperationsService.GetSchemaAsync(endpoint, endpointInfo, includeMutations, maxDepth);
                     result["endpoint"] = endpoint;
                     result["timestamp"] = DateTime.UtcNow;
                     break;
@@ -67,7 +66,7 @@ Benefits:
                 case "list_queries":
                     result["availableQueries"] = await GetAvailableQueries(endpoint, endpointInfo, includeMutations);
                     result["exampleQueries"] = GetExampleQueries(endpoint, endpointInfo);
-                    result["operationHistory"] = Service.GetOperationHistory(endpoint);
+                    result["operationHistory"] = new List<string>(); // No history tracking in stateless mode
                     result["endpoint"] = endpoint;
                     break;
 
@@ -79,7 +78,7 @@ Benefits:
                     var queryStartTime = DateTime.UtcNow;
                     result["queryResult"] = await ExecuteQuery(endpoint, endpointInfo, query, variables);
                     var queryExecutionTime = DateTime.UtcNow - queryStartTime;
-                    Service.RecordPerformanceMetric(endpoint, "manual_query", queryExecutionTime, true);
+                    // Performance metrics not tracked in stateless mode
                     result["query"] = query;
                     result["variables"] = variables;
                     result["executedAt"] = DateTime.UtcNow;
@@ -88,7 +87,7 @@ Benefits:
 
                 case "get_capabilities":
                     result["capabilities"] = GetServiceCapabilities(endpoint, endpointInfo);
-                    result["performanceMetrics"] = Service.GetPerformanceMetrics(endpoint);
+                    result["performanceMetrics"] = new { endpoint, message = "Performance metrics not available in stateless mode" };
                     result["endpoint"] = endpoint;
                     break;
 
@@ -97,13 +96,13 @@ Benefits:
                     // Return comprehensive information
                     result["endpoint"] = endpoint;
                     result["endpointInfo"] = GetEndpointSummary(endpointInfo);
-                    result["schema"] = await Service.GetCachedSchemaAsync(endpoint, endpointInfo, includeMutations, maxDepth);
+                    result["schema"] = await CombinedOperationsService.GetSchemaAsync(endpoint, endpointInfo, includeMutations, maxDepth);
                     result["availableQueries"] = await GetAvailableQueries(endpoint, endpointInfo, includeMutations);
                     result["exampleQueries"] = GetExampleQueries(endpoint, endpointInfo);
                     result["capabilities"] = GetServiceCapabilities(endpoint, endpointInfo);
                     result["registeredTools"] = GetRegisteredToolsForEndpoint(endpoint);
-                    result["operationStatistics"] = Service.GetOperationStatistics(endpoint);
-                    result["performanceMetrics"] = Service.GetPerformanceMetrics(endpoint);
+                    result["operationStatistics"] = new { endpoint, message = "Operation statistics not available in stateless mode" };
+                    result["performanceMetrics"] = new { endpoint, message = "Performance metrics not available in stateless mode" };
                     result["timestamp"] = DateTime.UtcNow;
                     break;
             }
@@ -171,7 +170,7 @@ Result Chaining (sequential mode only):
                 Name = op.ContainsKey("name") ? op["name"]?.ToString() : $"Operation_{index}"
             }).ToList();
 
-            var results = await Service.ExecuteBatchOperationsAsync(
+            var results = await CombinedOperationsService.ExecuteBatchOperationsAsync(
                 batchOperations, 
                 executionMode.ToLower() == "parallel", 
                 continueOnError, 
@@ -229,7 +228,7 @@ This tool is useful for:
     {
         try
         {
-            var comparison = await Service.CompareEndpointSchemasAsync(primaryEndpoint, secondaryEndpoint);
+            var comparison = await CombinedOperationsService.CompareEndpointSchemasAsync(primaryEndpoint, secondaryEndpoint);
 
             return JsonSerializer.Serialize(comparison, new JsonSerializerOptions 
             { 
@@ -276,7 +275,7 @@ This tool is useful for:
             throw new ArgumentException($"Endpoint '{endpoint}' not found. Please register it first.");
         }
 
-        return await Service.GetCachedSchemaAsync(endpoint, endpointInfo, includeMutations, maxDepth);
+        return await CombinedOperationsService.GetSchemaAsync(endpoint, endpointInfo, includeMutations, maxDepth);
     }
 
     private static async Task<object> GetAvailableQueries(string endpoint, GraphQlEndpointInfo? endpointInfo, bool includeMutations)
@@ -354,7 +353,7 @@ This tool is useful for:
             var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, requestBody);
 
             // Record the operation for history tracking
-            Service.RecordOperation(endpoint, query, "query_execution");
+            // Operation recording not available in stateless mode
 
             return new
             {
@@ -533,7 +532,7 @@ This tool is ideal for:
                 if (endpointInfo == null) continue;
 
                 // Get schema to understand available data
-                var schema = await Service.GetCachedSchemaAsync(endpoint, endpointInfo, false, 3);
+                var schema = await CombinedOperationsService.GetSchemaAsync(endpoint, endpointInfo, false, 3);
                 
                 // Extract relevant queries for the primary entity
                 var relevantQueries = await DiscoverRelevantQueries(endpoint, primaryEntity, schema);
@@ -630,10 +629,10 @@ This tool is ideal for:
                 }
 
                 // Get comprehensive data from this endpoint
-                var schema = await Service.GetCachedSchemaAsync(endpoint, endpointInfo, true, 2);
+                var schema = await CombinedOperationsService.GetSchemaAsync(endpoint, endpointInfo, true, 2);
                 var queries = await GetAvailableQueries(endpoint, endpointInfo, false);
                 var capabilities = GetServiceCapabilities(endpoint, endpointInfo);
-                var performance = Service.GetPerformanceMetrics(endpoint);
+                var performance = new { endpoint, message = "Performance metrics not available in stateless mode" };
 
                 return new
                 {
@@ -671,7 +670,7 @@ This tool is ideal for:
         var sourceEndpoint = endpoints[0];
         var targetEndpoint = endpoints[1];
         
-        var migrationAnalysis = await Service.CompareEndpointSchemasAsync(sourceEndpoint, targetEndpoint);
+        var migrationAnalysis = await CombinedOperationsService.CompareEndpointSchemasAsync(sourceEndpoint, targetEndpoint);
         
         // Generate migration recommendations
         var migrationPlan = GenerateMigrationPlan(migrationAnalysis, config);

@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
 using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
@@ -6,168 +5,24 @@ using Graphql.Mcp.Helpers;
 namespace Graphql.Mcp.Helpers;
 
 /// <summary>
-/// Enhanced service for combined GraphQL operations with intelligent caching and state management
+/// Stateless service for combined GraphQL operations
 /// </summary>
-public sealed class CombinedOperationsService
+public static class CombinedOperationsService
 {
-    private static readonly Lazy<CombinedOperationsService> LazyInstance = new(() => new CombinedOperationsService());
-    
-    private readonly ConcurrentDictionary<string, object> _schemaCache = new();
-    private readonly ConcurrentDictionary<string, DateTime> _cacheTimestamps = new();
-    private readonly ConcurrentDictionary<string, List<string>> _operationHistory = new();
-    private readonly ConcurrentDictionary<string, object> _performanceMetrics = new();
-    
-    private readonly TimeSpan _cacheExpiry = TimeSpan.FromMinutes(30);
-    private readonly object _cacheLock = new();
 
-    public static CombinedOperationsService Instance => LazyInstance.Value;
+    #region Schema Operations
 
-    private CombinedOperationsService() { }
-
-    #region Schema Caching
-
-    public async Task<object> GetCachedSchemaAsync(string endpoint, GraphQlEndpointInfo endpointInfo, bool includeMutations = false, int maxDepth = 3)
+    public static async Task<object> GetSchemaAsync(string endpoint, GraphQlEndpointInfo endpointInfo, bool includeMutations = false, int maxDepth = 3)
     {
-        var cacheKey = GenerateCacheKey(endpoint, includeMutations, maxDepth);
-        
-        lock (_cacheLock)
-        {
-            if (_schemaCache.TryGetValue(cacheKey, out var cachedSchema) && 
-                _cacheTimestamps.TryGetValue(cacheKey, out var timestamp) &&
-                DateTime.UtcNow - timestamp < _cacheExpiry)
-            {
-                return cachedSchema;
-            }
-        }
-
-        // Cache miss or expired - fetch fresh schema
-        var schema = await FetchSchemaAsync(endpoint, endpointInfo, includeMutations, maxDepth);
-        
-        lock (_cacheLock)
-        {
-            _schemaCache[cacheKey] = schema;
-            _cacheTimestamps[cacheKey] = DateTime.UtcNow;
-        }
-
-        return schema;
-    }
-
-    public void InvalidateSchemaCache(string endpoint)
-    {
-        lock (_cacheLock)
-        {
-            var keysToRemove = _schemaCache.Keys.Where(k => k.StartsWith($"schema_{endpoint}")).ToList();
-            foreach (var key in keysToRemove)
-            {
-                _schemaCache.TryRemove(key, out _);
-                _cacheTimestamps.TryRemove(key, out _);
-            }
-        }
+        return await FetchSchemaAsync(endpoint, endpointInfo, includeMutations, maxDepth);
     }
 
     #endregion
 
-    #region Operation History
-
-    public void RecordOperation(string endpoint, string operation, string operationType)
-    {
-        var key = $"{endpoint}_{operationType}";
-        _operationHistory.AddOrUpdate(key,
-            new List<string> { operation },
-            (_, existing) =>
-            {
-                existing.Add(operation);
-                return existing.TakeLast(50).ToList(); // Keep last 50 operations
-            });
-    }
-
-    public List<string> GetOperationHistory(string endpoint, string? operationType = null)
-    {
-        var key = operationType != null ? $"{endpoint}_{operationType}" : endpoint;
-        return _operationHistory.GetValueOrDefault(key, new List<string>());
-    }
-
-    public Dictionary<string, object> GetOperationStatistics(string endpoint)
-    {
-        var allOperations = _operationHistory
-            .Where(kvp => kvp.Key.StartsWith(endpoint))
-            .SelectMany(kvp => kvp.Value)
-            .ToList();
-
-        return new Dictionary<string, object>
-        {
-            ["totalOperations"] = allOperations.Count,
-            ["uniqueOperations"] = allOperations.Distinct().Count(),
-            ["mostCommonOperations"] = allOperations
-                .GroupBy(op => op)
-                .OrderByDescending(g => g.Count())
-                .Take(5)
-                .Select(g => new { operation = g.Key, count = g.Count() })
-                .ToList(),
-            ["lastActivity"] = DateTime.UtcNow
-        };
-    }
-
-    #endregion
-
-    #region Performance Metrics
-
-    public void RecordPerformanceMetric(string endpoint, string operation, TimeSpan executionTime, bool success)
-    {
-        var key = $"perf_{endpoint}";
-        var metric = new
-        {
-            endpoint,
-            operation,
-            executionTime = executionTime.TotalMilliseconds,
-            success,
-            timestamp = DateTime.UtcNow
-        };
-
-        _performanceMetrics.AddOrUpdate(key,
-            new List<object> { metric },
-            (_, existing) =>
-            {
-                if (existing is List<object> list)
-                {
-                    list.Add(metric);
-                    return list.TakeLast(100).ToList(); // Keep last 100 metrics
-                }
-                return new List<object> { metric };
-            });
-    }
-
-    public Dictionary<string, object> GetPerformanceMetrics(string endpoint)
-    {
-        var key = $"perf_{endpoint}";
-        if (!_performanceMetrics.TryGetValue(key, out var metrics) || metrics is not List<object> metricsList)
-        {
-            return new Dictionary<string, object>
-            {
-                ["endpoint"] = endpoint,
-                ["noData"] = true
-            };
-        }
-
-        var successfulOperations = metricsList.Count(m => GetPropertyValue(m, "success", false));
-        var totalOperations = metricsList.Count;
-        var avgExecutionTime = metricsList.Average(m => GetPropertyValue(m, "executionTime", 0.0));
-
-        return new Dictionary<string, object>
-        {
-            ["endpoint"] = endpoint,
-            ["totalOperations"] = totalOperations,
-            ["successRate"] = totalOperations > 0 ? (double)successfulOperations / totalOperations : 0,
-            ["averageExecutionTime"] = avgExecutionTime,
-            ["lastRecorded"] = metricsList.LastOrDefault()
-        };
-    }
-
-    #endregion
 
     #region Batch Operations
 
-    public async Task<List<BatchOperationResult>> ExecuteBatchOperationsAsync(
+    public static async Task<List<BatchOperationResult>> ExecuteBatchOperationsAsync(
         List<BatchOperation> operations,
         bool parallel = false,
         bool continueOnError = true,
@@ -188,8 +43,7 @@ public sealed class CombinedOperationsService
                         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
                         var result = await ExecuteSingleOperationAsync(op, cts.Token);
                         
-                        RecordPerformanceMetric(op.Endpoint, op.Name ?? $"Operation_{index}", 
-                            DateTime.UtcNow - opStartTime, true);
+                        // Performance metrics not tracked in stateless mode
                         
                         return new BatchOperationResult
                         { 
@@ -205,8 +59,7 @@ public sealed class CombinedOperationsService
                     }
                     catch (Exception ex)
                     {
-                        RecordPerformanceMetric(op.Endpoint, op.Name ?? $"Operation_{index}", 
-                            DateTime.UtcNow - opStartTime, false);
+                        // Performance metrics not tracked in stateless mode
                         
                         if (!continueOnError) throw;
                         return new BatchOperationResult
@@ -241,8 +94,7 @@ public sealed class CombinedOperationsService
                         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
                         var result = await ExecuteSingleOperationAsync(op, cts.Token);
                         
-                        RecordPerformanceMetric(op.Endpoint, op.Name ?? $"Operation_{i}", 
-                            DateTime.UtcNow - opStartTime, true);
+                        // Performance metrics not tracked in stateless mode
                         
                         results.Add(new BatchOperationResult 
                         { 
@@ -258,8 +110,7 @@ public sealed class CombinedOperationsService
                     }
                     catch (Exception ex)
                     {
-                        RecordPerformanceMetric(op.Endpoint, op.Name ?? $"Operation_{i}", 
-                            DateTime.UtcNow - opStartTime, false);
+                        // Performance metrics not tracked in stateless mode
                         
                         var errorResult = new BatchOperationResult 
                         { 
@@ -299,10 +150,10 @@ public sealed class CombinedOperationsService
 
     #region Schema Analysis
 
-    public async Task<SchemaAnalysisResult> AnalyzeSchemaComplexityAsync(string endpoint, GraphQlEndpointInfo endpointInfo)
+    public static async Task<SchemaAnalysisResult> AnalyzeSchemaComplexityAsync(string endpoint, GraphQlEndpointInfo endpointInfo)
     {
         var startTime = DateTime.UtcNow;
-        var schema = await GetCachedSchemaAsync(endpoint, endpointInfo, true, 10);
+        var schema = await GetSchemaAsync(endpoint, endpointInfo, true, 10);
         
         // Perform complexity analysis
         return new SchemaAnalysisResult
@@ -315,7 +166,7 @@ public sealed class CombinedOperationsService
         };
     }
 
-    public async Task<EndpointComparisonResult> CompareEndpointSchemasAsync(string endpoint1, string endpoint2)
+    public static async Task<EndpointComparisonResult> CompareEndpointSchemasAsync(string endpoint1, string endpoint2)
     {
         var startTime = DateTime.UtcNow;
         var info1 = EndpointRegistryService.Instance.GetEndpointInfo(endpoint1);
@@ -326,11 +177,11 @@ public sealed class CombinedOperationsService
             throw new ArgumentException("Both endpoints must be registered");
         }
 
-        var schema1 = await GetCachedSchemaAsync(endpoint1, info1, true, 5);
-        var schema2 = await GetCachedSchemaAsync(endpoint2, info2, true, 5);
+        var schema1 = await GetSchemaAsync(endpoint1, info1, true, 5);
+        var schema2 = await GetSchemaAsync(endpoint2, info2, true, 5);
 
-        var perf1 = GetPerformanceMetrics(endpoint1);
-        var perf2 = GetPerformanceMetrics(endpoint2);
+        var perf1 = new { averageExecutionTime = 0.0, successRate = 0.0 };
+        var perf2 = new { averageExecutionTime = 0.0, successRate = 0.0 };
 
         return new EndpointComparisonResult
         {
@@ -353,12 +204,7 @@ public sealed class CombinedOperationsService
 
     #region Private Helper Methods
 
-    private string GenerateCacheKey(string endpoint, bool includeMutations, int maxDepth)
-    {
-        return $"schema_{endpoint}_{includeMutations}_{maxDepth}";
-    }
-
-    private async Task<object> FetchSchemaAsync(string endpoint, GraphQlEndpointInfo endpointInfo, bool includeMutations, int maxDepth)
+    private static async Task<object> FetchSchemaAsync(string endpoint, GraphQlEndpointInfo endpointInfo, bool includeMutations, int maxDepth)
     {
         try
         {
@@ -403,7 +249,7 @@ public sealed class CombinedOperationsService
         }
     }
 
-    private async Task<object> ExecuteSingleOperationAsync(BatchOperation operation, CancellationToken cancellationToken)
+    private static async Task<object> ExecuteSingleOperationAsync(BatchOperation operation, CancellationToken cancellationToken)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(operation.Endpoint);
         if (endpointInfo == null)
@@ -417,8 +263,7 @@ public sealed class CombinedOperationsService
             endpointInfo, 
             requestBody);
 
-        // Record the operation
-        RecordOperation(operation.Endpoint, operation.Query, "combined_operation");
+        // Operation recording not available in stateless mode
 
         return new
         {
@@ -431,7 +276,7 @@ public sealed class CombinedOperationsService
         };
     }
 
-    private BatchOperation ProcessResultChaining(BatchOperation operation, List<BatchOperationResult> previousResults)
+    private static BatchOperation ProcessResultChaining(BatchOperation operation, List<BatchOperationResult> previousResults)
     {
         var processedQuery = operation.Query;
         
@@ -464,7 +309,7 @@ public sealed class CombinedOperationsService
         };
     }
 
-    private SchemaComplexityResult CalculateComplexityMetrics(object schema)
+    private static SchemaComplexityResult CalculateComplexityMetrics(object schema)
     {
         // Simplified complexity calculation
         return new SchemaComplexityResult
@@ -480,7 +325,7 @@ public sealed class CombinedOperationsService
         };
     }
 
-    private List<string> GenerateOptimizationRecommendations(object schema)
+    private static List<string> GenerateOptimizationRecommendations(object schema)
     {
         return new List<string>
         {
@@ -490,7 +335,7 @@ public sealed class CombinedOperationsService
         };
     }
 
-    private SchemaComparisonResult PerformSchemaComparison(object schema1, object schema2)
+    private static SchemaComparisonResult PerformSchemaComparison(object schema1, object schema2)
     {
         return new SchemaComparisonResult
         {

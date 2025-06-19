@@ -44,11 +44,9 @@ public static class GraphQlToolGenerator
                 EndpointRegistryService.Instance.RegisterDynamicTool(toolName, toolInfo);
                 toolsGenerated++;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // Log error but continue with next field instead of failing completely
-                // In a production system, you might want to use a proper logging framework
-                System.Diagnostics.Debug.WriteLine($"Error generating tool for field {field.Name.Value}: {ex.Message}");
+                // Continue with next field instead of failing completely
             }
         }
 
