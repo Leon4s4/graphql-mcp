@@ -11,14 +11,16 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class SecurityAnalysisTools
 {
-    [McpServerTool, Description("Analyze GraphQL queries for security vulnerabilities, depth attacks, and complexity issues")]
+    [McpServerTool, Description("Analyze GraphQL queries for security vulnerabilities, DoS attack vectors, injection risks, and resource consumption threats. This comprehensive security tool detects: query depth attacks and recursive bombing, complexity-based DoS vulnerabilities, injection attack vectors and malicious patterns, introspection abuse and information disclosure, resource exhaustion attacks, malformed query exploitation, unauthorized field access patterns, rate limiting bypass attempts. Provides risk assessment and mitigation recommendations for production security.")]
     public static async Task<string> AnalyzeQuerySecurity(
-        [Description("GraphQL query to analyze")]
+        [Description("GraphQL query string to analyze for security vulnerabilities")]
         string query,
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
-        [Description("Max query depth allowed")]
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("Maximum allowed query depth to prevent recursive bombing attacks")]
         int maxDepth = 10,
-        [Description("Max query complexity")] int maxComplexity = 1000)
+        [Description("Maximum allowed query complexity score to prevent resource exhaustion")]
+        int maxComplexity = 1000)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)

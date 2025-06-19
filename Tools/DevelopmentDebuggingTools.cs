@@ -7,8 +7,8 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class DevelopmentDebuggingTools
 {
-    [McpServerTool, Description("Provide detailed analysis of what a GraphQL query does, including field selections and data flow")]
-    public static string ExplainQuery([Description("GraphQL query to analyze")] string query)
+    [McpServerTool, Description("Provide detailed human-readable analysis of what a GraphQL query does, including operation breakdown, field selections, data flow patterns, and complexity assessment. This educational tool helps understand: operation type identification and structure, variable declarations and usage patterns, field selection hierarchy and relationships, fragment definitions and usage, directive applications and behavior, query complexity and performance implications, data flow visualization and dependencies. Perfect for learning GraphQL or debugging complex queries.")]
+    public static string ExplainQuery([Description("GraphQL query string to analyze and explain in detail")] string query)
     {
         var explanation = new List<string>();
         explanation.Add("# GraphQL Query Analysis\n");
@@ -85,8 +85,8 @@ public static class DevelopmentDebuggingTools
         return string.Join("\n", explanation);
     }
 
-    [McpServerTool, Description("Suggest performance and best practice improvements for GraphQL queries")]
-    public static string OptimizeQuery([Description("GraphQL query to optimize")] string query)
+    [McpServerTool, Description("Suggest performance optimizations and best practice improvements for GraphQL queries with actionable recommendations. This optimization tool provides suggestions for: reducing over-fetching and under-fetching, fragment usage for code reuse, query depth and complexity reduction, field selection optimization, variable usage improvements, directive application enhancements, caching strategy recommendations, pagination and filtering optimizations. Essential for production query optimization and performance tuning.")]
+    public static string OptimizeQuery([Description("GraphQL query string to analyze for optimization opportunities")] string query)
     {
         var suggestions = new List<string>();
         suggestions.Add("# GraphQL Query Optimization Suggestions\n");

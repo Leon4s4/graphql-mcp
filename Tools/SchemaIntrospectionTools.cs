@@ -103,9 +103,10 @@ public static class SchemaIntrospectionTools
                   }
                 }";
 
-    [McpServerTool, Description("Retrieve complete GraphQL schema information including types, fields, directives, and relationships")]
+    [McpServerTool, Description("Retrieve complete GraphQL schema information including all types, fields, directives, relationships, and metadata. This tool performs comprehensive schema introspection to discover: Query/Mutation/Subscription root types, all object types with their fields and arguments, input types and enums, scalar types and custom scalars, field descriptions and deprecation info, type relationships and dependencies, directive definitions and usage. Use this to understand the complete API surface before building queries.")]
     public static async Task<GraphQlResponse> IntrospectSchema(
-        [Description("Name of the registered GraphQL endpoint")] string endpointName)
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
@@ -130,10 +131,11 @@ public static class SchemaIntrospectionTools
         return await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, body);
     }
 
-    [McpServerTool, Description("Generate comprehensive documentation from GraphQL schema descriptions and field metadata")]
+    [McpServerTool, Description("Generate comprehensive human-readable documentation from GraphQL schema descriptions, field metadata, and type information. This tool creates detailed documentation including: field descriptions and usage examples, parameter requirements and types, return type structures, deprecation warnings and migration info, type relationships and inheritance, enum values and their meanings, input type requirements. Optionally filter to specific types for focused documentation.")]
     public static async Task<string> GetSchemaDocs(
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
-        [Description("Specific type name to get documentation for (optional)")]
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("Specific type name to get documentation for. Leave empty to get documentation for all types")]
         string? typeName = null)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);

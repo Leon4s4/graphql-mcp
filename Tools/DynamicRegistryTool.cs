@@ -13,7 +13,35 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class DynamicRegistryTool
 {
-    [McpServerTool, Description("View all auto-generated GraphQL operation tools organized by endpoint")]
+    [McpServerTool, Description(@"View all auto-generated GraphQL operation tools organized by endpoint with comprehensive operation details.
+
+This tool provides a complete overview of all available GraphQL operations across registered endpoints:
+
+Operation Information:
+- Query operations for data retrieval
+- Mutation operations for data modification
+- Operation names and descriptions
+- Parameter requirements and types
+- Return type information
+
+Tool Organization:
+- Grouped by GraphQL endpoint
+- Separated by operation type (Query vs Mutation)
+- Shows tool naming conventions
+- Displays parameter signatures
+- Includes operation complexity hints
+
+Use Cases:
+- Discover available GraphQL operations
+- Find the correct tool name for specific operations
+- Understand parameter requirements before execution
+- Browse API capabilities across multiple endpoints
+- Plan complex query strategies
+
+Tool Naming Convention:
+- Pattern: [prefix_]operationType_operationName
+- Examples: 'query_getUsers', 'crm_mutation_createUser'
+- Prefix helps organize tools from multiple endpoints")]
     public static string ListDynamicTools()
     {
         var tools = EndpointRegistryService.Instance.GetAllDynamicTools().Values.ToList();
@@ -48,11 +76,11 @@ public static class DynamicRegistryTool
         return result.ToString();
     }
 
-    [McpServerTool, Description("Execute a specific auto-generated GraphQL operation with type-safe variables")]
+    [McpServerTool, Description("Execute a specific auto-generated GraphQL operation with type-safe variable validation and rich error handling. This tool provides targeted execution of specific GraphQL operations with pre-built optimized queries, validates variables against schema types, handles operation-specific error cases, and returns formatted structured results. Use ListDynamicTools to see all available tools and their names.")]
     public static async Task<string> ExecuteDynamicOperation(
-        [Description("Name of the dynamic tool to execute")]
+        [Description("Name of the dynamic tool to execute. Use ListDynamicTools to see all available tools and their names")]
         string toolName,
-        [Description("Variables for the operation as JSON object")]
+        [Description("Variables for the operation as JSON object. Must match the operation's parameter schema. Example: {\"id\": 123, \"input\": {\"name\": \"John\"}}")]
         string? variables = null)
     {
         try

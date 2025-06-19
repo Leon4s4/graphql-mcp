@@ -11,12 +11,14 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class FieldUsageAnalyticsTools
 {
-    [McpServerTool, Description("Analyze GraphQL field usage patterns from query logs to identify unused schema fields")]
+    [McpServerTool, Description("Analyze GraphQL field usage patterns from query logs to identify performance optimization opportunities, unused schema fields, and popular API patterns. This tool provides insights including: field popularity rankings and usage statistics, unused field identification for schema cleanup, deprecation candidates based on low usage, query pattern analysis and trends, performance impact assessment by field complexity, schema evolution recommendations. Essential for API governance and optimization.")]
     public static async Task<string> AnalyzeFieldUsage(
-        [Description("Log of executed queries as JSON array")]
+        [Description("Log of executed queries as JSON array. Example: [\"query { users { id name } }\", \"query { posts { title author { name } } }\"]")]
         string queryLog,
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
-        [Description("Show unused fields")] bool showUnused = true)
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("Include unused fields in the analysis report. Useful for schema cleanup")]
+        bool showUnused = true)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)

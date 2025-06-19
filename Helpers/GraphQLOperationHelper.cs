@@ -12,7 +12,7 @@ namespace Graphql.Mcp.Helpers;
 public static class GraphQLOperationHelper
 {
     /// <summary>
-    /// Generates a GraphQL operation string (HotChocolate version)
+    /// Generates a GraphQL operation string (HotChocolate version) with enhanced field selection
     /// </summary>
     public static string GenerateOperationString(FieldDefinitionNode field, string operationType, string fieldName)
     {
@@ -48,9 +48,21 @@ public static class GraphQLOperationHelper
             operation.Append(")");
         }
 
-        // For now, just add basic scalar fields - this could be enhanced to traverse the schema
+        // Enhanced field selection based on return type
+        var returnTypeName = GetTypeName(field.Type);
         operation.AppendLine(" {");
-        operation.AppendLine("    # Fields will be selected based on return type");
+        
+        // Add some common scalar fields that are likely to exist
+        operation.AppendLine("    # Common fields - customize based on your needs:");
+        operation.AppendLine("    # id");
+        operation.AppendLine("    # name");
+        operation.AppendLine("    # title");
+        operation.AppendLine("    # createdAt");
+        operation.AppendLine("    # updatedAt");
+        operation.AppendLine("    ");
+        operation.AppendLine("    # Use BuildSmartQuery tool for automatic field selection");
+        operation.AppendLine("    # Use GetSchema tool to see available fields");
+        
         operation.AppendLine("  }");
         operation.AppendLine("}");
 
@@ -62,23 +74,58 @@ public static class GraphQLOperationHelper
     /// </summary>
     public static string GetFieldDescription(FieldDefinitionNode field, string operationType, string fieldName)
     {
-        var description = field.Description?.Value ?? $"Execute {operationType} operation: {fieldName}";
+        var description = new StringBuilder();
         
+        // Start with operation type and name
+        description.AppendLine($"Execute {operationType.ToLower()} operation: {fieldName}");
+        
+        // Add field description if available
+        if (!string.IsNullOrEmpty(field.Description?.Value))
+        {
+            description.AppendLine();
+            description.AppendLine($"Description: {field.Description.Value}");
+        }
+        
+        // Add parameters information
         if (field.Arguments.Any())
         {
-            description += "\n\nParameters:";
+            description.AppendLine();
+            description.AppendLine("Parameters:");
             foreach (var arg in field.Arguments)
             {
                 var argType = GetTypeName(arg.Type);
-                description += $"\n- {arg.Name.Value} ({argType})";
+                var isRequired = arg.Type is NonNullTypeNode;
+                var requiredMarker = isRequired ? " (REQUIRED)" : " (optional)";
+                
+                description.Append($"- {arg.Name.Value}: {argType}{requiredMarker}");
+                
                 if (!string.IsNullOrEmpty(arg.Description?.Value))
                 {
-                    description += $": {arg.Description.Value}";
+                    description.Append($" - {arg.Description.Value}");
                 }
+                description.AppendLine();
             }
         }
-
-        return description;
+        
+        // Add return type information
+        var returnType = GetTypeName(field.Type);
+        description.AppendLine();
+        description.AppendLine($"Returns: {returnType}");
+        
+        // Add usage examples
+        description.AppendLine();
+        description.AppendLine("Usage Examples:");
+        if (field.Arguments.Any())
+        {
+            description.AppendLine($"- With variables: Use ExecuteDynamicOperation with toolName '{operationType.ToLower()}_{fieldName}'");
+            description.AppendLine($"- Direct query: Use QueryGraphQl with operation string");
+        }
+        else
+        {
+            description.AppendLine($"- Simple execution: Use ExecuteDynamicOperation with toolName '{operationType.ToLower()}_{fieldName}'");
+        }
+        
+        return description.ToString();
     }
 
     /// <summary>
@@ -96,7 +143,7 @@ public static class GraphQLOperationHelper
     }
 
     /// <summary>
-    /// Generates a GraphQL operation string (legacy JsonElement version)
+    /// Generates a GraphQL operation string (legacy JsonElement version) with enhanced guidance
     /// </summary>
     public static string GenerateOperationString(JsonElement field, string operationType, string fieldName)
     {
@@ -147,8 +194,15 @@ public static class GraphQLOperationHelper
         }
 
         operation.AppendLine(" {");
-        operation.AppendLine("    # Add your field selections here");
-        operation.AppendLine("    # This is a template - customize the fields you need");
+        operation.AppendLine("    # Common fields - customize based on your needs:");
+        operation.AppendLine("    # id");
+        operation.AppendLine("    # name");
+        operation.AppendLine("    # title");
+        operation.AppendLine("    # createdAt");
+        operation.AppendLine("    # updatedAt");
+        operation.AppendLine("    ");
+        operation.AppendLine("    # Use BuildSmartQuery tool for automatic field selection");
+        operation.AppendLine("    # Use GetSchema tool to see available fields for this type");
         operation.AppendLine("  }");
         operation.AppendLine("}");
 
@@ -156,28 +210,82 @@ public static class GraphQLOperationHelper
     }
 
     /// <summary>
-    /// Gets a description for a GraphQL field
+    /// Gets a description for a GraphQL field (enhanced version)
     /// </summary>
     public static string GetFieldDescription(JsonElement field, string operationType, string fieldName)
     {
         var description = new StringBuilder();
-
+        
+        // Start with operation type and name
+        description.AppendLine($"Execute {operationType.ToLower()} operation: {fieldName}");
+        
+        // Add field description if available
         if (field.TryGetProperty("description", out var desc) && desc.ValueKind == JsonValueKind.String)
         {
-            description.Append(desc.GetString());
+            var descText = desc.GetString();
+            if (!string.IsNullOrEmpty(descText))
+            {
+                description.AppendLine();
+                description.AppendLine($"Description: {descText}");
+            }
         }
-        else
-        {
-            description.Append($"Execute {operationType.ToLower()} operation: {fieldName}");
-        }
-
+        
+        // Add parameters information
         if (field.TryGetProperty("args", out var args) && args.ValueKind == JsonValueKind.Array)
         {
             var argCount = args.GetArrayLength();
             if (argCount > 0)
             {
-                description.Append($" (requires {argCount} parameter{(argCount == 1 ? "" : "s")})");
+                description.AppendLine();
+                description.AppendLine("Parameters:");
+                
+                foreach (var arg in args.EnumerateArray())
+                {
+                    if (arg.TryGetProperty("name", out var argName) && 
+                        arg.TryGetProperty("type", out var argType))
+                    {
+                        var paramName = argName.GetString() ?? "";
+                        var paramType = GraphQlTypeHelpers.GetTypeName(argType);
+                        var isRequired = argType.TryGetProperty("kind", out var kindElement) && 
+                                       kindElement.GetString() == "NON_NULL";
+                        var requiredMarker = isRequired ? " (REQUIRED)" : " (optional)";
+                        
+                        description.Append($"- {paramName}: {paramType}{requiredMarker}");
+                        
+                        if (arg.TryGetProperty("description", out var argDesc) && 
+                            argDesc.ValueKind == JsonValueKind.String)
+                        {
+                            var argDescText = argDesc.GetString();
+                            if (!string.IsNullOrEmpty(argDescText))
+                            {
+                                description.Append($" - {argDescText}");
+                            }
+                        }
+                        description.AppendLine();
+                    }
+                }
             }
+        }
+        
+        // Add return type information
+        if (field.TryGetProperty("type", out var returnType))
+        {
+            var returnTypeName = GraphQlTypeHelpers.GetTypeName(returnType);
+            description.AppendLine();
+            description.AppendLine($"Returns: {returnTypeName}");
+        }
+        
+        // Add usage examples
+        description.AppendLine();
+        description.AppendLine("Usage Examples:");
+        if (field.TryGetProperty("args", out var fieldArgs) && fieldArgs.ValueKind == JsonValueKind.Array && fieldArgs.GetArrayLength() > 0)
+        {
+            description.AppendLine($"- With variables: Use ExecuteDynamicOperation with toolName '{operationType.ToLower()}_{fieldName}'");
+            description.AppendLine($"- Direct query: Use QueryGraphQl with operation string");
+        }
+        else
+        {
+            description.AppendLine($"- Simple execution: Use ExecuteDynamicOperation with toolName '{operationType.ToLower()}_{fieldName}'");
         }
 
         return description.ToString();

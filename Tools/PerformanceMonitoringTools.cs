@@ -11,13 +11,15 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class PerformanceMonitoringTools
 {
-    [McpServerTool, Description("Measure GraphQL query execution time and generate performance reports")]
+    [McpServerTool, Description("Measure GraphQL query execution time and generate comprehensive performance reports with timing statistics, latency analysis, and optimization recommendations. This tool provides detailed performance insights including: execution time measurements across multiple runs, statistical analysis (min, max, average, percentiles), network latency vs server processing time, query complexity correlation with performance, performance trends and consistency analysis, bottleneck identification and recommendations, comparison baselines for optimization efforts. Essential for performance tuning and SLA monitoring.")]
     public static async Task<string> MeasureQueryPerformance(
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
-        [Description("GraphQL query to measure")]
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("GraphQL query to measure for performance analysis")]
         string query,
-        [Description("Number of test runs")] int runs = 5,
-        [Description("Variables as JSON object (optional)")]
+        [Description("Number of test runs for statistical accuracy. More runs provide better averages")]
+        int runs = 5,
+        [Description("Variables as JSON object for parameterized queries. Example: {\"limit\": 100, \"filter\": {\"status\": \"active\"}}")]
         string? variables = null)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);

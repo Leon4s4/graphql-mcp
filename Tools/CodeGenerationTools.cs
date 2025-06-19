@@ -10,10 +10,11 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class CodeGenerationTools
 {
-    [McpServerTool, Description("Generate strongly-typed C# classes and models from GraphQL schema types")]
+    [McpServerTool, Description("Generate strongly-typed C# classes and models from GraphQL schema types with comprehensive type mapping, validation attributes, and serialization support. This code generation tool creates: strongly-typed C# classes for all GraphQL types, proper nullable reference type annotations, JSON serialization attributes for API integration, data validation attributes for input validation, inheritance hierarchies for interfaces and unions, enum classes with proper value mappings, documentation comments from schema descriptions. Essential for type-safe GraphQL client development.")]
     public static async Task<string> GenerateTypes(
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
-        [Description("Namespace for generated classes")]
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("C# namespace for generated classes. Example: 'MyApp.GraphQL.Types'")]
         string namespaceName = "Generated.GraphQL")
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
@@ -74,13 +75,13 @@ public static class CodeGenerationTools
         return generatedCode.ToString();
     }
 
-    [McpServerTool, Description("Create strongly-typed client classes with methods for executing specific GraphQL queries")]
+    [McpServerTool, Description("Create strongly-typed C# client classes with methods for executing specific GraphQL queries, including request/response models, error handling, and async operations. This client generation tool provides: type-safe method signatures for GraphQL operations, automatic request serialization and response deserialization, comprehensive error handling and exception types, async/await patterns for modern C# development, HTTP client configuration and dependency injection support, variable parameter validation and type checking, response mapping to strongly-typed models. Perfect for integrating GraphQL APIs into .NET applications.")]
     public static string GenerateClientCode(
-        [Description("GraphQL query to generate client for")]
+        [Description("GraphQL query string to generate client methods for")]
         string query,
-        [Description("Class name for the generated client")]
+        [Description("C# class name for the generated client. Example: 'UserApiClient', 'ProductServiceClient'")]
         string className = "GraphQLClient",
-        [Description("Namespace for generated client")]
+        [Description("C# namespace for generated client class. Example: 'MyApp.GraphQL.Clients'")]
         string namespaceName = "Generated.GraphQL")
     {
         var generatedCode = new StringBuilder();

@@ -8,8 +8,8 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class UtilityTools
 {
-    [McpServerTool, Description("Format GraphQL queries with proper indentation and readable structure")]
-    public static string FormatQuery([Description("GraphQL query to format")] string query)
+    [McpServerTool, Description("Format GraphQL queries with proper indentation, readable structure, and consistent styling for improved readability and maintainability. This formatting tool provides: consistent indentation with configurable spacing, proper bracket and parentheses alignment, field selection organization and grouping, comment preservation and positioning, line break optimization for readability, string literal handling and escaping, directive and fragment formatting. Essential for code review and collaborative development.")]
+    public static string FormatQuery([Description("GraphQL query string to format with proper indentation and structure")] string query)
     {
         var formatted = new StringBuilder();
         var lines = query.Split('\n');

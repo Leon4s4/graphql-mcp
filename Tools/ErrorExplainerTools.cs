@@ -9,13 +9,13 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class ErrorExplainerTools
 {
-    [McpServerTool, Description("Analyze GraphQL error messages and provide actionable solutions and explanations")]
+    [McpServerTool, Description("Analyze GraphQL error messages and provide actionable solutions, explanations, and debugging guidance. This tool helps decode complex error scenarios including: syntax errors with line and column references, validation errors against schema rules, execution errors and field resolution failures, authentication and authorization issues, variable and argument type mismatches, nested field access problems, server-side runtime errors. Provides specific solutions and query corrections for each error type.")]
     public static string ExplainError(
-        [Description("GraphQL error message or response")]
+        [Description("GraphQL error message, response JSON, or error text to analyze")]
         string errorText,
-        [Description("Original query that caused the error (optional)")]
+        [Description("Original GraphQL query that caused the error. Helps provide context-specific solutions")]
         string? query = null,
-        [Description("Include solution suggestions")]
+        [Description("Include specific solution suggestions and corrective actions")]
         bool includeSolutions = true)
     {
         var explanation = new StringBuilder();
@@ -97,8 +97,8 @@ public static class ErrorExplainerTools
         return explanation.ToString();
     }
 
-    [McpServerTool, Description("Check GraphQL query syntax and structure for common formatting errors")]
-    public static string ValidateQuery([Description("GraphQL query to validate")] string query)
+    [McpServerTool, Description("Check GraphQL query syntax and structure for common formatting errors, best practice violations, and potential issues. This tool validates: proper GraphQL syntax and grammar, balanced brackets and parentheses, correct field selection sets, proper variable declarations and usage, argument syntax and placement, fragment definitions and usage, directive syntax and positioning, query depth and complexity warnings. Essential for query debugging before execution.")]
+    public static string ValidateQuery([Description("GraphQL query string to validate for syntax and structural issues")] string query)
     {
         var validation = new StringBuilder();
         validation.AppendLine("# GraphQL Query Validation Report\n");

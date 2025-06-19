@@ -11,16 +11,44 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class EndpointManagementTools
 {
-    [McpServerTool, Description("Register a GraphQL endpoint and automatically generate MCP tools for all available queries and mutations")]
+    [McpServerTool, Description(@"Register a GraphQL endpoint and automatically generate MCP tools for all available queries and mutations.
+
+This tool performs the following operations:
+1. Connects to the GraphQL endpoint
+2. Introspects the schema to discover all available operations
+3. Generates dynamic MCP tools for each query and mutation
+4. Registers the endpoint for future operations
+
+Schema Discovery:
+- Automatically detects all Query type operations
+- Optionally includes Mutation type operations (if allowMutations=true)
+- Extracts type information, field descriptions, and parameters
+- Generates tools with rich descriptions and type information
+
+Authentication Support:
+- Custom HTTP headers for API keys, JWT tokens, etc.
+- Example headers: '{""Authorization"": ""Bearer token123"", ""X-API-Key"": ""key456""}'
+
+Generated Tools:
+- Each operation becomes an individual MCP tool
+- Tools are named with pattern: [prefix_]operationType_operationName
+- Include parameter validation and type information
+- Provide operation-specific examples and documentation
+
+Error Handling:
+- Validates endpoint accessibility
+- Checks GraphQL schema validity
+- Reports connection and authentication issues")]
     public static async Task<string> RegisterEndpoint(
-        [Description("GraphQL endpoint URL")] string endpoint,
-        [Description("Unique name for this endpoint")]
+        [Description("GraphQL endpoint URL. Examples: 'https://api.github.com/graphql', 'http://localhost:4000/graphql'")]
+        string endpoint,
+        [Description("Unique identifier for this endpoint. Used to reference the endpoint in other tools. Example: 'github-api', 'local-crm'")]
         string endpointName,
-        [Description("HTTP headers as JSON object (optional)")]
+        [Description("HTTP headers as JSON object for authentication. Example: '{\"Authorization\": \"Bearer token123\", \"X-API-Key\": \"key456\"}'")]
         string? headers = null,
-        [Description("Allow mutations to be registered as tools")]
+        [Description("Whether to register mutation operations as tools. Set to true for endpoints where you want to modify data")]
         bool allowMutations = false,
-        [Description("Tool prefix for generated tools")]
+        [Description("Prefix for generated tool names. Example: 'crm' generates 'crm_query_getUsers' instead of 'query_getUsers'")]
         string toolPrefix = "")
     {
         if (string.IsNullOrEmpty(endpoint))
@@ -55,7 +83,29 @@ public static class EndpointManagementTools
         }
     }
 
-    [McpServerTool, Description("View all registered GraphQL endpoints with their configuration and tool counts")]
+    [McpServerTool, Description(@"View all registered GraphQL endpoints with their configuration, capabilities, and generated tool counts.
+
+Displays comprehensive information about each registered endpoint:
+
+Endpoint Information:
+- Endpoint name and URL
+- Authentication headers (count, not values for security)
+- Mutation support status
+- Tool prefix configuration
+- Number of generated dynamic tools
+
+Tool Organization:
+- Groups tools by endpoint
+- Shows Query vs Mutation operation counts
+- Lists tool naming conventions
+- Displays endpoint status and health
+
+Use Cases:
+- Verify endpoint registration success
+- Check available operations before querying
+- Troubleshoot connection issues
+- Audit endpoint configurations
+- Plan query strategies across multiple endpoints")]
     public static string GetAllEndpoints()
     {
         var endpoints = EndpointRegistryService.Instance.GetAllEndpoints();
@@ -93,9 +143,31 @@ public static class EndpointManagementTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Update dynamic tools for an endpoint by re-introspecting its GraphQL schema")]
+    [McpServerTool, Description(@"Update dynamic tools for an endpoint by re-introspecting its GraphQL schema.
+
+This tool is useful when:
+- The GraphQL schema has been updated with new operations
+- Field definitions or types have changed
+- New mutations or queries have been added
+- You want to refresh tool descriptions with latest schema information
+
+Process:
+1. Re-connects to the GraphQL endpoint
+2. Performs fresh schema introspection
+3. Removes old dynamic tools for this endpoint
+4. Generates new tools based on current schema
+5. Preserves endpoint configuration (headers, mutations setting, etc.)
+
+Schema Changes Detected:
+- New queries and mutations
+- Modified field signatures
+- Updated type definitions
+- Changed parameter requirements
+- Added or removed deprecations
+
+Note: This operation will replace all existing dynamic tools for the specified endpoint.")]
     public static async Task<string> RefreshEndpointTools(
-        [Description("Name of the endpoint to refresh")]
+        [Description("Name of the registered endpoint to refresh. Use GetAllEndpoints to see available endpoints")]
         string endpointName)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);

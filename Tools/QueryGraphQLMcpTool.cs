@@ -11,13 +11,36 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class QueryGraphQlMcpTool
 {
-    [McpServerTool, Description("Execute GraphQL queries and mutations with comprehensive error handling and formatted results")]
+    [McpServerTool, Description(@"Execute GraphQL queries and mutations against registered endpoints with comprehensive error handling and formatted results.
+
+This is the primary tool for executing GraphQL operations. It supports:
+- Complex queries with nested selections
+- Mutations (if enabled on endpoint)
+- Variable substitution with type validation
+- Automatic error handling and formatting
+- Support for multiple registered endpoints
+
+Examples:
+- Query: 'query { users { id name email } }'
+- Mutation: 'mutation($input: UserInput!) { createUser(input: $input) { id name } }'
+- With variables: '{""name"": ""John"", ""email"": ""john@example.com""}'
+
+Operation Types Supported:
+- Query operations (data retrieval)
+- Mutation operations (data modification, if allowed)
+- Subscription operations (real-time updates, if supported)
+
+Error Handling:
+- Validates endpoint registration
+- Checks mutation permissions
+- Parses and validates variables JSON
+- Returns formatted error messages with context")]
     public static async Task<string> QueryGraphQl(
-        [Description("GraphQL query or mutation to execute")]
+        [Description("GraphQL query or mutation string. Examples: 'query { users { id name } }' or 'mutation($input: UserInput!) { createUser(input: $input) { id } }'")]
         string query,
-        [Description("Name of the registered endpoint (use ListDynamicTools to see available endpoints)")]
+        [Description("Name of the registered GraphQL endpoint. Use ListDynamicTools or GetAllEndpoints to see available endpoints")]
         string endpointName,
-        [Description("Variables for the query as JSON object (optional)")]
+        [Description("Variables for the query as JSON object. Example: '{\"id\": 123, \"input\": {\"name\": \"John\", \"email\": \"john@example.com\"}}'")]
         string? variables = null)
     {
         try

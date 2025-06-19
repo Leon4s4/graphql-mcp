@@ -14,14 +14,15 @@ namespace Graphql.Mcp.Tools;
 public static class GraphQlSchemaTools
 {
     private static readonly StrawberryShakeSchemaService _schemaService = new();
-    [McpServerTool, Description("Retrieve and format specific GraphQL schema information with filtering and type focus")]
+    [McpServerTool, Description("Retrieve and format specific GraphQL schema information with advanced filtering, type focus, and detailed documentation. This tool provides comprehensive schema exploration including: complete type definitions with fields and arguments, filtered views by operation type (Query/Mutation/Subscription), focused analysis on specific types and their relationships, formatted output with proper GraphQL syntax, field descriptions and deprecation information, type relationships and inheritance hierarchies, directive usage and custom scalars. Essential for API discovery and integration planning.")]
     public static async Task<string> GetSchema(
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
-        [Description("Type name to focus on (optional)")]
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("Specific type name to focus analysis on. Useful for understanding complex types")]
         string? typeName = null,
-        [Description("Include only query types")]
+        [Description("Show only Query root type and its operations")]
         bool queryOnly = false,
-        [Description("Include only mutation types")]
+        [Description("Show only Mutation root type and its operations")]
         bool mutationOnly = false)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
@@ -86,11 +87,11 @@ public static class GraphQlSchemaTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Analyze differences between two GraphQL schemas with detailed change reporting")]
+    [McpServerTool, Description("Analyze differences between two GraphQL schemas with detailed change reporting, breaking change detection, and migration guidance. This tool provides comprehensive schema comparison including: field additions, modifications, and removals, type changes and structural differences, breaking vs non-breaking change classification, argument and return type modifications, deprecation status changes, directive differences and custom scalar changes, migration recommendations and impact assessment. Essential for API versioning and backward compatibility analysis.")]
     public static async Task<string> CompareSchemas(
-        [Description("Name of the first registered GraphQL endpoint")]
+        [Description("Name of the first registered GraphQL endpoint for comparison")]
         string endpointName1,
-        [Description("Name of the second registered GraphQL endpoint")]
+        [Description("Name of the second registered GraphQL endpoint for comparison")]
         string endpointName2)
     {
         var endpointInfo1 = EndpointRegistryService.Instance.GetEndpointInfo(endpointName1);

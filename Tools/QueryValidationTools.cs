@@ -11,13 +11,15 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class QueryValidationTools
 {
-    [McpServerTool, Description("Test GraphQL queries with comprehensive validation including syntax, schema compliance, and execution")]
+    [McpServerTool, Description("Test GraphQL queries with comprehensive multi-layer validation including syntax checking, schema compliance verification, and actual execution testing. This tool provides complete query testing with: syntax validation for proper GraphQL grammar, schema validation against endpoint structure, field existence and type checking, variable and argument validation, execution testing with error handling, performance and complexity analysis, best practice recommendations. Essential for query development and debugging.")]
     public static async Task<string> TestQuery(
-        [Description("GraphQL query to test")] string query,
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
-        [Description("Variables as JSON (optional)")]
+        [Description("GraphQL query string to test. Can be query, mutation, or subscription")]
+        string query,
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("Variables as JSON object for parameterized queries. Example: {\"id\": 123, \"limit\": 10}")]
         string? variables = null,
-        [Description("Validate query syntax only")]
+        [Description("Only perform syntax validation without executing the query. Useful for quick syntax checks")]
         bool syntaxCheckOnly = false)
     {
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);

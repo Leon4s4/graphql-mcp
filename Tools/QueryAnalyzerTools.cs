@@ -10,15 +10,15 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class QueryAnalyzerTools
 {
-    [McpServerTool, Description("Perform comprehensive analysis of GraphQL queries including complexity, performance impact, and best practice recommendations")]
+    [McpServerTool, Description("Perform comprehensive analysis of GraphQL queries including complexity scoring, performance impact assessment, security vulnerability detection, and best practice recommendations. This tool analyzes: query complexity and execution cost estimation, field selection efficiency and optimization opportunities, security risks like deep nesting or resource exhaustion, performance bottlenecks and N+1 query patterns, best practice compliance and recommendations, variable usage and type safety, fragment usage and optimization potential. Essential for query optimization and security auditing.")]
     public static string AnalyzeQuery(
-        [Description("GraphQL query to analyze")]
+        [Description("GraphQL query string to analyze. Can be query, mutation, or subscription")]
         string query,
-        [Description("Include detailed complexity analysis")]
+        [Description("Include detailed complexity analysis with scoring and risk assessment")]
         bool includeComplexity = true,
-        [Description("Include performance recommendations")]
+        [Description("Include performance recommendations and optimization suggestions")]
         bool includePerformance = true,
-        [Description("Include security analysis")]
+        [Description("Include security vulnerability analysis and risk detection")]
         bool includeSecurity = true)
     {
         var analysis = new StringBuilder();
