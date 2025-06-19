@@ -271,6 +271,37 @@ public static class FieldUsageAnalyticsTools
         return result.ToString();
     }
 
+    [McpServerTool, Description("Perform comprehensive field usage analytics with pattern recognition, performance correlation, schema optimization recommendations, and usage trend analysis. This advanced analytics tool provides deep insights for API governance and strategic planning.")]
+    public static async Task<string> AnalyzeFieldUsageComprehensive(
+        [Description("Log of executed queries as JSON array. Example: [\"query { users { id name } }\", \"query { posts { title author { name } } }\"]")]
+        string queryLog,
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("Analysis focus: 'optimization' for performance insights, 'governance' for schema management, 'trends' for usage patterns")]
+        string analysisFocus = "optimization",
+        [Description("Include predictive analytics and trend forecasting")]
+        bool includePredictiveAnalytics = true,
+        [Description("Include performance correlation analysis")]
+        bool includePerformanceCorrelation = true,
+        [Description("Time period for trend analysis in days")]
+        int trendAnalysisPeriod = 30)
+    {
+        try
+        {
+            var smartResponse = await SmartResponseService.Instance.CreateFieldUsageAnalyticsResponseAsync(
+                queryLog, endpointName, analysisFocus, includePredictiveAnalytics, includePerformanceCorrelation, trendAnalysisPeriod);
+            
+            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+        }
+        catch (Exception ex)
+        {
+            return await SmartResponseService.Instance.CreateErrorResponseAsync(
+                "FieldUsageAnalyticsError", 
+                ex.Message,
+                new { queryLog, endpointName, analysisFocus });
+        }
+    }
+
     private static async Task<List<SchemaField>> ExtractSchemaFields(string schemaJson)
     {
         var fields = new List<SchemaField>();

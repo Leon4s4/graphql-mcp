@@ -4,6 +4,8 @@ using System.Text.RegularExpressions;
 using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace Graphql.Mcp.Tools;
 
@@ -103,7 +105,55 @@ public static class SchemaIntrospectionTools
                   }
                 }";
 
-    [McpServerTool, Description("Retrieve complete GraphQL schema information including all types, fields, directives, relationships, and metadata. This tool performs comprehensive schema introspection to discover: Query/Mutation/Subscription root types, all object types with their fields and arguments, input types and enums, scalar types and custom scalars, field descriptions and deprecation info, type relationships and dependencies, directive definitions and usage. Use this to understand the complete API surface before building queries.")]
+    [McpServerTool, Description("Retrieve comprehensive GraphQL schema information with intelligent defaults, examples, and metadata. This tool provides everything needed to understand and work with a GraphQL API in a single response including: complete schema introspection with types, fields, and directives; automatically generated query examples based on schema analysis; performance recommendations and optimization hints; security analysis and permission requirements; field usage patterns and complexity analysis; related operations and alternative approaches; deprecation warnings and migration guidance. Returns a comprehensive JSON response with all metadata needed for effective GraphQL development.")]
+    public static async Task<string> IntrospectSchemaComprehensive(
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("Include automatically generated query examples based on schema analysis")]
+        bool includeExamples = true,
+        [Description("Include performance metrics and optimization recommendations")]
+        bool includePerformance = true,
+        [Description("Maximum number of example queries to generate per type")]
+        int maxExamples = 5,
+        [Description("Include security analysis and permission requirements")]
+        bool includeSecurity = true)
+    {
+        var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
+        if (endpointInfo == null)
+        {
+            return CreateErrorResponse($"Endpoint '{endpointName}' not found", 
+                "Please register the endpoint first using RegisterEndpoint",
+                ["Use GetAllEndpoints to see available endpoints", "Check endpoint name spelling"]);
+        }
+
+        try
+        {
+            // Execute schema introspection
+            var schemaResult = await IntrospectSchemaInternal(endpointInfo);
+            if (!schemaResult.IsSuccess)
+            {
+                return CreateErrorResponse("Schema introspection failed", 
+                    schemaResult.Content ?? "Unknown error",
+                    ["Check endpoint connectivity", "Verify GraphQL introspection is enabled", "Check authentication if required"]);
+            }
+
+            // Use smart response service for comprehensive response
+            var smartResponseService = GetSmartResponseService();
+            return await smartResponseService.CreateSchemaIntrospectionResponseAsync(
+                schemaResult, includeExamples, includePerformance, maxExamples);
+        }
+        catch (Exception ex)
+        {
+            return CreateErrorResponse("Unexpected error during schema introspection", 
+                ex.Message,
+                ["Verify endpoint is accessible", "Check network connectivity", "Review endpoint configuration"]);
+        }
+    }
+
+    /// <summary>
+    /// Original schema introspection method for backward compatibility
+    /// </summary>
+    [McpServerTool, Description("Retrieve basic GraphQL schema information for backward compatibility. For comprehensive responses with examples and metadata, use IntrospectSchemaComprehensive instead.")]
     public static async Task<GraphQlResponse> IntrospectSchema(
         [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
         string endpointName)
@@ -114,14 +164,6 @@ public static class SchemaIntrospectionTools
             return GraphQlResponse.ConnectionError($"Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.");
         }
 
-        return await IntrospectSchemaInternal(endpointInfo);
-    }
-
-    /// <summary>
-    /// Internal method for schema introspection that can be used by other tools
-    /// </summary>
-    public static async Task<GraphQlResponse> IntrospectSchema(GraphQlEndpointInfo endpointInfo)
-    {
         return await IntrospectSchemaInternal(endpointInfo);
     }
 
@@ -336,6 +378,47 @@ public static class SchemaIntrospectionTools
         }
 
         return "Query passed basic validation checks. For full validation, consider executing the query against the server.";
+    }
+
+    /// <summary>
+    /// Helper method to get or create SmartResponseService instance
+    /// </summary>
+    private static SmartResponseService GetSmartResponseService()
+    {
+        // For now, create a simple instance. In a real DI scenario, this would be injected
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<SmartResponseService>.Instance;
+        return new SmartResponseService(cache, logger);
+    }
+
+    /// <summary>
+    /// Creates a comprehensive error response with suggestions
+    /// </summary>
+    private static string CreateErrorResponse(string title, string message, List<string> suggestions)
+    {
+        var errorResponse = new
+        {
+            error = new
+            {
+                title = title,
+                message = message,
+                timestamp = DateTime.UtcNow,
+                suggestions = suggestions,
+                type = "SCHEMA_INTROSPECTION_ERROR"
+            },
+            metadata = new
+            {
+                operation = "schema_introspection",
+                success = false,
+                executionTimeMs = 0
+            }
+        };
+
+        return JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
     }
 
     private static string FormatType(JsonElement typeElement)

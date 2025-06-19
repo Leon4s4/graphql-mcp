@@ -189,6 +189,37 @@ public static class SecurityAnalysisTools
         return result.ToString();
     }
 
+    [McpServerTool, Description("Perform comprehensive security analysis of GraphQL queries with detailed vulnerability assessment, risk scoring, penetration testing scenarios, compliance checking, and actionable security recommendations. This is the primary security analysis tool that provides enterprise-grade security evaluation.")]
+    public static async Task<string> AnalyzeSecurityComprehensive(
+        [Description("GraphQL query string to analyze for security vulnerabilities")]
+        string query,
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("Security analysis mode: 'standard' for basic analysis, 'strict' for high-security environments, 'penetration' for attack simulation")]
+        string analysisMode = "standard",
+        [Description("Include automated penetration testing scenarios and attack vectors")]
+        bool includePenetrationTesting = false,
+        [Description("Maximum allowed query depth to prevent recursive bombing attacks")]
+        int maxDepth = 10,
+        [Description("Maximum allowed query complexity score to prevent resource exhaustion")]
+        int maxComplexity = 1000)
+    {
+        try
+        {
+            var smartResponse = await SmartResponseService.Instance.CreateSecurityAnalysisResponseAsync(
+                query, endpointName, analysisMode, includePenetrationTesting, maxDepth, maxComplexity);
+            
+            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+        }
+        catch (Exception ex)
+        {
+            return await SmartResponseService.Instance.CreateErrorResponseAsync(
+                "SecurityAnalysisError", 
+                ex.Message,
+                new { query, endpointName, analysisMode, maxDepth, maxComplexity });
+        }
+    }
+
     private static ComplexityAnalysis AnalyzeQueryComplexity(string query, int maxComplexity)
     {
         // Simplified complexity calculation

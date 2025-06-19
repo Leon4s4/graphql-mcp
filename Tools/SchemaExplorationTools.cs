@@ -371,7 +371,7 @@ Type Information:
 - Custom scalar definitions
 
 Filtering Options:
-- Filter by type kind (OBJECT, INPUT_OBJECT, ENUM, etc.)
+- Filter by type kind (OBJECT, INPUT_OBJECT, ENUM, SCALAR, INTERFACE, UNION). Leave empty for all types
 - Exclude internal GraphQL types
 - Sort by name or category
 - Group by type relationships
@@ -938,6 +938,35 @@ Example Output:
         catch (ArgumentException ex)
         {
             return $"Invalid regex pattern: {ex.Message}";
+        }
+    }
+
+    [McpServerTool, Description("Perform comprehensive schema exploration with intelligent analysis, field relationships, usage patterns, and development recommendations. This advanced tool provides deep schema insights for API discovery, development planning, and architectural analysis.")]
+    public static async Task<string> ExploreSchemaComprehensive(
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("Exploration focus: 'overview' for general analysis, 'development' for dev recommendations, 'architecture' for structural analysis")]
+        string focusArea = "overview",
+        [Description("Include field usage analytics and patterns")]
+        bool includeUsageAnalytics = true,
+        [Description("Include architectural recommendations and best practices")]
+        bool includeArchitecturalAnalysis = true,
+        [Description("Maximum depth for type relationship analysis")]
+        int maxRelationshipDepth = 3)
+    {
+        try
+        {
+            var smartResponse = await SmartResponseService.Instance.CreateSchemaExplorationResponseAsync(
+                endpointName, focusArea, includeUsageAnalytics, includeArchitecturalAnalysis, maxRelationshipDepth);
+            
+            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+        }
+        catch (Exception ex)
+        {
+            return await SmartResponseService.Instance.CreateErrorResponseAsync(
+                "SchemaExplorationError", 
+                ex.Message,
+                new { endpointName, focusArea, maxRelationshipDepth });
         }
     }
 

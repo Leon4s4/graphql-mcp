@@ -166,6 +166,37 @@ public static class QueryValidationTools
         return result.ToString();
     }
 
+    [McpServerTool, Description("Perform comprehensive query validation with advanced testing, schema compliance checking, performance analysis, and intelligent error detection. This enterprise-grade validation tool provides complete query assessment for development and production readiness.")]
+    public static async Task<string> ValidateQueryComprehensive(
+        [Description("GraphQL query string to validate. Can be query, mutation, or subscription")]
+        string query,
+        [Description("Name of the registered GraphQL endpoint. Use GetAllEndpoints to see available endpoints")]
+        string endpointName,
+        [Description("Variables as JSON object for parameterized queries. Example: {\"id\": 123, \"limit\": 10}")]
+        string? variables = null,
+        [Description("Validation mode: 'basic' for syntax only, 'standard' for schema validation, 'comprehensive' for full testing")]
+        string validationMode = "comprehensive",
+        [Description("Include performance benchmarking and optimization analysis")]
+        bool includePerformanceAnalysis = true,
+        [Description("Test query execution against the live endpoint")]
+        bool executeQuery = false)
+    {
+        try
+        {
+            var smartResponse = await SmartResponseService.Instance.CreateQueryValidationResponseAsync(
+                query, endpointName, variables, validationMode, includePerformanceAnalysis, executeQuery);
+            
+            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+        }
+        catch (Exception ex)
+        {
+            return await SmartResponseService.Instance.CreateErrorResponseAsync(
+                "QueryValidationError", 
+                ex.Message,
+                new { query, endpointName, validationMode });
+        }
+    }
+
     private static List<string> ValidateQuerySyntax(string query)
     {
         var errors = new List<string>();
