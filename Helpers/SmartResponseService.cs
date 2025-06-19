@@ -2437,7 +2437,6 @@ namespace {namespaceName}.Client
                 EstimatedExecutionTime = TimeSpan.FromMilliseconds(50)
             });
         }
-        await Task.CompletedTask;
         return examples;
     }
     private async Task<List<MutationExample>> GenerateCommonMutationsAsync(SchemaIntrospectionData? schema, int maxExamples)
