@@ -10,7 +10,7 @@ namespace Graphql.Mcp.Helpers;
 /// </summary>
 public sealed class CombinedOperationsService
 {
-    private static readonly Lazy<CombinedOperationsService> _instance = new(() => new CombinedOperationsService());
+    private static readonly Lazy<CombinedOperationsService> LazyInstance = new(() => new CombinedOperationsService());
     
     private readonly ConcurrentDictionary<string, object> _schemaCache = new();
     private readonly ConcurrentDictionary<string, DateTime> _cacheTimestamps = new();
@@ -20,7 +20,7 @@ public sealed class CombinedOperationsService
     private readonly TimeSpan _cacheExpiry = TimeSpan.FromMinutes(30);
     private readonly object _cacheLock = new();
 
-    public static CombinedOperationsService Instance => _instance.Value;
+    public static CombinedOperationsService Instance => LazyInstance.Value;
 
     private CombinedOperationsService() { }
 

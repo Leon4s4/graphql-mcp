@@ -1161,7 +1161,7 @@ Example Output:
         // SDL Format
         result.AppendLine("## SDL Definition\n");
         result.AppendLine("```graphql");
-        result.AppendLine(FormatFieldAsSDL(field));
+        result.AppendLine(FormatFieldAsSdl(field));
         result.AppendLine("```");
 
         return result.ToString();
@@ -1205,7 +1205,7 @@ Example Output:
         // SDL Format
         result.AppendLine("## SDL Definition\n");
         result.AppendLine("```graphql");
-        result.AppendLine(FormatTypeAsSDL(type));
+        result.AppendLine(FormatTypeAsSdl(type));
         result.AppendLine("```");
 
         return result.ToString();
@@ -1358,7 +1358,7 @@ Example Output:
         };
     }
 
-    private static string FormatFieldAsSDL(JsonElement field)
+    private static string FormatFieldAsSdl(JsonElement field)
     {
         var result = new StringBuilder();
         
@@ -1404,7 +1404,7 @@ Example Output:
         return result.ToString();
     }
 
-    private static string FormatTypeAsSDL(JsonElement type)
+    private static string FormatTypeAsSdl(JsonElement type)
     {
         var result = new StringBuilder();
         
@@ -1478,7 +1478,7 @@ Example Output:
             result.AppendLine(" {");
             foreach (var field in fields.EnumerateArray())
             {
-                result.AppendLine($"  {FormatFieldAsSDL(field)}");
+                result.AppendLine($"  {FormatFieldAsSdl(field)}");
             }
             result.Append("}");
         }
@@ -1487,7 +1487,7 @@ Example Output:
             result.AppendLine(" {");
             foreach (var field in inputFields.EnumerateArray())
             {
-                result.AppendLine($"  {FormatFieldAsSDL(field)}");
+                result.AppendLine($"  {FormatFieldAsSdl(field)}");
             }
             result.Append("}");
         }

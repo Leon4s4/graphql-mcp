@@ -84,7 +84,7 @@ public class SmartResponseService
 
             var executionTime = DateTime.UtcNow - startTime;
 
-            var response = new GraphQLExecutionResponse
+            var response = new GraphQlExecutionResponse
             {
                 QueryId = queryId,
                 Data = data,
@@ -148,7 +148,7 @@ public class SmartResponseService
         {
             _logger.LogError(ex, "Error creating execution response for query {QueryId}", queryId);
 
-            var errorResponse = new GraphQLExecutionResponse
+            var errorResponse = new GraphQlExecutionResponse
             {
                 QueryId = queryId,
                 Errors =
@@ -206,7 +206,7 @@ public class SmartResponseService
 
             var processingTime = DateTime.UtcNow - startTime;
 
-            return new GraphQLComprehensiveResponse
+            return new GraphQlComprehensiveResponse
             {
                 Schema = schemaData,
                 CommonQueries = await examplesTask,
@@ -222,7 +222,7 @@ public class SmartResponseService
                     },
                     Version = new VersionInfo
                     {
-                        GraphQLVersion = "2021",
+                        GraphQlVersion = "2021",
                         Features = ["Introspection", "Subscriptions", "Directives"]
                     }
                 },
@@ -1404,9 +1404,9 @@ namespace {namespaceName}.Client
     {
         return new SecurityComplianceResult
         {
-            OWASP_Compliance = (ComplianceCheck)CheckOWASPCompliance(query),
-            GraphQL_Best_Practices = (ComplianceCheck)CheckGraphQLBestPractices(query),
-            Industry_Standards = analysisMode == "strict" ? (ComplianceCheck)CheckIndustryStandards(query) : null,
+            OwaspCompliance = (ComplianceCheck)CheckOwaspCompliance(query),
+            GraphQlBestPractices = (ComplianceCheck)CheckGraphQlBestPractices(query),
+            IndustryStandards = analysisMode == "strict" ? (ComplianceCheck)CheckIndustryStandards(query) : null,
             Recommendations = GenerateComplianceRecommendations(query, analysisMode)
         };
     }
@@ -1617,8 +1617,8 @@ namespace {namespaceName}.Client
         return complexityBomb;
     }
     private string GenerateIntrospectionQuery() => "{ __schema { types { name } } }";
-    private ComplianceCheck CheckOWASPCompliance(string query) => new ComplianceCheck { IsCompliant = true, Score = 85 };
-    private ComplianceCheck CheckGraphQLBestPractices(string query) => new ComplianceCheck { IsCompliant = true, Score = 90 };
+    private ComplianceCheck CheckOwaspCompliance(string query) => new ComplianceCheck { IsCompliant = true, Score = 85 };
+    private ComplianceCheck CheckGraphQlBestPractices(string query) => new ComplianceCheck { IsCompliant = true, Score = 90 };
     private ComplianceCheck CheckIndustryStandards(string query) => new ComplianceCheck { IsCompliant = true, Score = 80 };
     private List<string> GenerateComplianceRecommendations(string query, string analysisMode)
     {
@@ -2256,16 +2256,16 @@ namespace {namespaceName}.Client
     {
         return utilityType switch
         {
-            "format" => FormatGraphQLOperation(operation, outputFormat),
-            "optimize" => OptimizeGraphQLOperation(operation),
-            "transform" => TransformGraphQLOperation(operation),
-            "validate" => ValidateGraphQLOperation(operation),
-            "analyze" => AnalyzeGraphQLOperation(operation),
+            "format" => FormatGraphQlOperation(operation, outputFormat),
+            "optimize" => OptimizeGraphQlOperation(operation),
+            "transform" => TransformGraphQlOperation(operation),
+            "validate" => ValidateGraphQlOperation(operation),
+            "analyze" => AnalyzeGraphQlOperation(operation),
             _ => operation
         };
     }
 
-    private string FormatGraphQLOperation(string operation, string format)
+    private string FormatGraphQlOperation(string operation, string format)
     {
         // Implement formatting logic based on format type
         return format switch
@@ -2277,10 +2277,10 @@ namespace {namespaceName}.Client
         };
     }
 
-    private string OptimizeGraphQLOperation(string operation) => operation; // Simplified
-    private string TransformGraphQLOperation(string operation) => operation; // Simplified
-    private string ValidateGraphQLOperation(string operation) => "Valid"; // Simplified
-    private string AnalyzeGraphQLOperation(string operation) => "Analysis complete"; // Simplified
+    private string OptimizeGraphQlOperation(string operation) => operation; // Simplified
+    private string TransformGraphQlOperation(string operation) => operation; // Simplified
+    private string ValidateGraphQlOperation(string operation) => "Valid"; // Simplified
+    private string AnalyzeGraphQlOperation(string operation) => "Analysis complete"; // Simplified
     private string OptimizeForProduction(string operation) => operation; // Simplified
     private string AddProperIndentation(string operation) => operation; // Simplified
 
@@ -3124,9 +3124,9 @@ namespace {namespaceName}.Client
         return hints;
     }
 
-    private List<GraphQLTypeInfo> ExtractReferencedTypes(string query)
+    private List<GraphQlTypeInfo> ExtractReferencedTypes(string query)
     {
-        var types = new List<GraphQLTypeInfo>();
+        var types = new List<GraphQlTypeInfo>();
         
         if (string.IsNullOrWhiteSpace(query)) return types;
         
@@ -3139,10 +3139,10 @@ namespace {namespaceName}.Client
             var typeName = match.Groups[1].Value;
             if (!types.Any(t => t.Name == typeName))
             {
-                types.Add(new GraphQLTypeInfo
+                types.Add(new GraphQlTypeInfo
                 {
                     Name = typeName,
-                    Kind = DTO.TypeKind.OBJECT,
+                    Kind = DTO.TypeKind.Object,
                     Description = $"Type referenced in fragment condition"
                 });
             }
@@ -3154,10 +3154,10 @@ namespace {namespaceName}.Client
         {
             if (query.Contains(commonType, StringComparison.OrdinalIgnoreCase))
             {
-                types.Add(new GraphQLTypeInfo
+                types.Add(new GraphQlTypeInfo
                 {
                     Name = commonType,
-                    Kind = DTO.TypeKind.SCALAR,
+                    Kind = DTO.TypeKind.Scalar,
                     Description = $"Built-in scalar type"
                 });
             }
@@ -3323,9 +3323,9 @@ namespace {namespaceName}.Client
         
         return schemaInfo;
     }
-    private List<GraphQLTypeInfo> ParseTypes(JsonElement schema)
+    private List<GraphQlTypeInfo> ParseTypes(JsonElement schema)
     {
-        var types = new List<GraphQLTypeInfo>();
+        var types = new List<GraphQlTypeInfo>();
         
         try
         {
@@ -3333,7 +3333,7 @@ namespace {namespaceName}.Client
             {
                 foreach (var typeElement in typesArray.EnumerateArray())
                 {
-                    var typeInfo = new GraphQLTypeInfo();
+                    var typeInfo = new GraphQlTypeInfo();
                     
                     if (typeElement.TryGetProperty("name", out var name))
                         typeInfo.Name = name.GetString() ?? "";

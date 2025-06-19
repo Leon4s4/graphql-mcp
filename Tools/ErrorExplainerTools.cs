@@ -214,7 +214,7 @@ public static class ErrorExplainerTools
             // Parse and analyze the error
             var errorInfo = ParseErrorResponse(errorText);
             var primaryAnalysis = errorInfo.IsGraphQlError
-                ? AnalyzeGraphQLErrors(errorInfo.Errors, query)
+                ? AnalyzeGraphQlErrors(errorInfo.Errors, query)
                 : AnalyzeSingleError(errorText, query);
 
             // Generate comprehensive analysis
@@ -482,7 +482,7 @@ public static class ErrorExplainerTools
     }
 
     // Helper methods for comprehensive error analysis (simplified implementations)
-    private static dynamic AnalyzeGraphQLErrors(List<GraphQLError> errors, string? query) => new { type = "graphql", count = errors.Count };
+    private static dynamic AnalyzeGraphQlErrors(List<GraphQlError> errors, string? query) => new { type = "graphql", count = errors.Count };
     private static dynamic AnalyzeSingleError(string error, string? query) => new { type = "general", message = error };
     private static string NormalizeErrorMessage(string error) => error.Trim();
     private static string DetermineErrorCategory(string error) => error.Contains("Syntax") ? "syntax" : "validation";
@@ -506,7 +506,7 @@ public static class ErrorExplainerTools
 
             // Simple error parsing - in real implementation would parse JSON GraphQL errors
             var errorInfo = new ErrorInfo { IsGraphQlError = true };
-            errorInfo.Errors.Add(new GraphQLError
+            errorInfo.Errors.Add(new GraphQlError
             {
                 Type = "ValidationError",
                 Message = errorText,

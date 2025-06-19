@@ -37,7 +37,7 @@ public static class AutomaticQueryBuilderTool
             var schema = await GraphQlSchemaHelper.GetSchemaAsync(endpointInfo);
             var operationField = GraphQlSchemaHelper.FindOperationField(schema, operationName);
             var parsedVariables = JsonHelpers.ParseVariables(variables ?? string.Empty);
-            var query = GraphQLOperationHelper.BuildGraphQLQuery(operationField, schema, operationName, maxDepth, includeAllScalars, parsedVariables);
+            var query = GraphQlOperationHelper.BuildGraphQlQuery(operationField, schema, operationName, maxDepth, includeAllScalars, parsedVariables);
 
             return MarkdownFormatHelpers.FormatQueryResult(query, operationName, maxDepth, includeAllScalars, variables);
         }
@@ -72,7 +72,7 @@ public static class AutomaticQueryBuilderTool
             if (!type.HasValue)
                 return $"Type '{typeName}' not found in schema";
 
-            var selection = GraphQLOperationHelper.BuildNestedFieldSelection(type.Value, schema, maxDepth, currentDepth, true);
+            var selection = GraphQlOperationHelper.BuildNestedFieldSelection(type.Value, schema, maxDepth, currentDepth, true);
             return MarkdownFormatHelpers.FormatNestedSelectionResult(selection, typeName);
         }
         catch (Exception ex)
@@ -135,7 +135,7 @@ public static class AutomaticQueryBuilderTool
             var parsedVariables = JsonHelpers.ParseVariables(variables ?? string.Empty);
 
             // Build primary query
-            var primaryQuery = GraphQLOperationHelper.BuildGraphQLQuery(operationField, schema, operationName, maxDepth, includeAllScalars, parsedVariables);
+            var primaryQuery = GraphQlOperationHelper.BuildGraphQlQuery(operationField, schema, operationName, maxDepth, includeAllScalars, parsedVariables);
 
             // Generate comprehensive response
             var response = new
@@ -236,13 +236,13 @@ public static class AutomaticQueryBuilderTool
         {
             lightweight = new
             {
-                query = GraphQLOperationHelper.BuildGraphQLQuery(operationField, schema, operationName, 1, false, variables),
+                query = GraphQlOperationHelper.BuildGraphQlQuery(operationField, schema, operationName, 1, false, variables),
                 description = "Minimal query with only essential fields",
                 useCase = "Quick data retrieval with minimal bandwidth"
             },
             detailed = new
             {
-                query = GraphQLOperationHelper.BuildGraphQLQuery(operationField, schema, operationName, maxDepth + 1, true, variables),
+                query = GraphQlOperationHelper.BuildGraphQlQuery(operationField, schema, operationName, maxDepth + 1, true, variables),
                 description = "Comprehensive query with extended depth",
                 useCase = "Complete data analysis and reporting"
             },

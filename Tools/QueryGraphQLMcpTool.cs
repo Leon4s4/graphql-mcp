@@ -39,7 +39,7 @@ Advanced Features:
 - Context-aware field suggestions and optimizations  
 - Security scanning for sensitive data exposure
 - Performance profiling with execution metrics")]
-    public static async Task<string> QueryGraphQLComprehensive(
+    public static async Task<string> QueryGraphQlComprehensive(
         [Description("GraphQL query or mutation string. Examples: 'query { users { id name } }' or 'mutation($input: UserInput!) { createUser(input: $input) { id } }'")]
         string query,
         [Description("Name of the registered GraphQL endpoint. Use ListDynamicTools or GetAllEndpoints to see available endpoints")]
@@ -112,7 +112,7 @@ Advanced Features:
             var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, request);
 
             // Parse the result to extract data and errors
-            var (data, errors) = ParseGraphQLResult(result);
+            var (data, errors) = ParseGraphQlResult(result);
 
             // Use smart response service for comprehensive response
             var smartResponseService = GetSmartResponseService();
@@ -244,7 +244,7 @@ Advanced Features:
     /// <summary>
     /// Parse GraphQL result to extract data and errors
     /// </summary>
-    private static (object? data, List<ExecutionError>? errors) ParseGraphQLResult(GraphQlResponse result)
+    private static (object? data, List<ExecutionError>? errors) ParseGraphQlResult(GraphQlResponse result)
     {
         if (!result.IsSuccess || string.IsNullOrEmpty(result.Content))
         {
