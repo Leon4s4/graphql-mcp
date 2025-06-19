@@ -17,6 +17,7 @@ builder.Services
 builder.Services.AddHttpClient("GraphQLClient", client => { client.Timeout = TimeSpan.FromSeconds(30); });
 
 builder.Services.AddSingleton<IGraphQlHttpClient, GraphQlHttpClient>();
+builder.Services.AddSingleton<CombinedOperationsService>(_ => CombinedOperationsService.Instance);
 
 var app = builder.Build();
 
