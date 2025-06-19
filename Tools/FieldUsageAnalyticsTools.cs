@@ -288,17 +288,23 @@ public static class FieldUsageAnalyticsTools
     {
         try
         {
-            var smartResponse = await SmartResponseService.Instance.CreateFieldUsageAnalyticsResponseAsync(
-                queryLog, endpointName, analysisFocus, includePredictiveAnalytics, includePerformanceCorrelation, trendAnalysisPeriod);
-            
-            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                var smartResponse = await smartResponseService.CreateFieldUsageAnalyticsResponseAsync(
+                    queryLog, endpointName, analysisFocus, includePredictiveAnalytics, includePerformanceCorrelation, trendAnalysisPeriod);
+                
+                return await smartResponseService.FormatComprehensiveResponseAsync(smartResponse);
+            });
         }
         catch (Exception ex)
         {
-            return await SmartResponseService.Instance.CreateErrorResponseAsync(
-                "FieldUsageAnalyticsError", 
-                ex.Message,
-                new { queryLog, endpointName, analysisFocus });
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                return await smartResponseService.CreateErrorResponseAsync(
+                    "FieldUsageAnalyticsError", 
+                    ex.Message,
+                    new { queryLog, endpointName, analysisFocus });
+            });
         }
     }
 

@@ -326,18 +326,24 @@ public static class CodeGenerationTools
     {
         try
         {
-            var smartResponse = await SmartResponseService.Instance.CreateCodeGenerationResponseAsync(
-                endpointName, codeTarget, namespaceName, includeDocumentation, includeValidation, includeClientUtilities);
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                var smartResponse = await smartResponseService.CreateCodeGenerationResponseAsync(
+                    endpointName, codeTarget, namespaceName, includeDocumentation, includeValidation, includeClientUtilities);
 
-            var formatted = await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
-            return formatted?.ToString() ?? "No response generated";
+                var formatted = await smartResponseService.FormatComprehensiveResponseAsync(smartResponse);
+                return formatted?.ToString() ?? "No response generated";
+            });
         }
         catch (Exception ex)
         {
-            var errorResponse = await SmartResponseService.Instance.CreateErrorResponseAsync(
-                $"CodeGenerationError: {ex.Message} (Endpoint: {endpointName}, Target: {codeTarget})",
-                ex);
-            return errorResponse?.ToString() ?? $"Error: {ex.Message}";
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                var errorResponse = await smartResponseService.CreateErrorResponseAsync(
+                    $"CodeGenerationError: {ex.Message} (Endpoint: {endpointName}, Target: {codeTarget})",
+                    ex);
+                return errorResponse?.ToString() ?? $"Error: {ex.Message}";
+            });
         }
     }
 

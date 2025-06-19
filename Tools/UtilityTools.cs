@@ -277,17 +277,23 @@ public static class UtilityTools
     {
         try
         {
-            var smartResponse = await SmartResponseService.Instance.CreateUtilityOperationsResponseAsync(
-                operation, utilityType, includeAdvancedFormatting, includeOptimizations, outputFormat);
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                var smartResponse = await smartResponseService.CreateUtilityOperationsResponseAsync(
+                    operation, utilityType, includeAdvancedFormatting, includeOptimizations, outputFormat);
 
-            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+                return await smartResponseService.FormatComprehensiveResponseAsync(smartResponse);
+            });
         }
         catch (Exception ex)
         {
-            return await SmartResponseService.Instance.CreateErrorResponseAsync(
-                "UtilityOperationError",
-                ex.Message,
-                new { operation, utilityType, outputFormat });
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                return await smartResponseService.CreateErrorResponseAsync(
+                    "UtilityOperationError",
+                    ex.Message,
+                    new { operation, utilityType, outputFormat });
+            });
         }
     }
 

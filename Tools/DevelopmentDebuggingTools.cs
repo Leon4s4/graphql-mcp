@@ -364,17 +364,23 @@ public static class DevelopmentDebuggingTools
     {
         try
         {
-            var smartResponse = await SmartResponseService.Instance.CreateDevelopmentDebuggingResponseAsync(
-                query, endpointName, debugFocus, includeInteractiveDebugging, includePerformanceProfiling, errorContext);
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                var smartResponse = await smartResponseService.CreateDevelopmentDebuggingResponseAsync(
+                    query, endpointName, debugFocus, includeInteractiveDebugging, includePerformanceProfiling, errorContext);
 
-            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+                return await smartResponseService.FormatComprehensiveResponseAsync(smartResponse);
+            });
         }
         catch (Exception ex)
         {
-            return await SmartResponseService.Instance.CreateErrorResponseAsync(
-                "DevelopmentDebuggingError",
-                ex.Message,
-                new { query, endpointName, debugFocus });
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                return await smartResponseService.CreateErrorResponseAsync(
+                    "DevelopmentDebuggingError",
+                    ex.Message,
+                    new { query, endpointName, debugFocus });
+            });
         }
     }
 

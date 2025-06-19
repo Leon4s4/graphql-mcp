@@ -956,17 +956,23 @@ Example Output:
     {
         try
         {
-            var smartResponse = await SmartResponseService.Instance.CreateSchemaExplorationResponseAsync(
-                endpointName, focusArea, includeUsageAnalytics, includeArchitecturalAnalysis, maxRelationshipDepth);
-            
-            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                var smartResponse = await smartResponseService.CreateSchemaExplorationResponseAsync(
+                    endpointName, focusArea, includeUsageAnalytics, includeArchitecturalAnalysis, maxRelationshipDepth);
+                
+                return await smartResponseService.FormatComprehensiveResponseAsync(smartResponse);
+            });
         }
         catch (Exception ex)
         {
-            return await SmartResponseService.Instance.CreateErrorResponseAsync(
-                "SchemaExplorationError", 
-                ex.Message,
-                new { endpointName, focusArea, maxRelationshipDepth });
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                return await smartResponseService.CreateErrorResponseAsync(
+                    "SchemaExplorationError", 
+                    ex.Message,
+                    new { endpointName, focusArea, maxRelationshipDepth });
+            });
         }
     }
 

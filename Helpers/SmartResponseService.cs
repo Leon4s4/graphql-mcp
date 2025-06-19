@@ -14,7 +14,6 @@ namespace Graphql.Mcp.Helpers;
 /// </summary>
 public class SmartResponseService
 {
-    private static SmartResponseService? _instance;
     private readonly IMemoryCache _cache;
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly ILogger<SmartResponseService> _logger;
@@ -32,10 +31,6 @@ public class SmartResponseService
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
     }
-
-    public static SmartResponseService Instance => _instance ??= new SmartResponseService(
-        new MemoryCache(new MemoryCacheOptions()),
-        new ConsoleLogger());
 
     /// <summary>
     /// Creates a comprehensive GraphQL execution response with smart defaults
@@ -3822,20 +3817,6 @@ namespace {namespaceName}.Client
         public long TotalTime { get; set; }
         public long SuccessCount { get; set; }
         public long AverageTime { get; set; }
-    }
-}
-
-/// <summary>
-/// Simple console logger for static SmartResponseService instance
-/// </summary>
-public class ConsoleLogger : ILogger<SmartResponseService>
-{
-    public IDisposable BeginScope<TState>(TState state) => null!;
-    public bool IsEnabled(LogLevel logLevel) => true;
-
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-    {
-        Console.WriteLine($"[{logLevel}] {formatter(state, exception)}");
     }
 }
 

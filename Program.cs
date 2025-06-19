@@ -34,4 +34,7 @@ builder.Services.AddScoped<SmartResponseService>();
 
 var app = builder.Build();
 
+// Initialize service locator for static tool contexts
+ServiceLocator.Initialize(app.Services);
+
 await app.RunAsync();

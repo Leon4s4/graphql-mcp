@@ -183,17 +183,23 @@ public static class QueryValidationTools
     {
         try
         {
-            var smartResponse = await SmartResponseService.Instance.CreateQueryValidationResponseAsync(
-                query, endpointName, variables, validationMode, includePerformanceAnalysis, executeQuery);
-            
-            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                var smartResponse = await smartResponseService.CreateQueryValidationResponseAsync(
+                    query, endpointName, variables, validationMode, includePerformanceAnalysis, executeQuery);
+                
+                return await smartResponseService.FormatComprehensiveResponseAsync(smartResponse);
+            });
         }
         catch (Exception ex)
         {
-            return await SmartResponseService.Instance.CreateErrorResponseAsync(
-                "QueryValidationError", 
-                ex.Message,
-                new { query, endpointName, validationMode });
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                return await smartResponseService.CreateErrorResponseAsync(
+                    "QueryValidationError", 
+                    ex.Message,
+                    new { query, endpointName, validationMode });
+            });
         }
     }
 

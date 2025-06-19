@@ -206,17 +206,23 @@ public static class SecurityAnalysisTools
     {
         try
         {
-            var smartResponse = await SmartResponseService.Instance.CreateSecurityAnalysisResponseAsync(
-                query, endpointName, analysisMode, includePenetrationTesting, maxDepth, maxComplexity);
-            
-            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                var smartResponse = await smartResponseService.CreateSecurityAnalysisResponseAsync(
+                    query, endpointName, analysisMode, includePenetrationTesting, maxDepth, maxComplexity);
+                
+                return await smartResponseService.FormatComprehensiveResponseAsync(smartResponse);
+            });
         }
         catch (Exception ex)
         {
-            return await SmartResponseService.Instance.CreateErrorResponseAsync(
-                "SecurityAnalysisError", 
-                ex.Message,
-                new { query, endpointName, analysisMode, maxDepth, maxComplexity });
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                return await smartResponseService.CreateErrorResponseAsync(
+                    "SecurityAnalysisError", 
+                    ex.Message,
+                    new { query, endpointName, analysisMode, maxDepth, maxComplexity });
+            });
         }
     }
 
