@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Text.Json;
+using System.Linq;
 using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 
@@ -428,31 +430,46 @@ public sealed class CombinedOperationsService
 
     private object CalculateComplexityMetrics(object schema)
     {
-        // Simplified complexity calculation
-        return new
+        if (schema is JsonElement element && element.TryGetProperty("types", out var types) && types.ValueKind == JsonValueKind.Array)
         {
-            estimatedComplexity = "medium",
-            typeCount = 0,
-            fieldCount = 0,
-            maxDepth = 0,
-            circularReferences = false,
-            recommendations = new List<string>()
-        };
+            var typeCount = types.GetArrayLength();
+            var fieldCount = 0;
+            foreach (var type in types.EnumerateArray())
+            {
+                if (type.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
+                    fieldCount += fields.GetArrayLength();
+            }
+
+            return new
+            {
+                estimatedComplexity = fieldCount > 200 ? "high" : "medium",
+                typeCount,
+                fieldCount,
+                maxDepth = 0,
+                circularReferences = false,
+                recommendations = fieldCount > 200 ? new[] { "Consider modularizing schema" } : Array.Empty<string>()
+            };
+        }
+
+        return new { estimatedComplexity = "unknown", typeCount = 0, fieldCount = 0, maxDepth = 0, circularReferences = false, recommendations = Array.Empty<string>() };
     }
 
     private List<string> GenerateOptimizationRecommendations(object schema)
     {
-        return new List<string>
+        var recs = new List<string>
         {
             "Consider implementing query depth limiting",
             "Use field-level caching for frequently accessed data",
             "Implement query complexity analysis"
         };
+        if (schema is JsonElement element && CountFields(element) > 200)
+            recs.Add("Split large schema into smaller modules");
+        return recs;
     }
 
     private object PerformSchemaComparison(object schema1, object schema2)
     {
-        return new
+        var result = new
         {
             compatible = true,
             differences = new List<string>(),
@@ -460,6 +477,18 @@ public sealed class CombinedOperationsService
             addedTypes = new List<string>(),
             removedTypes = new List<string>()
         };
+
+        if (schema1 is JsonElement s1 && schema2 is JsonElement s2)
+        {
+            var types1 = s1.GetProperty("types").EnumerateArray().Select(t => t.GetProperty("name").GetString()).ToHashSet();
+            var types2 = s2.GetProperty("types").EnumerateArray().Select(t => t.GetProperty("name").GetString()).ToHashSet();
+
+            result.addedTypes.AddRange(types2.Except(types1).Where(t => t != null)!);
+            result.removedTypes.AddRange(types1.Except(types2).Where(t => t != null)!);
+            result.compatible = !result.addedTypes.Any() && !result.removedTypes.Any();
+        }
+
+        return result;
     }
 
     private static T GetPropertyValue<T>(object obj, string propertyName, T defaultValue)
@@ -484,6 +513,19 @@ public sealed class CombinedOperationsService
         }
         
         return defaultValue;
+    }
+
+    private int CountFields(JsonElement schema)
+    {
+        if (!schema.TryGetProperty("types", out var types) || types.ValueKind != JsonValueKind.Array)
+            return 0;
+        var count = 0;
+        foreach (var type in types.EnumerateArray())
+        {
+            if (type.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
+                count += fields.GetArrayLength();
+        }
+        return count;
     }
 
     #endregion

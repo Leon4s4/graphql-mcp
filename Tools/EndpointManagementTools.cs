@@ -2,6 +2,10 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
+using System.Net.Http;
+using System.Linq;
+using System.Threading.Tasks;
 using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
@@ -14,6 +18,10 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class EndpointManagementTools
 {
+    private static readonly HashSet<string> DefaultScalars = new()
+    {
+        "String", "Int", "Float", "Boolean", "ID"
+    };
     [McpServerTool, Description(@"Register a GraphQL endpoint and automatically generate MCP tools for all available queries and mutations.
 
 This tool performs the following operations:
@@ -599,25 +607,193 @@ Returns comprehensive JSON response with all registration data, generated tools,
     private static List<string> DetectAuthenticationMethods(Dictionary<string, string>? headers) => headers?.Keys.Where(k => k.Contains("Auth") || k.Contains("Key"))
         .ToList() ?? [];
 
-    private static List<dynamic> ParseGeneratedTools(string result) => []; // Would parse actual tool generation result
-    private static int CalculateSchemaComplexity(dynamic schema) => 10; // Simplified
-    private static int CountSchemaTypes(dynamic schema) => 50; // Simplified
-    private static int CountSchemaFields(dynamic schema) => 200; // Simplified
-    private static int CountDeprecatedFields(dynamic schema) => 5; // Simplified
-    private static List<string> IdentifyCustomScalars(dynamic schema) => ["DateTime", "JSON"];
-    private static List<string> IdentifySchemaFeatures(dynamic schema) => ["Introspection", "Subscriptions"];
-    private static List<string> GenerateSchemaRecommendations(dynamic schema) => ["Consider adding field descriptions"];
-    private static string DetermineSecurityRiskLevel(List<object> issues) => "medium";
-    private static int CalculateSecurityScore(List<object> issues) => 85;
-    private static async Task<bool> TestEndpointConnectivity(GraphQlEndpointInfo endpoint) => true; // Would test actual connectivity
+    private static List<dynamic> ParseGeneratedTools(string result)
+    {
+        var endpointName = Regex.Match(result, "endpoint '([^']+)'", RegexOptions.IgnoreCase).Groups[1].Value;
+        var allTools = EndpointRegistryService.Instance.GetAllDynamicTools();
+        return allTools.Values
+            .Where(t => string.IsNullOrEmpty(endpointName) || t.EndpointName == endpointName)
+            .Select(t => new { name = t.ToolName, type = t.OperationType.ToLower(), operation = t.OperationName })
+            .Cast<dynamic>()
+            .ToList();
+    }
+
+    private static int CalculateSchemaComplexity(dynamic schema)
+    {
+        if (schema is not JsonElement element) return 0;
+        return CountSchemaFields(element) + CountSchemaTypes(element) * 2 + CountDeprecatedFields(element);
+    }
+
+    private static int CountSchemaTypes(dynamic schema)
+    {
+        if (schema is JsonElement element && element.TryGetProperty("types", out var types) && types.ValueKind == JsonValueKind.Array)
+            return types.GetArrayLength();
+        return 0;
+    }
+
+    private static int CountSchemaFields(dynamic schema)
+    {
+        if (schema is not JsonElement element || !element.TryGetProperty("types", out var types) || types.ValueKind != JsonValueKind.Array)
+            return 0;
+        var count = 0;
+        foreach (var type in types.EnumerateArray())
+        {
+            if (type.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
+                count += fields.GetArrayLength();
+        }
+        return count;
+    }
+
+    private static int CountDeprecatedFields(dynamic schema)
+    {
+        if (schema is not JsonElement element || !element.TryGetProperty("types", out var types) || types.ValueKind != JsonValueKind.Array)
+            return 0;
+        var count = 0;
+        foreach (var type in types.EnumerateArray())
+        {
+            if (type.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var field in fields.EnumerateArray())
+                {
+                    if (field.TryGetProperty("isDeprecated", out var dep) && dep.GetBoolean())
+                        count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    private static List<string> IdentifyCustomScalars(dynamic schema)
+    {
+        var scalars = new List<string>();
+        if (schema is JsonElement element && element.TryGetProperty("types", out var types) && types.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var type in types.EnumerateArray())
+            {
+                if (type.TryGetProperty("kind", out var kind) && kind.GetString() == "SCALAR" &&
+                    type.TryGetProperty("name", out var name))
+                {
+                    var n = name.GetString();
+                    if (n != null && !DefaultScalars.Contains(n))
+                        scalars.Add(n);
+                }
+            }
+        }
+        return scalars;
+    }
+
+    private static List<string> IdentifySchemaFeatures(dynamic schema)
+    {
+        var features = new List<string> { "Introspection" };
+        if (schema is JsonElement element)
+        {
+            if (element.TryGetProperty("subscriptionType", out var sub) && sub.ValueKind != JsonValueKind.Null)
+                features.Add("Subscriptions");
+            if (IdentifyCustomScalars(element).Any())
+                features.Add("CustomScalars");
+        }
+        return features;
+    }
+
+    private static List<string> GenerateSchemaRecommendations(dynamic schema)
+    {
+        var recs = new List<string>();
+        var fieldCount = CountSchemaFields(schema);
+        if (fieldCount > 200)
+            recs.Add("Consider splitting large schema into modules");
+        if (CountDeprecatedFields(schema) > 0)
+            recs.Add("Remove deprecated fields to keep schema clean");
+        return recs;
+    }
+
+    private static string DetermineSecurityRiskLevel(List<object> issues)
+    {
+        return issues.Count switch
+        {
+            0 => "low",
+            <= 2 => "medium",
+            _ => "high"
+        };
+    }
+
+    private static int CalculateSecurityScore(List<object> issues)
+    {
+        return Math.Max(0, 100 - issues.Count * 10);
+    }
+
+    private static async Task<bool> TestEndpointConnectivity(GraphQlEndpointInfo endpoint)
+    {
+        try
+        {
+            using var client = new HttpClient();
+            using var response = await client.GetAsync(endpoint.Url);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static string GetPerformanceRating(int ms) => ms < 100 ? "excellent" : ms < 500 ? "good" : "needs-improvement";
-    private static List<string> GeneratePerformanceRecommendations(TimeSpan responseTime) => ["Consider caching for better performance"];
-    private static async Task<bool> TestIntrospectionAvailability(GraphQlEndpointInfo endpoint) => true; // Would test introspection
-    private static List<string> GenerateHealthRecommendations(List<object> checks) => ["Monitor endpoint regularly"];
-    private static object GenerateOptimalConfiguration(dynamic analysis) => new { caching = true, batching = true };
-    private static object GenerateSecurityConfiguration(dynamic analysis) => new { https = true, authentication = "required" };
-    private static object GeneratePerformanceConfiguration(dynamic analysis) => new { timeout = 30000, retries = 3 };
-    private static List<object> GenerateNextSteps(GraphQlEndpointInfo endpoint, List<dynamic> tools, dynamic analysis) => [new { step = "Test generated tools", action = "Execute sample queries" }];
-    private static List<object> GenerateMonitoringRecommendations(GraphQlEndpointInfo endpoint) => [new { metric = "response_time", threshold = "500ms" }];
-    private static object GenerateAlertingThresholds(dynamic analysis) => new { responseTime = 1000, errorRate = 5 };
+
+    private static List<string> GeneratePerformanceRecommendations(TimeSpan responseTime)
+    {
+        var recs = new List<string>();
+        if (responseTime > TimeSpan.FromSeconds(1))
+            recs.Add("Enable caching to reduce latency");
+        if (responseTime > TimeSpan.FromSeconds(2))
+            recs.Add("Consider batching requests to reduce overhead");
+        return recs;
+    }
+
+    private static async Task<bool> TestIntrospectionAvailability(GraphQlEndpointInfo endpoint)
+    {
+        var result = await GraphQlSchemaHelper.IntrospectSchemaInternal(endpoint);
+        return result.IsSuccess;
+    }
+
+    private static List<string> GenerateHealthRecommendations(List<object> checks)
+    {
+        return checks.Count == 0 ? new List<string> { "All checks passed" } : new List<string> { "Investigate reported issues" };
+    }
+
+    private static object GenerateOptimalConfiguration(dynamic analysis)
+    {
+        return new { caching = true, batching = true };
+    }
+
+    private static object GenerateSecurityConfiguration(dynamic analysis)
+    {
+        return new { https = true, authentication = "required" };
+    }
+
+    private static object GeneratePerformanceConfiguration(dynamic analysis)
+    {
+        return new { timeout = 30000, retries = 3 };
+    }
+
+    private static List<object> GenerateNextSteps(GraphQlEndpointInfo endpoint, List<dynamic> tools, dynamic analysis)
+    {
+        var toolName = tools.FirstOrDefault()?.name ?? "query tools";
+        return new List<object>
+        {
+            new { step = "Test generated tools", action = $"Try {toolName} against the endpoint" },
+            new { step = "Review analysis", action = "Check schema analysis results" }
+        };
+    }
+
+    private static List<object> GenerateMonitoringRecommendations(GraphQlEndpointInfo endpoint)
+    {
+        return new List<object>
+        {
+            new { metric = "response_time", threshold = "500ms" },
+            new { metric = "error_rate", threshold = "5%" }
+        };
+    }
+
+    private static object GenerateAlertingThresholds(dynamic analysis)
+    {
+        return new { responseTime = 1000, errorRate = 5 };
+    }
 }
