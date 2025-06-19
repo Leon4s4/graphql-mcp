@@ -111,8 +111,10 @@ Use this for:
             }
 
             // Execute batch with smart response service
-            var smartResponseService = GetSmartResponseService();
-            return await smartResponseService.CreateBatchExecutionResponseAsync(operations, maxConcurrency);
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                return await smartResponseService.CreateBatchExecutionResponseAsync(operations, maxConcurrency);
+            });
         }
         catch (Exception ex)
         {
@@ -194,16 +196,6 @@ Use this before executing large batches to:
                 "Unexpected error during analysis",
                 ["Check operations format", "Verify endpoint configuration"]);
         }
-    }
-
-    /// <summary>
-    /// Helper method to get SmartResponseService instance
-    /// </summary>
-    private static SmartResponseService GetSmartResponseService()
-    {
-        var cache = new MemoryCache(new MemoryCacheOptions());
-        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<SmartResponseService>.Instance;
-        return new SmartResponseService(cache, logger);
     }
 
     /// <summary>

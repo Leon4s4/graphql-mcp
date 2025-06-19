@@ -138,9 +138,11 @@ public static class SchemaIntrospectionTools
             }
 
             // Use smart response service for comprehensive response
-            var smartResponseService = GetSmartResponseService();
-            return await smartResponseService.CreateSchemaIntrospectionResponseAsync(
-                schemaResult, includeExamples, includePerformance, maxExamples);
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                return await smartResponseService.CreateSchemaIntrospectionResponseAsync(
+                    schemaResult, includeExamples, includePerformance, maxExamples);
+            });
         }
         catch (Exception ex)
         {
@@ -379,17 +381,6 @@ public static class SchemaIntrospectionTools
         }
 
         return "Query passed basic validation checks. For full validation, consider executing the query against the server.";
-    }
-
-    /// <summary>
-    /// Helper method to get or create SmartResponseService instance
-    /// </summary>
-    private static SmartResponseService GetSmartResponseService()
-    {
-        // For now, create a simple instance. In a real DI scenario, this would be injected
-        var cache = new MemoryCache(new MemoryCacheOptions());
-        var logger = NullLogger<SmartResponseService>.Instance;
-        return new SmartResponseService(cache, logger);
     }
 
     /// <summary>

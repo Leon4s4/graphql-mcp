@@ -115,9 +115,11 @@ Advanced Features:
             var (data, errors) = ParseGraphQlResult(result);
 
             // Use smart response service for comprehensive response
-            var smartResponseService = GetSmartResponseService();
-            return await smartResponseService.CreateExecutionResponseAsync(
-                query, data, errors, variableDict, includeSuggestions, includeMetrics, includeSchemaContext);
+            return await ServiceLocator.ExecuteWithSmartResponseServiceAsync(async smartResponseService =>
+            {
+                return await smartResponseService.CreateExecutionResponseAsync(
+                    query, data, errors, variableDict, includeSuggestions, includeMetrics, includeSchemaContext);
+            });
         }
         catch (Exception ex)
         {
@@ -197,17 +199,6 @@ Advanced Features:
     {
         return Regex.IsMatch(query, @"\bmutation\b",
             RegexOptions.IgnoreCase);
-    }
-
-    /// <summary>
-    /// Helper method to get or create SmartResponseService instance
-    /// </summary>
-    private static SmartResponseService GetSmartResponseService()
-    {
-        // For now, create a simple instance. In a real DI scenario, this would be injected
-        var cache = new MemoryCache(new MemoryCacheOptions());
-        var logger = NullLogger<SmartResponseService>.Instance;
-        return new SmartResponseService(cache, logger);
     }
 
     /// <summary>
