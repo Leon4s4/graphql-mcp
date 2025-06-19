@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Graphql.Mcp.DTO;
 
 /// <summary>
@@ -42,7 +40,7 @@ public class GraphQLTypeInfo
     public List<InputFieldInfo> InputFields { get; set; } = [];
     public List<TypeReference> Interfaces { get; set; } = [];
     public List<EnumValueInfo> EnumValues { get; set; } = [];
-    
+
     // Smart default extensions
     public List<string> ExampleUsages { get; set; } = [];
     public List<QueryExample> RelatedQueries { get; set; } = [];
@@ -62,7 +60,7 @@ public class FieldInfo
     public TypeReference Type { get; set; } = new();
     public bool IsDeprecated { get; set; }
     public string? DeprecationReason { get; set; }
-    
+
     // Comprehensive metadata
     public List<string> ExampleValues { get; set; } = [];
     public string? UsageHint { get; set; }
@@ -243,16 +241,273 @@ public class BatchSummary
     public int MaxConcurrency { get; set; }
 }
 
+/// <summary>
+/// Comprehensive response for smart response operations
+/// </summary>
+public class ComprehensiveResponse
+{
+    public bool Success { get; set; }
+    public string ResponseId { get; set; } = "";
+    public DateTime Timestamp { get; set; }
+    public string? ErrorCode { get; set; }
+    public string? ErrorMessage { get; set; }
+    public object? Data { get; set; }
+    public ResponseMetadata? Metadata { get; set; }
+    public AnalyticsInfo? Analytics { get; set; }
+}
+
+/// <summary>
+/// Response metadata for comprehensive responses
+/// </summary>
+public class ResponseMetadata
+{
+    public TimeSpan ProcessingTime { get; set; }
+    public string CacheStatus { get; set; } = "";
+    public string OperationType { get; set; } = "";
+    public List<string> RecommendedActions { get; set; } = [];
+    public List<string> RelatedEndpoints { get; set; } = [];
+    public List<string> Tags { get; set; } = [];
+}
+
+/// <summary>
+/// Analytics information for comprehensive responses
+/// </summary>
+public class AnalyticsInfo
+{
+    public string ComplexityRating { get; set; } = "";
+    public string PerformanceImpact { get; set; } = "";
+    public string ResourceUsage { get; set; } = "";
+    public List<string> RecommendedNextSteps { get; set; } = [];
+}
+
+/// <summary>
+/// Validation issue for GraphQL queries
+/// </summary>
+public class ValidationIssue
+{
+    public string Type { get; set; } = "";
+    public string Severity { get; set; } = "";
+    public string Message { get; set; } = "";
+    public int? Line { get; set; }
+    public int? Column { get; set; }
+    public string? Suggestion { get; set; }
+    public string? Location { get; set; }
+    public string? Fix { get; set; }
+}
+
+/// <summary>
+/// Error information from GraphQL response
+/// </summary>
+public class ErrorInfo
+{
+    public bool IsGraphQlError { get; set; }
+    public List<GraphQLError> Errors { get; set; } = [];
+}
+
+/// <summary>
+/// GraphQL error details
+/// </summary>
+public class GraphQLError
+{
+    public string Type { get; set; } = "";
+    public string Message { get; set; } = "";
+    public string Path { get; set; } = "";
+    public List<ErrorLocation> Locations { get; set; } = [];
+}
+
+/// <summary>
+/// Error location in GraphQL query
+/// </summary>
+public class ErrorLocation
+{
+    public int Line { get; set; }
+    public int Column { get; set; }
+}
+
+/// <summary>
+/// Error analysis result
+/// </summary>
+public class ErrorAnalysis
+{
+    public string Explanation { get; set; } = "";
+    public List<string> Solutions { get; set; } = [];
+    public string Severity { get; set; } = "";
+}
+
+/// <summary>
+/// Represents the results of a schema structure analysis
+/// </summary>
+public class SchemaAnalysis
+{
+    public int TotalTypes { get; set; }
+    public int QueryFields { get; set; }
+    public int MutationFields { get; set; }
+    public int SubscriptionFields { get; set; }
+    public int CustomScalars { get; set; }
+    public int Directives { get; set; }
+    public string Complexity { get; set; } = "Moderate";
+    public List<string> Insights { get; set; } = [];
+    public List<string> Recommendations { get; set; } = [];
+}
+
+/// <summary>
+/// Test generation results
+/// </summary>
+public class TestGenerationResult
+{
+    public List<string> TestFiles { get; set; } = [];
+    public string Framework { get; set; } = "";
+    public List<string> Dependencies { get; set; } = [];
+    public string SetupInstructions { get; set; } = "";
+    public List<string> MockData { get; set; } = [];
+}
+
+/// <summary>
+/// Code generation results
+/// </summary>
+public class CodeGenerationResult
+{
+    public string GeneratedCode { get; set; } = "";
+    public List<string> Files { get; set; } = [];
+    public string Target { get; set; } = "";
+    public List<string> Dependencies { get; set; } = [];
+    public string Documentation { get; set; } = "";
+    public List<string> BestPractices { get; set; } = [];
+}
+
+/// <summary>
+/// Security analysis results
+/// </summary>
+public class SecurityAnalysisResult
+{
+    public List<SecurityVulnerability> Vulnerabilities { get; set; } = [];
+    public int SecurityScore { get; set; }
+    public List<string> Recommendations { get; set; } = [];
+    public bool IsCompliant { get; set; }
+    public List<string> ComplianceStandards { get; set; } = [];
+}
+
+/// <summary>
+/// Security vulnerability information
+/// </summary>
+public class SecurityVulnerability
+{
+    public string Type { get; set; } = "";
+    public string Severity { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string Recommendation { get; set; } = "";
+}
+
+/// <summary>
+/// Query validation results
+/// </summary>
+public class QueryValidationResult
+{
+    public bool IsValid { get; set; }
+    public List<string> Errors { get; set; } = [];
+    public List<string> Warnings { get; set; } = [];
+    public string EstimatedExecutionTime { get; set; } = "";
+}
+
+/// <summary>
+/// Performance analysis results
+/// </summary>
+public class PerformanceAnalysisResult
+{
+    public int ComplexityScore { get; set; }
+    public string Rating { get; set; } = "";
+    public string EstimatedTime { get; set; } = "";
+    public List<string> Recommendations { get; set; } = [];
+    public string Impact { get; set; } = "";
+}
+
+/// <summary>
+/// Utility operation results
+/// </summary>
+public class UtilityOperationResult
+{
+    public string Result { get; set; } = "";
+    public List<string> Options { get; set; } = [];
+    public List<string> Recommendations { get; set; } = [];
+    public Dictionary<string, object> Metrics { get; set; } = new();
+}
+
+/// <summary>
+/// Development guide information
+/// </summary>
+public class DevelopmentGuide
+{
+    public List<string> Steps { get; set; } = [];
+    public List<string> BestPractices { get; set; } = [];
+    public List<string> Examples { get; set; } = [];
+    public Dictionary<string, string> Resources { get; set; } = new();
+}
+
+/// <summary>
+/// Query statistics information
+/// </summary>
+public class QueryStatistics
+{
+    public int ExecutionCount { get; set; }
+    public string AverageTime { get; set; } = "";
+    public string LastExecuted { get; set; } = "";
+    public List<string> CommonErrors { get; set; } = [];
+}
+
+/// <summary>
+/// Type relationships information
+/// </summary>
+public class TypeRelationshipsResult
+{
+    public List<string> DirectRelationships { get; set; } = [];
+    public List<string> IndirectRelationships { get; set; } = [];
+    public int MaxDepth { get; set; }
+    public Dictionary<string, List<string>> RelationshipMap { get; set; } = new();
+}
+
+/// <summary>
+/// Field usage analysis results
+/// </summary>
+public class FieldUsageAnalysisResult
+{
+    public List<string> MostUsedFields { get; set; } = [];
+    public List<string> UnusedFields { get; set; } = [];
+    public Dictionary<string, int> UsageStats { get; set; } = new();
+    public List<string> Recommendations { get; set; } = [];
+}
+
+/// <summary>
+/// Schema architecture analysis results
+/// </summary>
+public class SchemaArchitectureResult
+{
+    public string ArchitecturePattern { get; set; } = "";
+    public List<string> Strengths { get; set; } = [];
+    public List<string> Weaknesses { get; set; } = [];
+    public List<string> Recommendations { get; set; } = [];
+    public int ComplexityScore { get; set; }
+}
+
 // Supporting types and enums
 
 public enum TypeKind
 {
-    SCALAR, OBJECT, INTERFACE, UNION, ENUM, INPUT_OBJECT, LIST, NON_NULL
+    SCALAR,
+    OBJECT,
+    INTERFACE,
+    UNION,
+    ENUM,
+    INPUT_OBJECT,
+    LIST,
+    NON_NULL
 }
 
 public enum QueryComplexityRating
 {
-    Simple, Moderate, Complex, VeryComplex
+    Simple,
+    Moderate,
+    Complex,
+    VeryComplex
 }
 
 public class TypeReference

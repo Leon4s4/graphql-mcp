@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 using System.Text.RegularExpressions;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
@@ -19,7 +20,7 @@ public static class UtilityTools
         foreach (var line in lines)
         {
             var trimmedLine = line.Trim();
-            
+
             if (string.IsNullOrWhiteSpace(trimmedLine))
             {
                 formatted.AppendLine();
@@ -278,13 +279,13 @@ public static class UtilityTools
         {
             var smartResponse = await SmartResponseService.Instance.CreateUtilityOperationsResponseAsync(
                 operation, utilityType, includeAdvancedFormatting, includeOptimizations, outputFormat);
-            
+
             return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
         }
         catch (Exception ex)
         {
             return await SmartResponseService.Instance.CreateErrorResponseAsync(
-                "UtilityOperationError", 
+                "UtilityOperationError",
                 ex.Message,
                 new { operation, utilityType, outputFormat });
         }

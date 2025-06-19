@@ -1,12 +1,10 @@
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Graphql.Mcp.Helpers;
-using Graphql.Mcp.DTO;
 using ModelContextProtocol.Server;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 
 namespace Graphql.Mcp.Tools;
 
@@ -116,7 +114,8 @@ public static class QueryAnalyzerTools
 
     [McpServerTool, Description("Automatically construct GraphQL queries from schema types with intelligent field selection")]
     public static async Task<string> BuildQuery(
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
+        [Description("Name of the registered GraphQL endpoint")]
+        string endpointName,
         [Description("Root type to query (e.g., 'User', 'Product')")]
         string rootType,
         [Description("Fields to include (comma-separated)")]
@@ -210,7 +209,8 @@ public static class QueryAnalyzerTools
     {
         try
         {
-            var analysisId = Guid.NewGuid().ToString("N")[..8];
+            var analysisId = Guid.NewGuid()
+                .ToString("N")[..8];
             var startTime = DateTime.UtcNow;
 
             // Perform comprehensive analysis using smart response patterns
@@ -235,7 +235,8 @@ public static class QueryAnalyzerTools
                 {
                     original = query,
                     normalized = NormalizeQuery(query),
-                    hash = query.GetHashCode().ToString("X")
+                    hash = query.GetHashCode()
+                        .ToString("X")
                 },
                 operation = operationInfo,
                 fieldAnalysis = fieldAnalysis,
@@ -260,12 +261,12 @@ public static class QueryAnalyzerTools
             {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
         }
         catch (Exception ex)
         {
-            return CreateAnalysisErrorResponse("Query Analysis Error", 
+            return CreateAnalysisErrorResponse("Query Analysis Error",
                 $"Error analyzing query: {ex.Message}",
                 "An unexpected error occurred during query analysis",
                 ["Check query syntax", "Verify query format", "Try with a simpler query first"]);
@@ -538,43 +539,6 @@ public static class QueryAnalyzerTools
         };
     }
 
-    private class OperationInfo
-    {
-        public string Type { get; set; } = "";
-        public string Name { get; set; } = "";
-        public bool HasVariables { get; set; }
-        public bool HasFragments { get; set; }
-        public bool HasDirectives { get; set; }
-    }
-
-    private class FieldAnalysis
-    {
-        public int TotalFields { get; set; }
-        public int UniqueFields { get; set; }
-        public int NestedSelections { get; set; }
-        public int MaxDepth { get; set; }
-    }
-
-    private class ComplexityAnalysis
-    {
-        public int Score { get; set; }
-        public string RiskLevel { get; set; } = "";
-        public List<string> Issues { get; set; } = [];
-    }
-
-    private class PerformanceAnalysis
-    {
-        public List<string> Recommendations { get; set; } = [];
-        public List<string> Warnings { get; set; } = [];
-    }
-
-    private class SecurityAnalysis
-    {
-        public string RiskLevel { get; set; } = "";
-        public List<string> Issues { get; set; } = [];
-        public List<string> Recommendations { get; set; } = [];
-    }
-
     /// <summary>
     /// Generate smart recommendations based on comprehensive analysis
     /// </summary>
@@ -632,7 +596,7 @@ public static class QueryAnalyzerTools
             {
                 approach = "persisted-queries",
                 description = "Consider using persisted queries for better performance and security",
-                benefits = ["Reduced bandwidth", "Enhanced security", "Better caching"],
+                benefits = new List<string> { "Reduced bandwidth", "Enhanced security", "Better caching" },
                 implementation = "Register query with server and use query ID instead of full query"
             });
         }
@@ -658,7 +622,7 @@ public static class QueryAnalyzerTools
     {
         var estimatedFields = CountFields(query);
         var estimatedDepth = GetMaxDepth(query);
-        
+
         return new
         {
             strategy = complexity?.Score > 15 ? "sequential" : "parallel",
@@ -682,11 +646,12 @@ public static class QueryAnalyzerTools
                 type = "query-level"
             },
             optimizationOpportunities = new[]
-            {
-                estimatedFields > 20 ? "Consider field selection optimization" : null,
-                estimatedDepth > 5 ? "Consider query depth reduction" : null,
-                HasFragments(query) ? "Fragment optimization available" : "Consider using fragments"
-            }.Where(x => x != null).ToArray()
+                {
+                    estimatedFields > 20 ? "Consider field selection optimization" : null,
+                    estimatedDepth > 5 ? "Consider query depth reduction" : null,
+                    HasFragments(query) ? "Fragment optimization available" : "Consider using fragments"
+                }.Where(x => x != null)
+                .ToArray()
         };
     }
 
@@ -697,7 +662,7 @@ public static class QueryAnalyzerTools
     {
         var patterns = AnalyzeQueryPatterns(query);
         var metrics = CalculateQueryMetrics(query);
-        
+
         return new
         {
             queryPatterns = patterns,
@@ -825,13 +790,57 @@ public static class QueryAnalyzerTools
 
     // Helper methods for analysis (simplified implementations for brevity)
     private static string NormalizeQuery(string query) => Regex.Replace(query.Trim(), @"\s+", " ");
-    private static int CountFields(string query) => query.Split(' ').Count(w => !w.Contains('{') && !w.Contains('}'));
+
+    private static int CountFields(string query) => query.Split(' ')
+        .Count(w => !w.Contains('{') && !w.Contains('}'));
+
     private static int GetMaxDepth(string query) => query.Count(c => c == '{') - query.Count(c => c == '}') + 3;
     private static bool HasFragments(string query) => query.Contains("...");
     private static List<string> GenerateBestPracticeRecommendations(string query, dynamic operationInfo) => ["Use fragments for repeated selections", "Implement query depth limiting"];
     private static List<string> AnalyzeQueryPatterns(string query) => ["field-selection", "nested-query"];
     private static object CalculateQueryMetrics(string query) => new { fieldCount = CountFields(query), depth = GetMaxDepth(query) };
-    private static int CalculateComplexityScore(string query) => query.Split('{').Length - 1;
+
+    private static int CalculateComplexityScore(string query) => query.Split('{')
+        .Length - 1;
+
     private static string DetermineQueryRating(string query, dynamic fieldAnalysis) => fieldAnalysis.TotalFields > 20 ? "needs-optimization" : "good";
     private static List<object> GenerateImprovementSuggestions(string query, List<string> patterns, object metrics) => [new { suggestion = "Consider using fragments", impact = "medium" }];
     private static List<object> GenerateSimilarPatternExamples(List<string> patterns) => [new { pattern = "optimized-field-selection", example = "query { user(id: $id) { id name } }" }];
+
+    private class OperationInfo
+    {
+        public string Type { get; set; } = "";
+        public string Name { get; set; } = "";
+        public bool HasVariables { get; set; }
+        public bool HasFragments { get; set; }
+        public bool HasDirectives { get; set; }
+    }
+
+    private class FieldAnalysis
+    {
+        public int TotalFields { get; set; }
+        public int UniqueFields { get; set; }
+        public int NestedSelections { get; set; }
+        public int MaxDepth { get; set; }
+    }
+
+    private class ComplexityAnalysis
+    {
+        public int Score { get; set; }
+        public string RiskLevel { get; set; } = "";
+        public List<string> Issues { get; set; } = [];
+    }
+
+    private class PerformanceAnalysis
+    {
+        public List<string> Recommendations { get; set; } = [];
+        public List<string> Warnings { get; set; } = [];
+    }
+
+    private class SecurityAnalysis
+    {
+        public string RiskLevel { get; set; } = "";
+        public List<string> Issues { get; set; } = [];
+        public List<string> Recommendations { get; set; } = [];
+    }
+}

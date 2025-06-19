@@ -176,7 +176,8 @@ public static class CodeGenerationTools
 
     [McpServerTool, Description("Generate fluent API builders for constructing GraphQL queries programmatically")]
     public static async Task<string> GenerateQueryBuilder(
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
+        [Description("Name of the registered GraphQL endpoint")]
+        string endpointName,
         [Description("Root type to generate builder for (Query/Mutation)")]
         string rootType = "Query")
     {
@@ -327,15 +328,16 @@ public static class CodeGenerationTools
         {
             var smartResponse = await SmartResponseService.Instance.CreateCodeGenerationResponseAsync(
                 endpointName, codeTarget, namespaceName, includeDocumentation, includeValidation, includeClientUtilities);
-            
-            return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+
+            var formatted = await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
+            return formatted?.ToString() ?? "No response generated";
         }
         catch (Exception ex)
         {
-            return await SmartResponseService.Instance.CreateErrorResponseAsync(
-                "CodeGenerationError", 
-                ex.Message,
-                new { endpointName, codeTarget, namespaceName });
+            var errorResponse = await SmartResponseService.Instance.CreateErrorResponseAsync(
+                $"CodeGenerationError: {ex.Message} (Endpoint: {endpointName}, Target: {codeTarget})",
+                ex);
+            return errorResponse?.ToString() ?? $"Error: {ex.Message}";
         }
     }
 

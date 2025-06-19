@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.RegularExpressions;
+using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
@@ -365,13 +366,13 @@ public static class DevelopmentDebuggingTools
         {
             var smartResponse = await SmartResponseService.Instance.CreateDevelopmentDebuggingResponseAsync(
                 query, endpointName, debugFocus, includeInteractiveDebugging, includePerformanceProfiling, errorContext);
-            
+
             return await SmartResponseService.Instance.FormatComprehensiveResponseAsync(smartResponse);
         }
         catch (Exception ex)
         {
             return await SmartResponseService.Instance.CreateErrorResponseAsync(
-                "DevelopmentDebuggingError", 
+                "DevelopmentDebuggingError",
                 ex.Message,
                 new { query, endpointName, debugFocus });
         }

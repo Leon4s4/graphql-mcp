@@ -1,7 +1,8 @@
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
+using System.Text.Json.Serialization;
+using Graphql.Mcp.DTO;
 using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
@@ -206,12 +207,13 @@ public static class ErrorExplainerTools
     {
         try
         {
-            var analysisId = Guid.NewGuid().ToString("N")[..8];
+            var analysisId = Guid.NewGuid()
+                .ToString("N")[..8];
             var startTime = DateTime.UtcNow;
 
             // Parse and analyze the error
             var errorInfo = ParseErrorResponse(errorText);
-            var primaryAnalysis = errorInfo.IsGraphQlError 
+            var primaryAnalysis = errorInfo.IsGraphQlError
                 ? AnalyzeGraphQLErrors(errorInfo.Errors, query)
                 : AnalyzeSingleError(errorText, query);
 
@@ -233,13 +235,15 @@ public static class ErrorExplainerTools
                 prevention = includePreventionGuidance ? GeneratePreventionGuidance(errorText, query) : null,
                 learningResources = includeLearningResources ? GenerateLearningResources(errorText, primaryAnalysis) : null,
                 relatedIssues = includeRelatedIssues ? IdentifyRelatedIssues(errorText, query) : null,
-                queryContext = !string.IsNullOrEmpty(query) ? new
-                {
-                    original = query,
-                    normalized = NormalizeQuery(query),
-                    potentialIssues = AnalyzeQueryForCommonIssues(query),
-                    suggestions = GenerateQueryImprovements(query, errorText)
-                } : null,
+                queryContext = !string.IsNullOrEmpty(query)
+                    ? new
+                    {
+                        original = query,
+                        normalized = NormalizeQuery(query),
+                        potentialIssues = AnalyzeQueryForCommonIssues(query),
+                        suggestions = GenerateQueryImprovements(query, errorText)
+                    }
+                    : null,
                 metadata = new
                 {
                     analysisTimestamp = DateTime.UtcNow,
@@ -255,7 +259,7 @@ public static class ErrorExplainerTools
             {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
         }
         catch (Exception ex)
@@ -478,7 +482,7 @@ public static class ErrorExplainerTools
     }
 
     // Helper methods for comprehensive error analysis (simplified implementations)
-    private static dynamic AnalyzeGraphQLErrors(List<dynamic> errors, string? query) => new { type = "graphql", count = errors.Count };
+    private static dynamic AnalyzeGraphQLErrors(List<GraphQLError> errors, string? query) => new { type = "graphql", count = errors.Count };
     private static dynamic AnalyzeSingleError(string error, string? query) => new { type = "general", message = error };
     private static string NormalizeErrorMessage(string error) => error.Trim();
     private static string DetermineErrorCategory(string error) => error.Contains("Syntax") ? "syntax" : "validation";
@@ -491,3 +495,150 @@ public static class ErrorExplainerTools
     private static List<object> GenerateNextSteps(string error, string? query, dynamic analysis) => [new { step = "Fix immediate error", action = "Apply suggested solution" }];
     private static List<object> GenerateAlternativeApproaches(string error, string? query) => [new { approach = "alternative-query", description = "Try a different query structure" }];
     private static List<object> GenerateTroubleshootingSteps(string error) => [new { step = "Check error message", action = "Read error details carefully" }];
+
+    // Missing method implementations
+    private static ErrorInfo ParseErrorResponse(string errorText)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(errorText))
+                return new ErrorInfo { IsGraphQlError = false };
+
+            // Simple error parsing - in real implementation would parse JSON GraphQL errors
+            var errorInfo = new ErrorInfo { IsGraphQlError = true };
+            errorInfo.Errors.Add(new GraphQLError
+            {
+                Type = "ValidationError",
+                Message = errorText,
+                Path = "",
+                Locations = []
+            });
+            return errorInfo;
+        }
+        catch
+        {
+            return new ErrorInfo { IsGraphQlError = false };
+        }
+    }
+
+    private static ErrorAnalysis AnalyzeErrorType(string errorMessage, string? query)
+    {
+        var analysis = new ErrorAnalysis
+        {
+            Explanation = "Error analysis based on message pattern",
+            Severity = errorMessage.Contains("Error") ? "High" : "Medium"
+        };
+
+        if (errorMessage.Contains("syntax"))
+        {
+            analysis.Solutions.Add("Check query syntax and formatting");
+            analysis.Solutions.Add("Validate brackets and parentheses");
+        }
+        else if (errorMessage.Contains("field"))
+        {
+            analysis.Solutions.Add("Check field names in schema");
+            analysis.Solutions.Add("Verify field is available on the type");
+        }
+        else
+        {
+            analysis.Solutions.Add("Review error message for specific details");
+        }
+
+        return analysis;
+    }
+
+    private static List<object> AnalyzeQueryForCommonIssues(string query)
+    {
+        var issues = new List<object>();
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            issues.Add(new { type = "empty", message = "Query is empty" });
+            return issues;
+        }
+
+        // Check for common syntax issues
+        if (!query.Contains("{"))
+            issues.Add(new { type = "syntax", message = "Query missing opening brace" });
+
+        if (!query.Contains("}"))
+            issues.Add(new { type = "syntax", message = "Query missing closing brace" });
+
+        // Check for balanced braces
+        var openBraces = query.Count(c => c == '{');
+        var closeBraces = query.Count(c => c == '}');
+        if (openBraces != closeBraces)
+            issues.Add(new { type = "syntax", message = "Unbalanced braces in query" });
+
+        return issues;
+    }
+
+    private static List<ValidationIssue> ValidateSyntax(string query)
+    {
+        var issues = new List<ValidationIssue>();
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            issues.Add(new ValidationIssue
+            {
+                Type = "Syntax",
+                Severity = "Error",
+                Message = "Query cannot be empty"
+            });
+            return issues;
+        }
+
+        // Basic syntax checks
+        if (!query.Contains("{"))
+        {
+            issues.Add(new ValidationIssue
+            {
+                Type = "Syntax",
+                Severity = "Error",
+                Message = "Query must contain at least one selection set (opening brace)"
+            });
+        }
+
+        return issues;
+    }
+
+    private static List<ValidationIssue> ValidateStructure(string query)
+    {
+        var issues = new List<ValidationIssue>();
+
+        // Check for balanced braces
+        var openBraces = query.Count(c => c == '{');
+        var closeBraces = query.Count(c => c == '}');
+
+        if (openBraces != closeBraces)
+        {
+            issues.Add(new ValidationIssue
+            {
+                Type = "Structure",
+                Severity = "Error",
+                Message = $"Unbalanced braces: {openBraces} opening, {closeBraces} closing"
+            });
+        }
+
+        return issues;
+    }
+
+    private static List<ValidationIssue> ValidateBestPractices(string query)
+    {
+        var issues = new List<ValidationIssue>();
+
+        // Check for overly complex queries
+        if (query.Split('{')
+                .Length > 10)
+        {
+            issues.Add(new ValidationIssue
+            {
+                Type = "Best Practice",
+                Severity = "Warning",
+                Message = "Query appears very complex, consider breaking into smaller queries"
+            });
+        }
+
+        return issues;
+    }
+}

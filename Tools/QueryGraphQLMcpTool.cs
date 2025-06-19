@@ -1,9 +1,11 @@
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
-using ModelContextProtocol.Server;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
 
@@ -57,7 +59,7 @@ Advanced Features:
             if (!EndpointRegistryService.Instance.IsEndpointRegistered(endpointName))
             {
                 var registeredEndpoints = EndpointRegistryService.Instance.GetRegisteredEndpointNames();
-                return CreateErrorResponse("Endpoint Not Found", 
+                return CreateErrorResponse("Endpoint Not Found",
                     $"Endpoint '{endpointName}' not found",
                     $"Available endpoints: {string.Join(", ", registeredEndpoints)}",
                     ["Use RegisterEndpoint to add new endpoints", "Check endpoint name spelling", "Use GetAllEndpoints to list available endpoints"]);
@@ -67,7 +69,7 @@ Advanced Features:
             var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
             if (endpointInfo == null)
             {
-                return CreateErrorResponse("Configuration Error", 
+                return CreateErrorResponse("Configuration Error",
                     "Could not retrieve endpoint information",
                     "Endpoint configuration is invalid or corrupted",
                     ["Re-register the endpoint", "Check endpoint configuration", "Contact administrator"]);
@@ -76,7 +78,7 @@ Advanced Features:
             // Check if it's a mutation and if mutations are allowed
             if (IsMutation(query) && !endpointInfo.AllowMutations)
             {
-                return CreateErrorResponse("Mutation Not Allowed", 
+                return CreateErrorResponse("Mutation Not Allowed",
                     $"Mutations are not allowed for endpoint '{endpointName}'",
                     "This endpoint is configured to only allow query operations",
                     ["Enable mutations when registering the endpoint", "Use query operations instead", "Contact administrator to enable mutations"]);
@@ -93,7 +95,7 @@ Advanced Features:
                 }
                 catch (JsonException ex)
                 {
-                    return CreateErrorResponse("Variable Parsing Error", 
+                    return CreateErrorResponse("Variable Parsing Error",
                         $"Error parsing variables JSON: {ex.Message}",
                         "The variables parameter must be valid JSON",
                         ["Check JSON syntax for variables", "Ensure proper quotes and brackets", "Validate variable types match schema"]);
@@ -108,7 +110,7 @@ Advanced Features:
 
             // Execute the GraphQL request
             var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, request);
-            
+
             // Parse the result to extract data and errors
             var (data, errors) = ParseGraphQLResult(result);
 
@@ -119,7 +121,7 @@ Advanced Features:
         }
         catch (Exception ex)
         {
-            return CreateErrorResponse("Execution Error", 
+            return CreateErrorResponse("Execution Error",
                 $"Error executing GraphQL query: {ex.Message}",
                 "An unexpected error occurred during query execution",
                 ["Check query syntax", "Verify endpoint connectivity", "Review variables format", "Contact support if issue persists"]);
@@ -193,8 +195,8 @@ Advanced Features:
 
     private static bool IsMutation(string query)
     {
-        return System.Text.RegularExpressions.Regex.IsMatch(query, @"\bmutation\b",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return Regex.IsMatch(query, @"\bmutation\b",
+            RegexOptions.IgnoreCase);
     }
 
     /// <summary>
@@ -204,7 +206,7 @@ Advanced Features:
     {
         // For now, create a simple instance. In a real DI scenario, this would be injected
         var cache = new MemoryCache(new MemoryCacheOptions());
-        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<SmartResponseService>.Instance;
+        var logger = NullLogger<SmartResponseService>.Instance;
         return new SmartResponseService(cache, logger);
     }
 
@@ -242,15 +244,17 @@ Advanced Features:
     /// <summary>
     /// Parse GraphQL result to extract data and errors
     /// </summary>
-    private static (object? data, List<Graphql.Mcp.DTO.ExecutionError>? errors) ParseGraphQLResult(GraphQlResponse result)
+    private static (object? data, List<ExecutionError>? errors) ParseGraphQLResult(GraphQlResponse result)
     {
         if (!result.IsSuccess || string.IsNullOrEmpty(result.Content))
         {
-            return (null, [new Graphql.Mcp.DTO.ExecutionError 
-            { 
-                Message = result.Content ?? "Unknown error",
-                Suggestions = ["Check endpoint connectivity", "Verify query syntax"]
-            }]);
+            return (null, [
+                new ExecutionError
+                {
+                    Message = result.Content ?? "Unknown error",
+                    Suggestions = ["Check endpoint connectivity", "Verify query syntax"]
+                }
+            ]);
         }
 
         try
@@ -259,7 +263,7 @@ Advanced Features:
             var root = doc.RootElement;
 
             object? data = null;
-            List<Graphql.Mcp.DTO.ExecutionError>? errors = null;
+            List<ExecutionError>? errors = null;
 
             if (root.TryGetProperty("data", out var dataElement))
             {
@@ -271,16 +275,18 @@ Advanced Features:
                 errors = [];
                 foreach (var errorElement in errorsElement.EnumerateArray())
                 {
-                    var error = new Graphql.Mcp.DTO.ExecutionError();
-                    
+                    var error = new ExecutionError();
+
                     if (errorElement.TryGetProperty("message", out var messageElement))
                         error.Message = messageElement.GetString() ?? "";
-                    
+
                     if (errorElement.TryGetProperty("path", out var pathElement) && pathElement.ValueKind == JsonValueKind.Array)
                     {
-                        error.Path = pathElement.EnumerateArray().Select(p => 
-                            p.ValueKind == JsonValueKind.String ? p.GetString()! : 
-                            p.ValueKind == JsonValueKind.Number ? p.GetInt32() : p.ToString()!).ToList<object>();
+                        error.Path = pathElement.EnumerateArray()
+                            .Select<JsonElement, object>(p =>
+                                p.ValueKind == JsonValueKind.String ? p.GetString()! :
+                                p.ValueKind == JsonValueKind.Number ? p.GetInt32() : p.ToString()!)
+                            .ToList();
                     }
 
                     if (errorElement.TryGetProperty("extensions", out var extensionsElement))
@@ -296,11 +302,13 @@ Advanced Features:
         }
         catch (Exception ex)
         {
-            return (null, [new Graphql.Mcp.DTO.ExecutionError 
-            { 
-                Message = $"Failed to parse response: {ex.Message}",
-                Suggestions = ["Check response format", "Verify endpoint returns valid GraphQL"]
-            }]);
+            return (null, [
+                new ExecutionError
+                {
+                    Message = $"Failed to parse response: {ex.Message}",
+                    Suggestions = ["Check response format", "Verify endpoint returns valid GraphQL"]
+                }
+            ]);
         }
     }
 }

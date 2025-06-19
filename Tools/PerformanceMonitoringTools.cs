@@ -2,12 +2,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
+using System.Text.Json.Serialization;
 using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 
 namespace Graphql.Mcp.Tools;
 
@@ -179,20 +177,24 @@ public static class PerformanceMonitoringTools
             if (potentialN1Issues.Count > 0)
             {
                 analysis.AppendLine("## ⚠️ Potential N+1 Issues Detected");
-                foreach (var issue in potentialN1Issues)
+                foreach (dynamic issue in potentialN1Issues)
                 {
-                    analysis.AppendLine($"- **{issue.FieldPath}**: {issue.Description}");
+                    analysis.AppendLine($"- **{issue.pattern}**: {issue.risk}");
                 }
 
                 analysis.AppendLine();
 
                 analysis.AppendLine("## 🔧 DataLoader Recommendations");
-                foreach (var issue in potentialN1Issues)
+                var recommendation = GenerateDataLoaderRecommendation(potentialN1Issues);
+                var dynamicRec = (dynamic)recommendation;
+                analysis.AppendLine($"**Recommendation**: {dynamicRec.recommendation}");
+                analysis.AppendLine($"**Priority**: {dynamicRec.priority}");
+                if (dynamicRec.implementation != null)
                 {
-                    analysis.AppendLine($"### {issue.FieldPath}");
-                    analysis.AppendLine(GenerateDataLoaderRecommendation(issue));
-                    analysis.AppendLine();
+                    analysis.AppendLine($"**Implementation**: {dynamicRec.implementation}");
                 }
+
+                analysis.AppendLine();
             }
             else
             {
@@ -262,7 +264,8 @@ public static class PerformanceMonitoringTools
         [Description("Include network latency analysis and optimization")]
         bool includeNetworkAnalysis = true)
     {
-        var performanceId = Guid.NewGuid().ToString("N")[..8];
+        var performanceId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
 
         try
@@ -270,7 +273,7 @@ public static class PerformanceMonitoringTools
             var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
             if (endpointInfo == null)
             {
-                return CreatePerformanceErrorResponse("Endpoint Not Found", 
+                return CreatePerformanceErrorResponse("Endpoint Not Found",
                     $"Endpoint '{endpointName}' not found",
                     "The specified endpoint is not registered",
                     ["Register the endpoint using RegisterEndpoint", "Check endpoint name spelling", "Use GetAllEndpoints to list available endpoints"]);
@@ -295,7 +298,7 @@ public static class PerformanceMonitoringTools
 
             // Perform comprehensive performance testing
             var testResults = await ExecuteComprehensivePerformanceTestAsync(endpointInfo, query, parsedVariables, runs);
-            
+
             // Analyze performance data
             var analysis = await AnalyzePerformanceDataAsync(testResults, query, includeBottleneckAnalysis, includeHistoricalComparison, includeResourceAnalysis);
 
@@ -359,7 +362,7 @@ public static class PerformanceMonitoringTools
             {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
         }
         catch (Exception ex)
@@ -391,8 +394,10 @@ public static class PerformanceMonitoringTools
         {
             var runResult = await ExecuteSingleRun(endpointInfo, requestBody, isWarmup: false);
             measurements.Add(runResult);
-            
-            if (runResult.GetType().GetProperty("success")?.GetValue(runResult) as bool? == true)
+
+            if (runResult.GetType()
+                    .GetProperty("success")
+                    ?.GetValue(runResult) as bool? == true)
                 successfulRuns++;
             else
                 failedRuns++;
@@ -401,8 +406,14 @@ public static class PerformanceMonitoringTools
         var totalMemoryAfter = GC.GetTotalMemory(false);
         var memoryUsed = totalMemoryAfter - totalMemoryBefore;
 
-        var successfulMeasurements = measurements.Where(m => m.GetType().GetProperty("success")?.GetValue(m) as bool? == true).ToList();
-        var executionTimes = successfulMeasurements.Select(m => (double)(m.GetType().GetProperty("executionTimeMs")?.GetValue(m) ?? 0)).ToList();
+        var successfulMeasurements = measurements.Where(m => m.GetType()
+                .GetProperty("success")
+                ?.GetValue(m) as bool? == true)
+            .ToList();
+        var executionTimes = successfulMeasurements.Select(m => (double)(m.GetType()
+                .GetProperty("executionTimeMs")
+                ?.GetValue(m) ?? 0))
+            .ToList();
 
         return new
         {
@@ -415,17 +426,19 @@ public static class PerformanceMonitoringTools
                 failedRuns = failedRuns,
                 successRate = runs > 0 ? (double)successfulRuns / runs * 100 : 0
             },
-            timing = executionTimes.Count > 0 ? new
-            {
-                averageMs = executionTimes.Average(),
-                minimumMs = executionTimes.Min(),
-                maximumMs = executionTimes.Max(),
-                medianMs = CalculateMedian(executionTimes),
-                percentile95Ms = CalculatePercentile(executionTimes, 95),
-                percentile99Ms = CalculatePercentile(executionTimes, 99),
-                standardDeviation = CalculateStandardDeviation(executionTimes),
-                consistency = DetermineConsistency(executionTimes)
-            } : null,
+            timing = executionTimes.Count > 0
+                ? new
+                {
+                    averageMs = executionTimes.Average(),
+                    minimumMs = executionTimes.Min(),
+                    maximumMs = executionTimes.Max(),
+                    medianMs = CalculateMedian(executionTimes),
+                    percentile95Ms = CalculatePercentile(executionTimes, 95),
+                    percentile99Ms = CalculatePercentile(executionTimes, 99),
+                    standardDeviation = CalculateStandardDeviation(executionTimes),
+                    consistency = DetermineConsistency(executionTimes)
+                }
+                : null,
             resources = new
             {
                 memoryUsedBytes = memoryUsed,
@@ -442,7 +455,7 @@ public static class PerformanceMonitoringTools
     {
         var stopwatch = Stopwatch.StartNew();
         var memoryBefore = GC.GetTotalMemory(false);
-        
+
         try
         {
             var result = await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, requestBody);
@@ -548,9 +561,21 @@ public static class PerformanceMonitoringTools
 
         return new
         {
-            immediate = recommendations.Where(r => r.GetType().GetProperty("priority")?.GetValue(r)?.ToString() == "critical").ToList(),
-            shortTerm = recommendations.Where(r => r.GetType().GetProperty("priority")?.GetValue(r)?.ToString() == "high").ToList(),
-            longTerm = recommendations.Where(r => r.GetType().GetProperty("priority")?.GetValue(r)?.ToString() == "medium").ToList(),
+            immediate = recommendations.Where(r => r.GetType()
+                    .GetProperty("priority")
+                    ?.GetValue(r)
+                    ?.ToString() == "critical")
+                .ToList(),
+            shortTerm = recommendations.Where(r => r.GetType()
+                    .GetProperty("priority")
+                    ?.GetValue(r)
+                    ?.ToString() == "high")
+                .ToList(),
+            longTerm = recommendations.Where(r => r.GetType()
+                    .GetProperty("priority")
+                    ?.GetValue(r)
+                    ?.ToString() == "medium")
+                .ToList(),
             all = recommendations
         };
     }
@@ -586,14 +611,117 @@ public static class PerformanceMonitoringTools
         });
     }
 
-    // Helper methods (simplified implementations for brevity)
+    /// <summary>
+    /// Helper methods for DataLoader analysis
+    /// </summary>
+    private static dynamic AnalyzeNestingPatterns(string query)
+    {
+        var maxNesting = 0;
+        var currentNesting = 0;
+
+        foreach (char c in query)
+        {
+            if (c == '{')
+            {
+                currentNesting++;
+                maxNesting = Math.Max(maxNesting, currentNesting);
+            }
+            else if (c == '}')
+            {
+                currentNesting--;
+            }
+        }
+
+        return new { MaxNesting = maxNesting };
+    }
+
+    private static dynamic AnalyzeFieldPatterns(string query)
+    {
+        // Simple field counting - count words that could be field names
+        var words = query.Split(new[] { ' ', '\n', '\r', '\t', '{', '}', '(', ')', ',' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => !string.IsNullOrEmpty(w) && char.IsLetter(w[0]))
+            .ToList();
+
+        return new
+        {
+            TotalFields = words.Count,
+            UniqueFields = words.Distinct()
+                .Count()
+        };
+    }
+
+    private static List<object> AnalyzeListFields(string query)
+    {
+        // Look for potential list patterns (arrays, collections, etc.)
+        var listIndicators = new[] { "[]", "list", "items", "edges", "nodes" };
+        var listFields = new List<object>();
+
+        foreach (var indicator in listIndicators)
+        {
+            if (query.Contains(indicator, StringComparison.OrdinalIgnoreCase))
+            {
+                listFields.Add(new { field = indicator, type = "potential_list" });
+            }
+        }
+
+        return listFields;
+    }
+
+    private static List<object> DetectPotentialN1Issues(string query)
+    {
+        var issues = new List<object>();
+
+        // Look for nested object patterns that might cause N+1
+        if (query.Contains("user") && query.Contains("posts", StringComparison.OrdinalIgnoreCase))
+        {
+            issues.Add(new { pattern = "user-posts", risk = "N+1 in post loading" });
+        }
+
+        if (query.Contains("author") && query.Contains("comments", StringComparison.OrdinalIgnoreCase))
+        {
+            issues.Add(new { pattern = "author-comments", risk = "N+1 in comment loading" });
+        }
+
+        return issues;
+    }
+
+    private static object GenerateDataLoaderRecommendation(List<object> potentialIssues)
+    {
+        if (!potentialIssues.Any())
+        {
+            return new { recommendation = "No DataLoader optimizations needed", priority = "low" };
+        }
+
+        return new
+        {
+            recommendation = "Consider implementing DataLoader for batch loading",
+            priority = "medium",
+            implementation = "Create DataLoader classes for related entities"
+        };
+    }
+
+    // ...existing helper methods...
     private static string NormalizeQuery(string query) => query.Trim();
-    private static int CalculateQueryComplexity(string query) => query.Split('{').Length - 1;
-    private static int CountQueryFields(string query) => query.Split(' ').Count(w => !w.Contains('{') && !w.Contains('}'));
+
+    private static int CalculateQueryComplexity(string query) => query.Split('{')
+        .Length - 1;
+
+    private static int CountQueryFields(string query) => query.Split(' ')
+        .Count(w => !w.Contains('{') && !w.Contains('}'));
+
     private static int CalculateQueryDepth(string query) => Math.Max(1, query.Count(c => c == '{') - query.Count(c => c == '}') + 3);
-    private static double CalculateMedian(IEnumerable<double> values) => values.OrderBy(x => x).Skip(values.Count() / 2).First();
-    private static double CalculatePercentile(List<double> values, int percentile) => values.OrderBy(x => x).Skip((int)(values.Count * percentile / 100.0)).First();
-    private static double CalculateStandardDeviation(List<double> values) => Math.Sqrt(values.Select(x => Math.Pow(x - values.Average(), 2)).Average());
+
+    private static double CalculateMedian(IEnumerable<double> values) => values.OrderBy(x => x)
+        .Skip(values.Count() / 2)
+        .First();
+
+    private static double CalculatePercentile(List<double> values, int percentile) => values.OrderBy(x => x)
+        .Skip((int)(values.Count * percentile / 100.0))
+        .First();
+
+    private static double CalculateStandardDeviation(List<double> values) => Math.Sqrt(values.Select(x => Math.Pow(x - values.Average(), 2))
+        .Average());
+
     private static string DetermineConsistency(List<double> values) => CalculateStandardDeviation(values) < values.Average() * 0.1 ? "high" : "moderate";
     private static string EstimateCpuImpact(List<double> times) => times.Average() > 1000 ? "high" : "low";
     private static List<object> IdentifyBottlenecks(dynamic testResults, string query) => [new { type = "query-complexity", description = "High field count detected" }];
@@ -612,3 +740,4 @@ public static class PerformanceMonitoringTools
     private static object GenerateAlertingThresholds(dynamic testResults) => new { responseTime = 2000, errorRate = 5 };
     private static object EstablishPerformanceBaseline(dynamic testResults) => new { baseline = testResults.timing?.averageMs, established = DateTime.UtcNow };
     private static List<object> GeneratePerformanceNextSteps(dynamic testResults, dynamic analysis, dynamic recommendations) => [new { step = "Address high priority recommendations", timeframe = "immediate" }];
+}

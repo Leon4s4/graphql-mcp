@@ -3,9 +3,9 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
-using ModelContextProtocol.Server;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using ModelContextProtocol.Server;
 
 namespace Graphql.Mcp.Tools;
 
@@ -121,18 +121,18 @@ public static class SchemaIntrospectionTools
         var endpointInfo = EndpointRegistryService.Instance.GetEndpointInfo(endpointName);
         if (endpointInfo == null)
         {
-            return CreateErrorResponse($"Endpoint '{endpointName}' not found", 
+            return CreateErrorResponse($"Endpoint '{endpointName}' not found",
                 "Please register the endpoint first using RegisterEndpoint",
                 ["Use GetAllEndpoints to see available endpoints", "Check endpoint name spelling"]);
         }
 
         try
         {
-            // Execute schema introspection
-            var schemaResult = await IntrospectSchemaInternal(endpointInfo);
+            // Execute schema introspection using GraphQLSchemaHelper
+            var schemaResult = await IntrospectSchema(endpointInfo);
             if (!schemaResult.IsSuccess)
             {
-                return CreateErrorResponse("Schema introspection failed", 
+                return CreateErrorResponse("Schema introspection failed",
                     schemaResult.Content ?? "Unknown error",
                     ["Check endpoint connectivity", "Verify GraphQL introspection is enabled", "Check authentication if required"]);
             }
@@ -144,7 +144,7 @@ public static class SchemaIntrospectionTools
         }
         catch (Exception ex)
         {
-            return CreateErrorResponse("Unexpected error during schema introspection", 
+            return CreateErrorResponse("Unexpected error during schema introspection",
                 ex.Message,
                 ["Verify endpoint is accessible", "Check network connectivity", "Review endpoint configuration"]);
         }
@@ -164,10 +164,10 @@ public static class SchemaIntrospectionTools
             return GraphQlResponse.ConnectionError($"Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.");
         }
 
-        return await IntrospectSchemaInternal(endpointInfo);
+        return await IntrospectSchema(endpointInfo);
     }
 
-    private static async Task<GraphQlResponse> IntrospectSchemaInternal(GraphQlEndpointInfo endpointInfo)
+    public static async Task<GraphQlResponse> IntrospectSchema(GraphQlEndpointInfo endpointInfo)
     {
         var body = new { query = IntrospectionQuery };
         return await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, body);
@@ -300,7 +300,8 @@ public static class SchemaIntrospectionTools
 
     [McpServerTool, Description("Validate GraphQL query syntax and schema compliance without executing the query")]
     public static async Task<string> ValidateQuery(
-        [Description("Name of the registered GraphQL endpoint")] string endpointName,
+        [Description("Name of the registered GraphQL endpoint")]
+        string endpointName,
         [Description("GraphQL query to validate")]
         string query)
     {
@@ -387,7 +388,7 @@ public static class SchemaIntrospectionTools
     {
         // For now, create a simple instance. In a real DI scenario, this would be injected
         var cache = new MemoryCache(new MemoryCacheOptions());
-        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<SmartResponseService>.Instance;
+        var logger = NullLogger<SmartResponseService>.Instance;
         return new SmartResponseService(cache, logger);
     }
 

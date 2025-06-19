@@ -1,22 +1,24 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Graphql.Mcp.DTO;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Graphql.Mcp.Helpers;
 
+//TODO: LEONARDO this class has a lot of not yet implemented methods and properties. NEED TO BE COMPLETED
 /// <summary>
 /// Service that provides smart default responses with comprehensive metadata
 /// for GraphQL MCP server operations
 /// </summary>
 public class SmartResponseService
 {
+    private static SmartResponseService? _instance;
     private readonly IMemoryCache _cache;
+    private readonly JsonSerializerOptions _jsonOptions;
     private readonly ILogger<SmartResponseService> _logger;
     private readonly ConcurrentDictionary<string, PerformanceStats> _queryStats;
-    private readonly JsonSerializerOptions _jsonOptions;
 
     public SmartResponseService(IMemoryCache cache, ILogger<SmartResponseService> logger)
     {
@@ -27,9 +29,13 @@ public class SmartResponseService
         {
             WriteIndented = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
     }
+
+    public static SmartResponseService Instance => _instance ??= new SmartResponseService(
+        new MemoryCache(new MemoryCacheOptions()),
+        new ConsoleLogger());
 
     /// <summary>
     /// Creates a comprehensive GraphQL execution response with smart defaults
@@ -43,14 +49,15 @@ public class SmartResponseService
         bool includeMetrics = true,
         bool includeSchemaContext = true)
     {
-        var queryId = Guid.NewGuid().ToString("N")[..8];
+        var queryId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
 
         try
         {
             // Parallel execution of analysis tasks
             var tasks = new List<Task>();
-            
+
             QueryAnalysis? analysis = null;
             SchemaContext? schemaContext = null;
             List<string> suggestions = [];
@@ -82,7 +89,7 @@ public class SmartResponseService
                 QueryId = queryId,
                 Data = data,
                 Errors = errors ?? [],
-                
+
                 Metadata = new ExecutionMetadata
                 {
                     ExecutionTimeMs = (int)executionTime.TotalMilliseconds,
@@ -99,25 +106,29 @@ public class SmartResponseService
                     }
                 },
 
-                Suggestions = includeSuggestions ? new QuerySuggestions
-                {
-                    OptimizationHints = analysis?.OptimizationHints ?? [],
-                    RelatedQueries = await GetRelatedQueriesAsync(query),
-                    FieldSuggestions = GetFieldSuggestions(query, data),
-                    PaginationHints = GetPaginationHints(data),
-                    AlternativeApproaches = suggestions
-                } : null,
+                Suggestions = includeSuggestions
+                    ? new QuerySuggestions
+                    {
+                        OptimizationHints = analysis?.OptimizationHints ?? [],
+                        RelatedQueries = await GetRelatedQueriesAsync(query),
+                        FieldSuggestions = GetFieldSuggestions(query, data),
+                        PaginationHints = GetPaginationHints(data),
+                        AlternativeApproaches = suggestions
+                    }
+                    : null,
 
                 SchemaContext = schemaContext,
 
-                Performance = includeMetrics ? new PerformanceRecommendations
-                {
-                    ShouldCache = ShouldCacheQuery(analysis),
-                    OptimalPagination = GetOptimalPagination(analysis),
-                    IndexHints = GetIndexHints(analysis),
-                    QueryComplexityRating = GetComplexityRating(analysis),
-                    OptimizationSuggestions = GenerateOptimizationSuggestions(analysis, executionTime)
-                } : null,
+                Performance = includeMetrics
+                    ? new PerformanceRecommendations
+                    {
+                        ShouldCache = ShouldCacheQuery(analysis),
+                        OptimalPagination = GetOptimalPagination(analysis),
+                        IndexHints = GetIndexHints(analysis),
+                        QueryComplexityRating = GetComplexityRating(analysis),
+                        OptimizationSuggestions = GenerateOptimizationSuggestions(analysis, executionTime)
+                    }
+                    : null,
 
                 Security = new SecurityAnalysis
                 {
@@ -136,20 +147,24 @@ public class SmartResponseService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating execution response for query {QueryId}", queryId);
-            
+
             var errorResponse = new GraphQLExecutionResponse
             {
                 QueryId = queryId,
-                Errors = [new ExecutionError
-                {
-                    Message = $"Internal error: {ex.Message}",
-                    Extensions = new Dictionary<string, object>
+                Errors =
+                [
+                    new ExecutionError
                     {
-                        ["errorType"] = ex.GetType().Name,
-                        ["timestamp"] = DateTime.UtcNow
-                    },
-                    Suggestions = ["Check query syntax and try again", "Contact support if the issue persists"]
-                }],
+                        Message = $"Internal error: {ex.Message}",
+                        Extensions = new Dictionary<string, object>
+                        {
+                            ["errorType"] = ex.GetType()
+                                .Name,
+                            ["timestamp"] = DateTime.UtcNow
+                        },
+                        Suggestions = ["Check query syntax and try again", "Contact support if the issue persists"]
+                    }
+                ],
                 Metadata = new ExecutionMetadata
                 {
                     ExecutionTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
@@ -171,25 +186,21 @@ public class SmartResponseService
         int maxExamples = 5)
     {
         var cacheKey = $"comprehensive_schema_{includeExamples}_{includePerformance}_{maxExamples}";
-        
+
         var response = await _cache.GetOrCreateAsync(cacheKey, async factory =>
         {
             factory.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
             factory.SlidingExpiration = TimeSpan.FromMinutes(5);
-            
+
             var startTime = DateTime.UtcNow;
 
             // Parse schema data
             var schemaData = ParseSchemaIntrospection(schemaResult.Content);
-            
+
             // Generate examples and metadata in parallel
-            var examplesTask = includeExamples ? 
-                GenerateCommonQueriesAsync(schemaData, maxExamples) : 
-                Task.FromResult<List<QueryExample>>([]);
-            
-            var mutationsTask = includeExamples ? 
-                GenerateCommonMutationsAsync(schemaData, maxExamples) : 
-                Task.FromResult<List<MutationExample>>([]);
+            var examplesTask = includeExamples ? GenerateCommonQueriesAsync(schemaData, maxExamples) : Task.FromResult<List<QueryExample>>([]);
+
+            var mutationsTask = includeExamples ? GenerateCommonMutationsAsync(schemaData, maxExamples) : Task.FromResult<List<MutationExample>>([]);
 
             await Task.WhenAll(examplesTask, mutationsTask);
 
@@ -215,25 +226,27 @@ public class SmartResponseService
                         Features = ["Introspection", "Subscriptions", "Directives"]
                     }
                 },
-                Performance = includePerformance ? new PerformanceMetadata
-                {
-                    SchemaSize = schemaData?.Types.Count ?? 0,
-                    ProcessingTimeMs = (int)processingTime.TotalMilliseconds,
-                    CacheHit = false,
-                    LastUpdated = DateTime.UtcNow,
-                    Recommendations = GenerateSchemaRecommendations(schemaData)
-                } : null,
+                Performance = includePerformance
+                    ? new PerformanceMetadata
+                    {
+                        SchemaSize = schemaData?.Types.Count ?? 0,
+                        ProcessingTimeMs = (int)processingTime.TotalMilliseconds,
+                        CacheHit = false,
+                        LastUpdated = DateTime.UtcNow,
+                        Recommendations = GenerateSchemaRecommendations(schemaData)
+                    }
+                    : null,
                 CacheInfo = new CacheMetadata
                 {
                     CachedAt = DateTime.UtcNow,
                     ExpiresAt = DateTime.UtcNow.AddMinutes(30),
                     CacheKey = cacheKey
                 },
-                RecommendedActions = GenerateRecommendedActions(schemaData),
+                RecommendedActions = GenerateRecommendedActions(schemaData, new QueryStatistics { ExecutionCount = 0 }, new PerformanceAnalysisResult()),
                 Extensions = new Dictionary<string, object>
                 {
-                    ["queryStats"] = GetQueryStatistics(),
-                    ["performanceProfile"] = GetPerformanceProfile()
+                    ["queryStats"] = GetQueryStatistics(""),
+                    ["performanceProfile"] = GetPerformanceProfile(schemaData)
                 }
             };
         });
@@ -248,12 +261,13 @@ public class SmartResponseService
         List<BatchQueryRequest> queries,
         int maxConcurrency = 5)
     {
-        var batchId = Guid.NewGuid().ToString("N")[..8];
+        var batchId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
-        
+
         var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
         var results = new ConcurrentBag<BatchQueryResult>();
-        
+
         var tasks = queries.Select(async (query, index) =>
         {
             await semaphore.WaitAsync();
@@ -261,15 +275,16 @@ public class SmartResponseService
             {
                 var queryStart = DateTime.UtcNow;
                 // This would execute the actual query
-                var result = await ExecuteQueryAsync(query.Query, query.Variables);
+                var result = await ExecuteQueryAsync(query.Query, JsonSerializer.SerializeToElement(new object()), query.Variables ?? new Dictionary<string, object>());
                 var queryTime = DateTime.UtcNow - queryStart;
-                
+
                 results.Add(new BatchQueryResult
                 {
                     Index = index,
                     QueryId = query.Id ?? $"{batchId}_{index}",
                     Data = result.Data,
-                    Errors = result.Errors?.Select(e => e.Message).ToList() ?? [],
+                    Errors = result.Errors?.Select(e => e.Message)
+                        .ToList() ?? [],
                     ExecutionTimeMs = (int)queryTime.TotalMilliseconds,
                     Success = result.Errors?.Count == 0
                 });
@@ -279,12 +294,13 @@ public class SmartResponseService
                 semaphore.Release();
             }
         });
-        
+
         await Task.WhenAll(tasks);
-        
+
         var totalTime = DateTime.UtcNow - startTime;
-        var orderedResults = results.OrderBy(r => r.Index).ToList();
-        
+        var orderedResults = results.OrderBy(r => r.Index)
+            .ToList();
+
         var batchResponse = new BatchExecutionResponse
         {
             BatchId = batchId,
@@ -299,7 +315,7 @@ public class SmartResponseService
                 MaxConcurrency = maxConcurrency
             }
         };
-        
+
         return JsonSerializer.Serialize(batchResponse, _jsonOptions);
     }
 
@@ -314,7 +330,8 @@ public class SmartResponseService
         int maxDepth = 10,
         int maxComplexity = 1000)
     {
-        var responseId = Guid.NewGuid().ToString("N")[..8];
+        var responseId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
 
         try
@@ -370,20 +387,22 @@ public class SmartResponseService
                     ProcessingTime = DateTime.UtcNow - startTime,
                     CacheStatus = "Fresh",
                     OperationType = "SecurityAnalysis",
-                    RecommendedActions = recommendations.Take(3).ToList(),
+                    RecommendedActions = recommendations.Take(3)
+                        .ToList(),
                     RelatedEndpoints = [endpointName],
                     Tags = ["security", "vulnerability", "analysis", analysisMode]
                 },
                 Analytics = new AnalyticsInfo
                 {
-                    ComplexityRating = GetSecurityComplexityRating(securityAnalysis),
+                    ComplexityRating = GetSecurityComplexityRating(securityAnalysis)
+                        .ToString(),
                     PerformanceImpact = "Low",
                     ResourceUsage = "Minimal",
                     RecommendedNextSteps = GenerateSecurityNextSteps(securityAnalysis, vulnerabilities)
                 }
             };
 
-            _logger.LogInformation("Security analysis completed for query {ResponseId} in {Duration}ms", 
+            _logger.LogInformation("Security analysis completed for query {ResponseId} in {Duration}ms",
                 responseId, response.Metadata.ProcessingTime.TotalMilliseconds);
 
             return response;
@@ -412,7 +431,8 @@ public class SmartResponseService
         bool includeArchitecturalAnalysis = true,
         int maxRelationshipDepth = 3)
     {
-        var responseId = Guid.NewGuid().ToString("N")[..8];
+        var responseId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
 
         try
@@ -473,20 +493,22 @@ public class SmartResponseService
                     ProcessingTime = DateTime.UtcNow - startTime,
                     CacheStatus = "Fresh",
                     OperationType = "SchemaExploration",
-                    RecommendedActions = recommendations.Take(3).ToList(),
+                    RecommendedActions = recommendations.Take(3)
+                        .ToList(),
                     RelatedEndpoints = [endpointName],
                     Tags = ["schema", "exploration", "analysis", focusArea]
                 },
                 Analytics = new AnalyticsInfo
                 {
-                    ComplexityRating = GetSchemaComplexityRating(schemaAnalysis),
+                    ComplexityRating = GetSchemaComplexityRating(schemaAnalysis)
+                        .ToString(),
                     PerformanceImpact = "Low",
                     ResourceUsage = "Minimal",
                     RecommendedNextSteps = GenerateExplorationNextSteps(schemaAnalysis, focusArea)
                 }
             };
 
-            _logger.LogInformation("Schema exploration completed for endpoint {Endpoint} with focus {Focus} in {Duration}ms", 
+            _logger.LogInformation("Schema exploration completed for endpoint {Endpoint} with focus {Focus} in {Duration}ms",
                 endpointName, focusArea, response.Metadata.ProcessingTime.TotalMilliseconds);
 
             return response;
@@ -516,7 +538,8 @@ public class SmartResponseService
         bool includePerformanceAnalysis = true,
         bool executeQuery = false)
     {
-        var responseId = Guid.NewGuid().ToString("N")[..8];
+        var responseId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
 
         try
@@ -581,20 +604,22 @@ public class SmartResponseService
                     ProcessingTime = DateTime.UtcNow - startTime,
                     CacheStatus = "Fresh",
                     OperationType = "QueryValidation",
-                    RecommendedActions = recommendations.Take(3).ToList(),
+                    RecommendedActions = recommendations.Take(3)
+                        .ToList(),
                     RelatedEndpoints = [endpointName],
                     Tags = ["validation", "testing", "analysis", validationMode]
                 },
                 Analytics = new AnalyticsInfo
                 {
-                    ComplexityRating = GetValidationComplexityRating(syntaxValidation, schemaValidation),
+                    ComplexityRating = GetValidationComplexityRating(syntaxValidation, schemaValidation)
+                        .ToString(),
                     PerformanceImpact = performanceAnalysis?.Impact ?? "Unknown",
                     ResourceUsage = "Low",
-                    RecommendedNextSteps = GenerateValidationNextSteps(syntaxValidation, schemaValidation, executeQuery)
+                    RecommendedNextSteps = GenerateValidationNextSteps(syntaxValidation, performanceAnalysis)
                 }
             };
 
-            _logger.LogInformation("Query validation completed for query {ResponseId} in {Duration}ms", 
+            _logger.LogInformation("Query validation completed for query {ResponseId} in {Duration}ms",
                 responseId, response.Metadata.ProcessingTime.TotalMilliseconds);
 
             return response;
@@ -624,7 +649,8 @@ public class SmartResponseService
         bool includePerformanceCorrelation = true,
         int trendAnalysisPeriod = 30)
     {
-        var responseId = Guid.NewGuid().ToString("N")[..8];
+        var responseId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
 
         try
@@ -658,10 +684,10 @@ public class SmartResponseService
             }
 
             // Perform comprehensive analytics
-            var usageStats = await AnalyzeFieldUsagePatterns(queries, endpointInfo);
-            var performanceCorrelation = includePerformanceCorrelation ? await AnalyzePerformanceCorrelation(queries, usageStats) : null;
-            var trendAnalysis = await AnalyzeUsageTrends(queries, trendAnalysisPeriod);
-            var predictiveAnalytics = includePredictiveAnalytics ? await GeneratePredictiveAnalytics(usageStats, trendAnalysis) : null;
+            var usageStats = AnalyzeFieldUsagePatterns(queries, endpointInfo);
+            var performanceCorrelation = includePerformanceCorrelation ? AnalyzePerformanceCorrelation(queries, usageStats) : null;
+            var trendAnalysis = AnalyzeUsageTrends(queries, trendAnalysisPeriod);
+            var predictiveAnalytics = includePredictiveAnalytics ? GeneratePredictiveAnalytics(usageStats, trendAnalysis) : null;
             var schemaOptimization = GenerateSchemaOptimizationRecommendations(usageStats, analysisFocus);
 
             // Generate insights based on focus area
@@ -696,7 +722,8 @@ public class SmartResponseService
                     ProcessingTime = DateTime.UtcNow - startTime,
                     CacheStatus = "Fresh",
                     OperationType = "FieldUsageAnalytics",
-                    RecommendedActions = recommendations.Take(3).ToList(),
+                    RecommendedActions = recommendations.Take(3)
+                        .ToList(),
                     RelatedEndpoints = [endpointName],
                     Tags = ["analytics", "usage", "optimization", analysisFocus]
                 },
@@ -709,7 +736,7 @@ public class SmartResponseService
                 }
             };
 
-            _logger.LogInformation("Field usage analytics completed for endpoint {Endpoint} in {Duration}ms", 
+            _logger.LogInformation("Field usage analytics completed for endpoint {Endpoint} in {Duration}ms",
                 endpointName, response.Metadata.ProcessingTime.TotalMilliseconds);
 
             return response;
@@ -739,7 +766,8 @@ public class SmartResponseService
         bool includeValidation = true,
         bool includeClientUtilities = false)
     {
-        var responseId = Guid.NewGuid().ToString("N")[..8];
+        var responseId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
 
         try
@@ -804,14 +832,15 @@ public class SmartResponseService
                 },
                 Analytics = new AnalyticsInfo
                 {
-                    ComplexityRating = GetCodeComplexityRating(codeAnalysis),
+                    ComplexityRating = GetCodeComplexityRating(codeAnalysis)
+                        .ToString(),
                     PerformanceImpact = "Low",
                     ResourceUsage = "Low",
                     RecommendedNextSteps = GenerateCodeNextSteps(codeTarget, includeClientUtilities)
                 }
             };
 
-            _logger.LogInformation("Code generation completed for endpoint {Endpoint} target {Target} in {Duration}ms", 
+            _logger.LogInformation("Code generation completed for endpoint {Endpoint} target {Target} in {Duration}ms",
                 endpointName, codeTarget, response.Metadata.ProcessingTime.TotalMilliseconds);
 
             return response;
@@ -841,7 +870,8 @@ public class SmartResponseService
         bool includePerformanceTests = false,
         string testingFramework = "xunit")
     {
-        var responseId = Guid.NewGuid().ToString("N")[..8];
+        var responseId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
 
         try
@@ -909,14 +939,15 @@ public class SmartResponseService
                 },
                 Analytics = new AnalyticsInfo
                 {
-                    ComplexityRating = GetTestComplexityRating(testSuiteType),
+                    ComplexityRating = GetTestComplexityRating(testSuiteType)
+                        .ToString(),
                     PerformanceImpact = "Low",
                     ResourceUsage = "Moderate",
                     RecommendedNextSteps = GenerateTestNextSteps(testSuiteType, testingFramework)
                 }
             };
 
-            _logger.LogInformation("Test suite generation completed for endpoint {Endpoint} type {Type} in {Duration}ms", 
+            _logger.LogInformation("Test suite generation completed for endpoint {Endpoint} type {Type} in {Duration}ms",
                 endpointName, testSuiteType, response.Metadata.ProcessingTime.TotalMilliseconds);
 
             return response;
@@ -937,15 +968,59 @@ public class SmartResponseService
 
     // Test suite helper methods
     private async Task<JsonElement> GetSchemaForTesting(GraphQlEndpointInfo endpoint) => new JsonElement();
-    private async Task<object> GenerateUnitTests(JsonElement schema, string framework) => new { };
-    private async Task<object> GenerateIntegrationTests(JsonElement schema, string framework) => new { };
-    private async Task<object> GenerateMockDataSets(JsonElement schema) => new { };
-    private async Task<object> GenerateEdgeCaseTests(JsonElement schema, string framework) => new { };
-    private async Task<object> GeneratePerformanceTests(JsonElement schema, string framework) => new { };
-    private object GenerateTestUtilities(string framework) => new { };
-    private object GenerateTestConfiguration(string framework, string endpoint) => new { };
-    private object GenerateTestDocumentation(string testType, string framework) => new { };
-    private object GenerateSetupInstructions(string framework) => new { };
+
+    private async Task<TestGenerationResult> GenerateUnitTests(object schema, string framework) => new()
+    {
+        Framework = framework,
+        TestFiles = ["UserTests.cs", "PostTests.cs"],
+        Dependencies = [$"{framework}.Framework", "Moq"],
+        SetupInstructions = $"Install {framework} and configure test project"
+    };
+
+    private async Task<TestGenerationResult> GenerateIntegrationTests(object schema, string framework) => new()
+    {
+        Framework = framework,
+        TestFiles = ["ApiIntegrationTests.cs"],
+        Dependencies = ["Microsoft.AspNetCore.Mvc.Testing"],
+        SetupInstructions = "Configure test server and database"
+    };
+
+    private async Task<TestGenerationResult> GenerateMockDataSets(object schema) => new()
+    {
+        MockData = ["User mock data", "Post mock data"],
+        TestFiles = ["MockDataSets.cs"]
+    };
+
+    private async Task<TestGenerationResult> GenerateEdgeCaseTests(object schema, string framework) => new()
+    {
+        Framework = framework,
+        TestFiles = ["EdgeCaseTests.cs"],
+        Dependencies = [$"{framework}.Framework"]
+    };
+
+    private async Task<TestGenerationResult> GeneratePerformanceTests(object schema, string framework) => new()
+    {
+        Framework = framework,
+        TestFiles = ["PerformanceTests.cs"],
+        Dependencies = ["NBomber", "BenchmarkDotNet"]
+    };
+
+    private TestGenerationResult GenerateTestUtilities(string framework) => new()
+    {
+        Framework = framework,
+        TestFiles = ["TestUtilities.cs", "TestHelpers.cs"],
+        Dependencies = ["FluentAssertions"]
+    };
+
+    private TestGenerationResult GenerateTestConfiguration(string framework, string endpoint) => new()
+    {
+        Framework = framework,
+        TestFiles = ["TestConfiguration.cs"],
+        SetupInstructions = $"Configure test endpoint: {endpoint}"
+    };
+
+    private string GenerateTestDocumentation(string testType, string framework) => $"# {testType} Testing with {framework}\n\nThis document describes how to run {testType} tests using {framework}.";
+    private string GenerateSetupInstructions(string framework) => $"1. Install {framework}\n2. Configure test project\n3. Run tests";
     private int CountTotalTests(params object?[] testSuites) => 50;
     private int EstimateTestCoverage(string testType) => testType == "comprehensive" ? 95 : 75;
     private List<string> GenerateTestRecommendations(string testType) => ["Run tests regularly", "Update as schema evolves"];
@@ -1008,25 +1083,26 @@ namespace {namespaceName}.Client
 }}";
     }
 
-    private async Task<object> GenerateClientUtilities(JsonElement schema, string target)
+    private async Task<CodeGenerationResult> GenerateClientUtilities(object schema, string target)
     {
-        return new
+        return new CodeGenerationResult
         {
-            QueryBuilders = "Generated query builder utilities",
-            Fragments = "Common fragments",
-            Helpers = "Type conversion helpers"
+            Target = target,
+            GeneratedCode = "Generated query builder utilities",
+            Files = ["QueryBuilders.cs", "Fragments.cs", "Helpers.cs"],
+            Dependencies = ["System.Net.Http", "System.Text.Json"],
+            Documentation = "Client utilities for GraphQL operations"
         };
     }
 
-    private async Task<object> AnalyzeGeneratedCode(string code, string target)
+    private async Task<CodeGenerationResult> AnalyzeGeneratedCode(string code, string target)
     {
-        return new
+        return new CodeGenerationResult
         {
-            Quality = "High",
-            Maintainability = 85,
-            Complexity = "Medium",
-            BestPracticesCompliance = 90,
-            PotentialIssues = new string[] { }
+            Target = target,
+            GeneratedCode = code,
+            BestPractices = ["High quality code", "Good maintainability", "Medium complexity"],
+            Documentation = "Analysis shows 90% best practices compliance"
         };
     }
 
@@ -1060,11 +1136,15 @@ namespace {namespaceName}.Client
         };
     }
 
-    private int CountLinesOfCode(string code) => code.Split('\n').Length;
-    private int CountGeneratedTypes(string code) => code.Split("class ").Length - 1;
-    private object GetGeneratedFileList(string code, string target) => new[] { "Types.cs", "Client.cs" };
-    private object GenerateCodeDocumentation(string code, string target) => new { };
-    private object GenerateCodeBestPractices(string target) => new { };
+    private int CountLinesOfCode(string code) => code.Split('\n')
+        .Length;
+
+    private int CountGeneratedTypes(string code) => code.Split("class ")
+        .Length - 1;
+
+    private string[] GetGeneratedFileList(string code, string target) => ["Types.cs", "Client.cs"];
+    private string GenerateCodeDocumentation(string code, string target) => $"Documentation for {target} generated code";
+    private string GenerateCodeBestPractices(string target) => $"Best practices for {target} development";
     private List<string> GenerateCodeRecommendations(string target) => ["Review generated code", "Add tests"];
     private QueryComplexityRating GetCodeComplexityRating(object analysis) => QueryComplexityRating.Simple;
     private List<string> GenerateCodeNextSteps(string target, bool includeUtilities) => ["Integrate into project", "Add validation"];
@@ -1099,7 +1179,7 @@ namespace {namespaceName}.Client
     private async Task<List<string>> GenerateErrorSuggestionsAsync(List<ExecutionError> errors, string query)
     {
         var suggestions = new List<string>();
-        
+
         foreach (var error in errors)
         {
             if (error.Message.Contains("Cannot query field"))
@@ -1118,8 +1198,9 @@ namespace {namespaceName}.Client
                 suggestions.Add("Check for missing brackets, commas, or quotes");
             }
         }
-        
-        return suggestions.Distinct().ToList();
+
+        return suggestions.Distinct()
+            .ToList();
     }
 
     private async Task<List<QueryExample>> GetRelatedQueriesAsync(string query)
@@ -1178,13 +1259,14 @@ namespace {namespaceName}.Client
 
     private void UpdatePerformanceStats(string query, TimeSpan executionTime, bool success)
     {
-        var queryHash = query.GetHashCode().ToString();
+        var queryHash = query.GetHashCode()
+            .ToString();
         _queryStats.AddOrUpdate(queryHash,
-            new PerformanceStats 
-            { 
-                TotalExecutions = 1, 
-                TotalTime = (long)executionTime.TotalMilliseconds, 
-                SuccessCount = success ? 1 : 0 
+            new PerformanceStats
+            {
+                TotalExecutions = 1,
+                TotalTime = (long)executionTime.TotalMilliseconds,
+                SuccessCount = success ? 1 : 0
             },
             (key, existing) => new PerformanceStats
             {
@@ -1195,42 +1277,43 @@ namespace {namespaceName}.Client
             });
     }
 
-    /// <summary>
-    /// Supporting classes for smart response service
-    /// </summary>
-    public class QueryAnalysis
-    {
-        public int ComplexityScore { get; set; }
-        public int DepthScore { get; set; }
-        public int FieldCount { get; set; }
-        public List<string> OptimizationHints { get; set; } = [];
-    }
-
-    public class PerformanceStats
-    {
-        public long TotalExecutions { get; set; }
-        public long TotalTime { get; set; }
-        public long SuccessCount { get; set; }
-        public long AverageTime { get; set; }
-    }
-
     // Security analysis helper methods
-    private async Task<object> AnalyzeQuerySecurityAsync(string query, GraphQlEndpointInfo endpoint, int maxDepth, int maxComplexity)
+    private async Task<SecurityAnalysisResult> AnalyzeQuerySecurityAsync(string query, GraphQlEndpointInfo endpoint, int maxDepth, int maxComplexity)
     {
         var complexity = await AnalyzeQueryComplexityAsync(query);
         var depth = CalculateQueryDepth(query);
-        var introspectionRisks = DetectIntrospectionQueries(query);
-        var injectionRisks = DetectInjectionRisks(query);
-        var resourceRisks = AnalyzeResourceConsumption(query);
 
-        return new
+        var vulnerabilities = new List<SecurityVulnerability>();
+
+        if (((dynamic)complexity).Score > maxComplexity)
         {
-            Complexity = new { Score = complexity.ComplexityScore, Limit = maxComplexity, IsWithinLimits = complexity.ComplexityScore <= maxComplexity },
-            Depth = new { Actual = depth, Limit = maxDepth, IsWithinLimits = depth <= maxDepth },
-            IntrospectionRisks = introspectionRisks,
-            InjectionRisks = injectionRisks,
-            ResourceRisks = resourceRisks,
-            OverallRiskLevel = CalculateOverallRiskLevel(complexity.ComplexityScore, depth, introspectionRisks, injectionRisks, resourceRisks)
+            vulnerabilities.Add(new SecurityVulnerability
+            {
+                Type = "High Complexity",
+                Severity = "Medium",
+                Description = $"Query complexity {((dynamic)complexity).Score} exceeds limit {maxComplexity}",
+                Recommendation = "Reduce query complexity or increase limits"
+            });
+        }
+
+        if (depth > maxDepth)
+        {
+            vulnerabilities.Add(new SecurityVulnerability
+            {
+                Type = "Deep Nesting",
+                Severity = "Medium",
+                Description = $"Query depth {depth} exceeds limit {maxDepth}",
+                Recommendation = "Reduce query nesting depth"
+            });
+        }
+
+        return new SecurityAnalysisResult
+        {
+            Vulnerabilities = vulnerabilities,
+            SecurityScore = vulnerabilities.Count == 0 ? 100 : Math.Max(0, 100 - vulnerabilities.Count * 20),
+            Recommendations = ["Enable query complexity analysis", "Implement query depth limiting"],
+            IsCompliant = vulnerabilities.Count == 0,
+            ComplianceStandards = ["OWASP GraphQL Guidelines"]
         };
     }
 
@@ -1242,7 +1325,8 @@ namespace {namespaceName}.Client
         var strictMode = analysisMode == "strict" || analysisMode == "penetration";
 
         // DoS vulnerabilities
-        if (DetectDoSPatterns(query).Any())
+        if (DetectDoSPatterns(query)
+            .Any())
         {
             vulnerabilities.Add(new
             {
@@ -1364,22 +1448,23 @@ namespace {namespaceName}.Client
     // Schema exploration helper methods
     private async Task<JsonElement> GetSchemaIntrospectionAsync(GraphQlEndpointInfo endpoint)
     {
-        // Implementation would fetch schema from endpoint
+        //TOTO: LEONARDO Implementation would fetch schema from endpoint
         return new JsonElement();
     }
 
-    private async Task<object> AnalyzeSchemaStructureAsync(JsonElement schemaData, string focusArea)
+    private async Task<SchemaAnalysis> AnalyzeSchemaStructureAsync(SchemaIntrospectionData? schemaData, string focusArea)
     {
-        return new
+        return new SchemaAnalysis
         {
-            TotalTypes = 50,
+            TotalTypes = schemaData?.Types?.Count ?? 50,
             QueryFields = 15,
             MutationFields = 8,
             SubscriptionFields = 3,
             CustomScalars = 5,
-            Directives = 10,
-            ComplexityScore = 75,
-            DepthScore = 8
+            Directives = schemaData?.Directives?.Count ?? 10,
+            Complexity = "Moderate",
+            Insights = ["Schema is well-structured", $"Focus area: {focusArea}"],
+            Recommendations = ["Consider adding field descriptions", "Implement proper error handling"]
         };
     }
 
@@ -1439,7 +1524,8 @@ namespace {namespaceName}.Client
     }
 
     private QueryComplexityRating GetSchemaComplexityRating(object schemaAnalysis) => QueryComplexityRating.Moderate;
-    private List<string> GenerateExplorationNextSteps(object schemaAnalysis, string focus) => 
+
+    private List<string> GenerateExplorationNextSteps(object schemaAnalysis, string focus) =>
         ["Explore specific types", "Try example queries", "Review documentation"];
 
     /// <summary>
@@ -1453,7 +1539,8 @@ namespace {namespaceName}.Client
         bool includePerformanceProfiling = true,
         string? errorContext = null)
     {
-        var responseId = Guid.NewGuid().ToString("N")[..8];
+        var responseId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
 
         try
@@ -1514,20 +1601,22 @@ namespace {namespaceName}.Client
                     ProcessingTime = DateTime.UtcNow - startTime,
                     CacheStatus = "Fresh",
                     OperationType = "DevelopmentDebugging",
-                    RecommendedActions = recommendations.Take(3).ToList(),
+                    RecommendedActions = recommendations.Take(3)
+                        .ToList(),
                     RelatedEndpoints = [endpointName],
                     Tags = ["debugging", "development", debugFocus, "analysis"]
                 },
                 Analytics = new AnalyticsInfo
                 {
-                    ComplexityRating = GetDebuggingComplexityRating(queryAnalysis, errorAnalysis),
+                    ComplexityRating = GetDebuggingComplexityRating(queryAnalysis, errorAnalysis)
+                        .ToString(),
                     PerformanceImpact = "Low",
                     ResourceUsage = "Low",
                     RecommendedNextSteps = GenerateDebuggingNextSteps(debugFocus, errorAnalysis != null)
                 }
             };
 
-            _logger.LogInformation("Development debugging completed for query {ResponseId} focus {Focus} in {Duration}ms", 
+            _logger.LogInformation("Development debugging completed for query {ResponseId} focus {Focus} in {Duration}ms",
                 responseId, debugFocus, response.Metadata.ProcessingTime.TotalMilliseconds);
 
             return response;
@@ -1569,7 +1658,8 @@ namespace {namespaceName}.Client
         bool includeOptimizations = true,
         string outputFormat = "readable")
     {
-        var responseId = Guid.NewGuid().ToString("N")[..8];
+        var responseId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
 
         try
@@ -1618,14 +1708,15 @@ namespace {namespaceName}.Client
                 },
                 Analytics = new AnalyticsInfo
                 {
-                    ComplexityRating = GetUtilityComplexityRating(operation, utilityType),
+                    ComplexityRating = GetUtilityComplexityRating(operation, utilityType)
+                        .ToString(),
                     PerformanceImpact = "Minimal",
                     ResourceUsage = "Low",
                     RecommendedNextSteps = GenerateUtilityNextSteps(utilityType, optimizations != null)
                 }
             };
 
-            _logger.LogInformation("Utility operation {Type} completed for operation {ResponseId} in {Duration}ms", 
+            _logger.LogInformation("Utility operation {Type} completed for operation {ResponseId} in {Duration}ms",
                 utilityType, responseId, response.Metadata.ProcessingTime.TotalMilliseconds);
 
             return response;
@@ -1663,7 +1754,8 @@ namespace {namespaceName}.Client
         // Implement formatting logic based on format type
         return format switch
         {
-            "compact" => operation.Replace("\n", " ").Replace("  ", " "),
+            "compact" => operation.Replace("\n", " ")
+                .Replace("  ", " "),
             "production" => OptimizeForProduction(operation),
             _ => AddProperIndentation(operation)
         };
@@ -1747,11 +1839,344 @@ namespace {namespaceName}.Client
         };
     }
 
-    private List<string> GenerateUtilityRecommendations(string utilityType) => 
+    private List<string> GenerateUtilityRecommendations(string utilityType) =>
         ["Apply formatting consistently", "Use optimization suggestions", "Validate before deployment"];
-    private QueryComplexityRating GetUtilityComplexityRating(string operation, string utilityType) => QueryComplexityRating.Simple;
-    private List<string> GenerateUtilityNextSteps(string utilityType, bool hasOptimizations) => 
-        ["Apply recommendations", "Test formatted operation", "Document changes"];
 
-    // ...existing singleton and helper methods...
+    private QueryComplexityRating GetUtilityComplexityRating(string operation, string utilityType) => QueryComplexityRating.Simple;
+
+    private List<string> GenerateUtilityNextSteps(string utilityType, bool hasOptimizations) =>
+        ["Apply suggested optimizations", "Test with production data", "Monitor performance impact"];
+
+    // Missing method implementations
+    private List<string> GetFieldSuggestions(string query, object data) => ["Add commonly used fields", "Consider nested selections"];
+    private PaginationHints GetPaginationHints(object data) => new() { ShouldPaginate = false, RecommendedPageSize = 10 };
+    private bool ShouldCacheQuery(QueryAnalysis analysis) => true;
+    private PaginationRecommendation GetOptimalPagination(QueryAnalysis analysis) => new() { Method = "cursor", RecommendedPageSize = 20 };
+    private List<string> GetIndexHints(QueryAnalysis analysis) => [];
+    private QueryComplexityRating GetComplexityRating(QueryAnalysis analysis) => QueryComplexityRating.Simple;
+    private List<string> GenerateOptimizationSuggestions(QueryAnalysis analysis, TimeSpan executionTime) => ["Consider using fragments", "Reduce nesting depth"];
+    private List<string> GenerateSecurityWarnings(string query) => [];
+    private List<string> ExtractRequiredPermissions(string query) => [];
+    private bool DetectSensitiveData(object data) => false;
+    private List<string> GenerateSecurityRecommendations(string query, object data) => [];
+
+    private async Task<List<QueryExample>> GenerateCommonQueriesAsync(SchemaIntrospectionData? schema, int maxExamples) => [];
+    private async Task<List<MutationExample>> GenerateCommonMutationsAsync(SchemaIntrospectionData? schema, int maxExamples) => [];
+    private List<string> GenerateSchemaRecommendations(object schema, object? additional = null, string? focusArea = null) => ["Follow GraphQL best practices"];
+    private List<string> GenerateRecommendedActions(JsonElement schema, object queryStats, object performanceProfile) => [];
+    private QueryStatistics GetQueryStatistics(string query) => new() { ExecutionCount = 0, AverageTime = "0ms", LastExecuted = "Never" };
+    private PerformanceAnalysisResult GetPerformanceProfile(object schema) => new() { Rating = "Good", Recommendations = [], EstimatedTime = "100ms" };
+
+    private async Task<object> ExecuteQueryAsync(string query, JsonElement schema, Dictionary<string, object> variables) => new { data = new object() };
+
+    private async Task<object> AnalyzeQueryComplexityAsync(string query) => new { Score = 1, Rating = "Low" };
+    private int CalculateQueryDepth(string query) => Math.Max(1, query.Count(c => c == '{') - query.Count(c => c == '}') + 1);
+
+    private object ValidateQuerySyntax(string query) => new { IsValid = true, Errors = new object[0] };
+    private async Task<object> ValidateAgainstSchemaAsync(string query, JsonElement schema) => new { IsValid = true };
+    private async Task<object> AnalyzeQueryPerformanceAsync(string query) => new { EstimatedTime = "100ms" };
+    private async Task<object> TestQueryExecutionAsync(string query, JsonElement schema, Dictionary<string, object> variables) => new { Success = true };
+    private Dictionary<string, object> ParseVariables(string variables) => JsonHelpers.ParseVariables(variables);
+    private List<string> GenerateValidationRecommendations(object syntaxValidation, object schemaValidation, object performanceAnalysis) => [];
+    private List<string> GenerateQueryOptimizationSuggestions(string query, object performanceAnalysis) => [];
+    private string DetermineOverallValidationStatus(object syntaxValidation, object schemaValidation, object performanceAnalysis) => "Valid";
+    private QueryComplexityRating GetValidationComplexityRating(object syntaxValidation, object schemaValidation) => QueryComplexityRating.Simple;
+    private List<string> GenerateValidationNextSteps(object syntaxValidation, object performanceAnalysis) => [];
+    private List<object> GenerateTestScenarios(string query, object validationAnalysis, object performanceAnalysis) => [];
+
+    private List<object> ParseQueryLog(string log) => [];
+
+    //TODO: LEONARDO Implement the actual logic for these methods
+    private object AnalyzeFieldUsagePatterns(List<object> queries) => new { CommonFields = new string[0] };
+    private object AnalyzePerformanceCorrelation(List<object> queries, object fieldUsage) => new { Correlations = new object[0] };
+    private object AnalyzeUsageTrends(List<object> queries) => new { Trends = new object[0] };
+    private object GeneratePredictiveAnalytics(object usageTrends, object performanceData) => new { Predictions = new object[0] };
+    private List<string> GenerateSchemaOptimizationRecommendations(object fieldUsage, object performanceData) => [];
+    private List<object> GenerateUsageInsights(object fieldUsage, object trends) => [];
+    private List<string> GenerateUsageRecommendations(object insights, object trends) => [];
+    private QueryComplexityRating GetUsageAnalyticsComplexityRating(object analytics) => QueryComplexityRating.Simple;
+    private List<string> GenerateUsageAnalyticsNextSteps(object analytics, object insights) => [];
+
+    private int CalculateComplexity(string query) => query.Count(c => c == '{');
+    private int CalculateDepth(string query) => CalculateQueryDepth(query);
+
+    private int CountFields(string query) => query.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        .Length;
+
+    private List<string> GenerateOptimizationHints(string query) => ["Consider reducing complexity"];
+
+    private List<GraphQLTypeInfo> ExtractReferencedTypes(string query) => [];
+    private List<string> ExtractAvailableFields(string query) => [];
+    private List<string> ExtractRequiredArguments(string query) => [];
+    private List<string> ExtractEnumValues(string query) => [];
+    private List<string> GenerateRelatedOperations(string query) => [];
+
+    private SchemaInfo ParseSchemaInfo(JsonElement schema) => new();
+    private List<GraphQLTypeInfo> ParseTypes(JsonElement schema) => [];
+    private List<DirectiveInfo> ParseDirectives(JsonElement schema) => [];
+    private List<string> GenerateAvailableOperations(object schema) => [];
+
+    private bool DetectIntrospectionQueries(string query) => query.Contains("__schema") || query.Contains("__type");
+    private List<string> DetectInjectionRisks(string query) => [];
+    private object AnalyzeResourceConsumption(string query) => new { EstimatedCost = "Low" };
+
+    /// <summary>
+    /// Formats a comprehensive response with proper JSON serialization, metadata, and formatting
+    /// </summary>
+    public async Task<string> FormatComprehensiveResponseAsync(object response)
+    {
+        try
+        {
+            if (response == null)
+            {
+                return await CreateErrorResponseAsync("Response is null");
+            }
+
+            // If response is already a string, return it
+            if (response is string stringResponse)
+            {
+                return stringResponse;
+            }
+
+            // If response is a ComprehensiveResponse, format it with enhanced metadata
+            if (response is ComprehensiveResponse comprehensiveResponse)
+            {
+                var formattedResponse = new
+                {
+                    success = comprehensiveResponse.Success,
+                    responseId = comprehensiveResponse.ResponseId,
+                    timestamp = comprehensiveResponse.Timestamp,
+                    data = comprehensiveResponse.Data,
+                    metadata = comprehensiveResponse.Metadata,
+                    analytics = comprehensiveResponse.Analytics,
+                    error = comprehensiveResponse.ErrorCode != null
+                        ? new
+                        {
+                            code = comprehensiveResponse.ErrorCode,
+                            message = comprehensiveResponse.ErrorMessage
+                        }
+                        : null,
+                    formatted = true,
+                    formatVersion = "1.0"
+                };
+
+                return JsonSerializer.Serialize(formattedResponse, _jsonOptions);
+            }
+
+            // For other object types, serialize with metadata
+            var enrichedResponse = new
+            {
+                success = true,
+                timestamp = DateTime.UtcNow,
+                data = response,
+                metadata = new
+                {
+                    formatted = true,
+                    formatVersion = "1.0",
+                    responseType = response.GetType()
+                        .Name
+                }
+            };
+
+            return JsonSerializer.Serialize(enrichedResponse, _jsonOptions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error formatting comprehensive response");
+            return await CreateErrorResponseAsync("Failed to format response", ex);
+        }
+    }
+
+    /// <summary>
+    /// Creates a standardized error response with comprehensive error details and context
+    /// </summary>
+    public async Task<string> CreateErrorResponseAsync(string error, Exception? exception = null)
+    {
+        try
+        {
+            var errorResponse = new ComprehensiveResponse
+            {
+                Success = false,
+                ResponseId = Guid.NewGuid()
+                    .ToString("N")[..8],
+                Timestamp = DateTime.UtcNow,
+                ErrorCode = DetermineErrorCode(error, exception),
+                ErrorMessage = error,
+                Data = null,
+                Metadata = new ResponseMetadata
+                {
+                    ProcessingTime = TimeSpan.Zero,
+                    CacheStatus = "No Cache",
+                    OperationType = "Error",
+                    RecommendedActions = ["Check error details", "Verify input parameters"],
+                    RelatedEndpoints = [],
+                    Tags = ["error"]
+                },
+                Analytics = new AnalyticsInfo
+                {
+                    ComplexityRating = "Low",
+                    PerformanceImpact = "None",
+                    ResourceUsage = "Minimal",
+                    RecommendedNextSteps = ["Review error message", "Check documentation"]
+                }
+            };
+
+            // Add exception details if available
+            if (exception != null)
+            {
+                errorResponse.Data = new
+                {
+                    exceptionType = exception.GetType()
+                        .Name,
+                    exceptionMessage = exception.Message,
+                    stackTrace = exception.StackTrace?.Split('\n')
+                        .Take(5)
+                        .ToArray(), // Limit stack trace
+                    innerException = exception.InnerException?.Message
+                };
+            }
+
+            return JsonSerializer.Serialize(errorResponse, _jsonOptions);
+        }
+        catch (Exception ex)
+        {
+            // Fallback error response if even error creation fails
+            _logger.LogError(ex, "Failed to create error response");
+            var fallbackError = new
+            {
+                success = false,
+                timestamp = DateTime.UtcNow,
+                error = "Critical error: Failed to create error response",
+                originalError = error,
+                exceptionMessage = ex.Message
+            };
+
+            return JsonSerializer.Serialize(fallbackError, _jsonOptions);
+        }
+    }
+
+    /// <summary>
+    /// Creates a standardized error response with error code, message, and additional context data
+    /// </summary>
+    public async Task<string> CreateErrorResponseAsync(string errorCode, string errorMessage, object? contextData = null)
+    {
+        try
+        {
+            var errorResponse = new ComprehensiveResponse
+            {
+                Success = false,
+                ResponseId = Guid.NewGuid()
+                    .ToString("N")[..8],
+                Timestamp = DateTime.UtcNow,
+                ErrorCode = errorCode,
+                ErrorMessage = errorMessage,
+                Data = contextData,
+                Metadata = new ResponseMetadata
+                {
+                    ProcessingTime = TimeSpan.Zero,
+                    CacheStatus = "No Cache",
+                    OperationType = "Error",
+                    RecommendedActions = ["Review error details", "Check input parameters"],
+                    RelatedEndpoints = [],
+                    Tags = ["error", errorCode.ToLowerInvariant()]
+                },
+                Analytics = new AnalyticsInfo
+                {
+                    ComplexityRating = "Low",
+                    PerformanceImpact = "None",
+                    ResourceUsage = "Minimal",
+                    RecommendedNextSteps = ["Review error message", "Check documentation"]
+                }
+            };
+
+            return JsonSerializer.Serialize(errorResponse, _jsonOptions);
+        }
+        catch (Exception ex)
+        {
+            // Fallback to simple error response
+            _logger.LogError(ex, "Failed to create error response with context");
+            return await CreateErrorResponseAsync($"{errorCode}: {errorMessage}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Determines appropriate error code based on error message and exception type
+    /// </summary>
+    private string DetermineErrorCode(string error, Exception? exception)
+    {
+        if (exception != null)
+        {
+            return exception switch
+            {
+                ArgumentException => "InvalidArgument",
+                InvalidOperationException => "InvalidOperation",
+                NotSupportedException => "NotSupported",
+                TimeoutException => "Timeout",
+                HttpRequestException => "NetworkError",
+                JsonException => "SerializationError",
+                UnauthorizedAccessException => "Unauthorized",
+                _ => "InternalError"
+            };
+        }
+
+        return error.ToLowerInvariant() switch
+        {
+            var e when e.Contains("endpoint") && e.Contains("not found") => "EndpointNotFound",
+            var e when e.Contains("authentication") || e.Contains("unauthorized") => "Unauthorized",
+            var e when e.Contains("validation") => "ValidationError",
+            var e when e.Contains("timeout") => "Timeout",
+            var e when e.Contains("network") || e.Contains("connection") => "NetworkError",
+            var e when e.Contains("parse") || e.Contains("json") => "ParseError",
+            var e when e.Contains("schema") => "SchemaError",
+            var e when e.Contains("query") => "QueryError",
+            _ => "GeneralError"
+        };
+    }
+
+    /// <summary>
+    /// Supporting classes for smart response service
+    /// </summary>
+    public class QueryAnalysis
+    {
+        public bool IsValid { get; set; }
+        public List<string> Errors { get; set; } = new();
+        public Dictionary<string, object> Metadata { get; set; } = new();
+        public int DepthScore { get; set; }
+        public int FieldCount { get; set; }
+        public List<string> OptimizationHints { get; set; } = [];
+        public int ComplexityScore { get; set; }
+        public List<string> SecurityWarnings { get; set; } = [];
+    }
+
+    public class PerformanceStats
+    {
+        public long TotalExecutions { get; set; }
+        public long TotalTime { get; set; }
+        public long SuccessCount { get; set; }
+        public long AverageTime { get; set; }
+    }
+}
+
+/// <summary>
+/// Simple console logger for static SmartResponseService instance
+/// </summary>
+public class ConsoleLogger : ILogger<SmartResponseService>
+{
+    public IDisposable BeginScope<TState>(TState state) => null!;
+    public bool IsEnabled(LogLevel logLevel) => true;
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+        Console.WriteLine($"[{logLevel}] {formatter(state, exception)}");
+    }
+}
+
+/// <summary>
+/// Query analysis result for SmartResponseService
+/// </summary>
+public class QueryAnalysis
+{
+    public List<string> OptimizationHints { get; set; } = [];
+    public int ComplexityScore { get; set; }
+    public List<string> SecurityWarnings { get; set; } = [];
 }

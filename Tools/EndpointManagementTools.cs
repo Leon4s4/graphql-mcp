@@ -1,10 +1,10 @@
 using System.ComponentModel;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 
 namespace Graphql.Mcp.Tools;
 
@@ -118,7 +118,7 @@ Use Cases:
             return "No GraphQL endpoints are currently registered. Use RegisterEndpoint to add an endpoint.";
         }
 
-        var result = new System.Text.StringBuilder();
+        var result = new StringBuilder();
         result.AppendLine("# Registered GraphQL Endpoints\n");
 
         foreach (var endpoint in endpoints)
@@ -247,7 +247,8 @@ Returns comprehensive JSON response with all registration data, generated tools,
         [Description("Include endpoint health monitoring and status checks")]
         bool includeHealthChecks = true)
     {
-        var registrationId = Guid.NewGuid().ToString("N")[..8];
+        var registrationId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
 
         try
@@ -276,7 +277,7 @@ Returns comprehensive JSON response with all registration data, generated tools,
 
             // Perform comprehensive endpoint analysis
             var analysis = await PerformEndpointAnalysisAsync(endpointInfo, includeSchemaAnalysis, includeSecurityAnalysis, includePerformanceAnalysis, includeHealthChecks);
-            
+
             // Register endpoint
             EndpointRegistryService.Instance.RegisterEndpoint(endpointName, endpointInfo);
 
@@ -327,19 +328,21 @@ Returns comprehensive JSON response with all registration data, generated tools,
                     features = new[] { "comprehensive-analysis", "smart-recommendations", "health-monitoring", "security-assessment" }
                 },
                 nextSteps = GenerateNextSteps(endpointInfo, generatedTools, analysis),
-                monitoring = includeHealthChecks ? new
-                {
-                    healthStatus = analysis.Health,
-                    recommendedChecks = GenerateMonitoringRecommendations(endpointInfo),
-                    alertingThresholds = GenerateAlertingThresholds(analysis)
-                } : null
+                monitoring = includeHealthChecks
+                    ? new
+                    {
+                        healthStatus = ((dynamic)analysis).health,
+                        recommendedChecks = GenerateMonitoringRecommendations(endpointInfo),
+                        alertingThresholds = GenerateAlertingThresholds(analysis)
+                    }
+                    : null
             };
 
             return JsonSerializer.Serialize(response, new JsonSerializerOptions
             {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
         }
         catch (Exception ex)
@@ -488,7 +491,12 @@ Returns comprehensive JSON response with all registration data, generated tools,
 
             return new
             {
-                overall = healthChecks.All(h => h.GetType().GetProperty("status")?.GetValue(h)?.ToString() == "healthy") ? "healthy" : "degraded",
+                overall = healthChecks.All(h => h.GetType()
+                    .GetProperty("status")
+                    ?.GetValue(h)
+                    ?.ToString() == "healthy")
+                    ? "healthy"
+                    : "degraded",
                 checks = healthChecks,
                 responseTime = (int)totalTime.TotalMilliseconds,
                 lastChecked = DateTime.UtcNow,
@@ -588,7 +596,9 @@ Returns comprehensive JSON response with all registration data, generated tools,
     }
 
     // Helper methods (simplified implementations for brevity)
-    private static List<string> DetectAuthenticationMethods(Dictionary<string, string>? headers) => headers?.Keys.Where(k => k.Contains("Auth") || k.Contains("Key")).ToList() ?? [];
+    private static List<string> DetectAuthenticationMethods(Dictionary<string, string>? headers) => headers?.Keys.Where(k => k.Contains("Auth") || k.Contains("Key"))
+        .ToList() ?? [];
+
     private static List<dynamic> ParseGeneratedTools(string result) => []; // Would parse actual tool generation result
     private static int CalculateSchemaComplexity(dynamic schema) => 10; // Simplified
     private static int CountSchemaTypes(dynamic schema) => 50; // Simplified

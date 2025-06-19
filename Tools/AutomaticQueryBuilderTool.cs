@@ -1,10 +1,8 @@
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Graphql.Mcp.Helpers;
-using Graphql.Mcp.DTO;
 using ModelContextProtocol.Server;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 
 namespace Graphql.Mcp.Tools;
 
@@ -40,7 +38,7 @@ public static class AutomaticQueryBuilderTool
             var operationField = GraphQlSchemaHelper.FindOperationField(schema, operationName);
             var parsedVariables = JsonHelpers.ParseVariables(variables ?? string.Empty);
             var query = GraphQLOperationHelper.BuildGraphQLQuery(operationField, schema, operationName, maxDepth, includeAllScalars, parsedVariables);
-            
+
             return MarkdownFormatHelpers.FormatQueryResult(query, operationName, maxDepth, includeAllScalars, variables);
         }
         catch (Exception ex)
@@ -70,7 +68,7 @@ public static class AutomaticQueryBuilderTool
         {
             var schema = await GraphQlSchemaHelper.GetSchemaAsync(endpointInfo);
             var type = GraphQlTypeHelpers.FindTypeByName(schema, typeName);
-            
+
             if (!type.HasValue)
                 return $"Type '{typeName}' not found in schema";
 
@@ -104,7 +102,8 @@ public static class AutomaticQueryBuilderTool
         [Description("Include security analysis and best practices")]
         bool includeSecurity = true)
     {
-        var buildId = Guid.NewGuid().ToString("N")[..8];
+        var buildId = Guid.NewGuid()
+            .ToString("N")[..8];
         var startTime = DateTime.UtcNow;
 
         try
@@ -120,10 +119,12 @@ public static class AutomaticQueryBuilderTool
 
             // Get schema and build query
             var schema = await GraphQlSchemaHelper.GetSchemaAsync(endpointInfo);
-            var operationField = GraphQlSchemaHelper.FindOperationField(schema, operationName);
-            var parsedVariables = JsonHelpers.ParseVariables(variables ?? string.Empty);
-            
-            if (!operationField.HasValue)
+            JsonElement operationField;
+            try
+            {
+                operationField = GraphQlSchemaHelper.FindOperationField(schema, operationName);
+            }
+            catch (InvalidOperationException)
             {
                 return CreateBuildErrorResponse("Operation Not Found",
                     $"Operation '{operationName}' not found in schema",
@@ -131,9 +132,11 @@ public static class AutomaticQueryBuilderTool
                     ["Check operation name spelling", "Use schema introspection to find available operations", "Verify the operation is available in Query type"]);
             }
 
+            var parsedVariables = JsonHelpers.ParseVariables(variables ?? string.Empty);
+
             // Build primary query
-            var primaryQuery = GraphQLOperationHelper.BuildGraphQLQuery(operationField.Value, schema, operationName, maxDepth, includeAllScalars, parsedVariables);
-            
+            var primaryQuery = GraphQLOperationHelper.BuildGraphQLQuery(operationField, schema, operationName, maxDepth, includeAllScalars, parsedVariables);
+
             // Generate comprehensive response
             var response = new
             {
@@ -156,38 +159,46 @@ public static class AutomaticQueryBuilderTool
                         fieldCount = CountQueryFields(primaryQuery),
                         estimatedExecutionTime = EstimateExecutionTime(primaryQuery)
                     },
-                    variations = includeVariations ? await GenerateQueryVariationsAsync(operationField.Value, schema, operationName, maxDepth, includeAllScalars, parsedVariables) : null,
-                    minimal = GenerateMinimalQuery(operationField.Value, schema, operationName, parsedVariables),
-                    optimized = GenerateOptimizedQuery(operationField.Value, schema, operationName, maxDepth, parsedVariables)
+                    variations = includeVariations ? await GenerateQueryVariationsAsync(operationField, schema, operationName, maxDepth, includeAllScalars, parsedVariables) : null,
+                    minimal = GenerateMinimalQuery(operationField, schema, operationName, parsedVariables),
+                    optimized = GenerateOptimizedQuery(operationField, schema, operationName, maxDepth, parsedVariables)
                 },
-                variables = parsedVariables.Count > 0 ? new
-                {
-                    provided = parsedVariables,
-                    recommended = GenerateRecommendedVariables(operationField.Value),
-                    optional = GenerateOptionalVariables(operationField.Value),
-                    validation = ValidateVariables(parsedVariables, operationField.Value)
-                } : null,
-                optimization = includeOptimization ? new
-                {
-                    recommendations = GenerateOptimizationRecommendations(primaryQuery, operationField.Value),
-                    performanceMetrics = AnalyzeQueryPerformance(primaryQuery),
-                    cachingStrategy = GenerateCachingStrategy(primaryQuery, operationName),
-                    complexityAnalysis = PerformComplexityAnalysis(primaryQuery)
-                } : null,
-                examples = includeExamples ? new
-                {
-                    basicUsage = GenerateBasicUsageExample(primaryQuery, parsedVariables),
-                    advancedPatterns = GenerateAdvancedPatterns(operationField.Value, schema),
-                    bestPractices = GenerateBestPracticeExamples(operationName, operationField.Value),
-                    commonMistakes = GenerateCommonMistakeExamples(operationName)
-                } : null,
-                security = includeSecurity ? new
-                {
-                    analysis = AnalyzeQuerySecurity(primaryQuery),
-                    recommendations = GenerateSecurityRecommendations(primaryQuery, operationField.Value),
-                    bestPractices = GenerateSecurityBestPractices(),
-                    vulnerabilityChecks = PerformVulnerabilityChecks(primaryQuery)
-                } : null,
+                variables = parsedVariables.Count > 0
+                    ? new
+                    {
+                        provided = parsedVariables,
+                        recommended = GenerateRecommendedVariables(operationField),
+                        optional = GenerateOptionalVariables(operationField),
+                        validation = ValidateVariables(parsedVariables, operationField)
+                    }
+                    : null,
+                optimization = includeOptimization
+                    ? new
+                    {
+                        recommendations = GenerateOptimizationRecommendations(primaryQuery, operationField),
+                        performanceMetrics = AnalyzeQueryPerformance(primaryQuery),
+                        cachingStrategy = GenerateCachingStrategy(primaryQuery, operationName),
+                        complexityAnalysis = PerformComplexityAnalysis(primaryQuery)
+                    }
+                    : null,
+                examples = includeExamples
+                    ? new
+                    {
+                        basicUsage = GenerateBasicUsageExample(primaryQuery, parsedVariables),
+                        advancedPatterns = GenerateAdvancedPatterns(operationField, schema),
+                        bestPractices = GenerateBestPracticeExamples(operationName, operationField),
+                        commonMistakes = GenerateCommonMistakeExamples(operationName)
+                    }
+                    : null,
+                security = includeSecurity
+                    ? new
+                    {
+                        analysis = AnalyzeQuerySecurity(primaryQuery),
+                        recommendations = GenerateSecurityRecommendations(primaryQuery, operationField),
+                        bestPractices = GenerateSecurityBestPractices(),
+                        vulnerabilityChecks = PerformVulnerabilityChecks(primaryQuery)
+                    }
+                    : null,
                 metadata = new
                 {
                     buildTimestamp = DateTime.UtcNow,
@@ -197,14 +208,14 @@ public static class AutomaticQueryBuilderTool
                     features = new[] { "smart-selection", "optimization", "security-analysis", "multiple-variations" }
                 },
                 nextSteps = GenerateNextSteps(primaryQuery, operationName, includeOptimization, includeSecurity),
-                relatedOperations = FindRelatedOperations(schema, operationName, operationField.Value)
+                relatedOperations = FindRelatedOperations(schema, operationName, operationField)
             };
 
             return JsonSerializer.Serialize(response, new JsonSerializerOptions
             {
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
         }
         catch (Exception ex)
@@ -219,7 +230,7 @@ public static class AutomaticQueryBuilderTool
     /// <summary>
     /// Generate multiple query variations for different use cases
     /// </summary>
-    private static async Task<object> GenerateQueryVariationsAsync(dynamic operationField, dynamic schema, string operationName, int maxDepth, bool includeAllScalars, Dictionary<string, object> variables)
+    private static async Task<object> GenerateQueryVariationsAsync(JsonElement operationField, JsonElement schema, string operationName, int maxDepth, bool includeAllScalars, Dictionary<string, object> variables)
     {
         return new
         {
@@ -253,10 +264,10 @@ public static class AutomaticQueryBuilderTool
     /// <summary>
     /// Generate optimization recommendations
     /// </summary>
-    private static List<object> GenerateOptimizationRecommendations(string query, dynamic operationField)
+    private static List<object> GenerateOptimizationRecommendations(string query, JsonElement operationField)
     {
         var recommendations = new List<object>();
-        
+
         var fieldCount = CountQueryFields(query);
         if (fieldCount > 20)
         {
@@ -301,7 +312,7 @@ public static class AutomaticQueryBuilderTool
     /// <summary>
     /// Generate security recommendations
     /// </summary>
-    private static List<object> GenerateSecurityRecommendations(string query, dynamic operationField)
+    private static List<object> GenerateSecurityRecommendations(string query, JsonElement operationField)
     {
         var recommendations = new List<object>();
 
@@ -412,25 +423,30 @@ public static class AutomaticQueryBuilderTool
     }
 
     // Helper methods (simplified implementations for brevity)
-    private static int CalculateQueryComplexity(string query) => query.Split('{').Length - 1;
-    private static int CountQueryFields(string query) => query.Split(' ').Count(w => !w.Contains('{') && !w.Contains('}'));
+    private static int CalculateQueryComplexity(string query) => query.Split('{')
+        .Length - 1;
+
+    private static int CountQueryFields(string query) => query.Split(' ')
+        .Count(w => !w.Contains('{') && !w.Contains('}'));
+
     private static int CalculateQueryDepth(string query) => Math.Max(1, query.Count(c => c == '{') - query.Count(c => c == '}') + 3);
     private static string EstimateExecutionTime(string query) => $"{Math.Max(50, CalculateQueryComplexity(query) * 10)}ms";
-    private static string GenerateMinimalQuery(dynamic field, dynamic schema, string name, Dictionary<string, object> vars) => $"query {{ {name} {{ id }} }}";
-    private static string GenerateOptimizedQuery(dynamic field, dynamic schema, string name, int depth, Dictionary<string, object> vars) => $"query {{ {name} {{ id }} }}";
-    private static List<object> GenerateRecommendedVariables(dynamic field) => [];
-    private static List<object> GenerateOptionalVariables(dynamic field) => [];
-    private static object ValidateVariables(Dictionary<string, object> vars, dynamic field) => new { valid = true };
+    private static string GenerateMinimalQuery(JsonElement field, JsonElement schema, string name, Dictionary<string, object> vars) => $"query {{ {name} {{ id }} }}";
+    private static string GenerateOptimizedQuery(JsonElement field, JsonElement schema, string name, int depth, Dictionary<string, object> vars) => $"query {{ {name} {{ id }} }}";
+    private static List<object> GenerateRecommendedVariables(JsonElement field) => [];
+    private static List<object> GenerateOptionalVariables(JsonElement field) => [];
+    private static object ValidateVariables(Dictionary<string, object> vars, JsonElement field) => new { valid = true };
     private static object AnalyzeQueryPerformance(string query) => new { rating = "good" };
     private static object GenerateCachingStrategy(string query, string operation) => new { recommended = true, ttl = 300 };
     private static object PerformComplexityAnalysis(string query) => new { score = CalculateQueryComplexity(query) };
     private static object GenerateBasicUsageExample(string query, Dictionary<string, object> vars) => new { example = query };
-    private static List<object> GenerateAdvancedPatterns(dynamic field, dynamic schema) => [];
-    private static List<object> GenerateBestPracticeExamples(string name, dynamic field) => [];
+    private static List<object> GenerateAdvancedPatterns(JsonElement field, JsonElement schema) => [];
+    private static List<object> GenerateBestPracticeExamples(string name, JsonElement field) => [];
     private static List<object> GenerateCommonMistakeExamples(string name) => [];
     private static object AnalyzeQuerySecurity(string query) => new { riskLevel = "low" };
     private static List<object> GenerateSecurityBestPractices() => [];
     private static List<object> PerformVulnerabilityChecks(string query) => [];
-    private static List<object> FindRelatedOperations(dynamic schema, string name, dynamic field) => [];
-    private static string GeneratePaginatedQuery(dynamic field, dynamic schema, string name, Dictionary<string, object> vars) => $"query {{ {name}(first: 10) {{ id }} }}";
-    private static string GenerateFilteredQuery(dynamic field, dynamic schema, string name, Dictionary<string, object> vars) => $"query {{ {name}(filter: {{}}) {{ id }} }}";
+    private static List<object> FindRelatedOperations(JsonElement schema, string name, JsonElement field) => [];
+    private static string GeneratePaginatedQuery(JsonElement field, JsonElement schema, string name, Dictionary<string, object> vars) => $"query {{ {name}(first: 10) {{ id }} }}";
+    private static string GenerateFilteredQuery(JsonElement field, JsonElement schema, string name, Dictionary<string, object> vars) => $"query {{ {name}(filter: {{}}) {{ id }} }}";
+}
