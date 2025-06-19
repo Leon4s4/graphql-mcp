@@ -233,47 +233,17 @@ public static class GraphQlSchemaHelper
         throw new InvalidOperationException($"Operation '{operationName}' not found in Query type");
     }
 
-    //TODO: leonardo
     /// <summary>
-    /// Internal method to introspect schema from GraphQL endpoint
+    /// Internal method to introspect the schema from a GraphQL endpoint
     /// </summary>
     public static async Task<GraphQlResponse> IntrospectSchemaInternal(GraphQlEndpointInfo endpointInfo)
     {
-        using var httpClient = new HttpClient();
-
-        // Add headers from endpoint info
-        if (endpointInfo.Headers?.Count > 0)
-        {
-            foreach (var header in endpointInfo.Headers)
-            {
-                httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
-            }
-        }
-
         var introspectionQuery = CreateIntrospectionQuery();
 
-        try
-        {
-            var response = await httpClient.PostAsJsonAsync(endpointInfo.Url, new
-            {
-                query = introspectionQuery
-            });
-
-            var responseContent = await response.Content.ReadAsStringAsync();
-
-            if (response.IsSuccessStatusCode)
-            {
-                return GraphQlResponse.Success(responseContent);
-            }
-            else
-            {
-                return GraphQlResponse.HttpError(response.StatusCode, response.ReasonPhrase ?? "Unknown error", responseContent);
-            }
-        }
-        catch (Exception ex)
-        {
-            return GraphQlResponse.ConnectionError($"Connection failed: {ex.Message}");
-        }
+        // Delegate the actual HTTP call to HttpClientHelper for consistent error handling
+        return await HttpClientHelper.ExecuteGraphQlRequestAsync(
+            endpointInfo,
+            new { query = introspectionQuery });
     }
 
     /// <summary>
