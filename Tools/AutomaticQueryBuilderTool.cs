@@ -433,20 +433,107 @@ public static class AutomaticQueryBuilderTool
     private static string EstimateExecutionTime(string query) => $"{Math.Max(50, CalculateQueryComplexity(query) * 10)}ms";
     private static string GenerateMinimalQuery(JsonElement field, JsonElement schema, string name, Dictionary<string, object> vars) => $"query {{ {name} {{ id }} }}";
     private static string GenerateOptimizedQuery(JsonElement field, JsonElement schema, string name, int depth, Dictionary<string, object> vars) => $"query {{ {name} {{ id }} }}";
-    private static List<object> GenerateRecommendedVariables(JsonElement field) => [];
-    private static List<object> GenerateOptionalVariables(JsonElement field) => [];
+    private static List<object> GenerateRecommendedVariables(JsonElement field)
+    {
+        var variables = new List<object>();
+        if (field.TryGetProperty("args", out var args) && args.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var arg in args.EnumerateArray())
+            {
+                if (arg.TryGetProperty("name", out var name))
+                {
+                    variables.Add(new { name = name.GetString() });
+                }
+            }
+        }
+        return variables;
+    }
+
+    private static List<object> GenerateOptionalVariables(JsonElement field)
+    {
+        var variables = new List<object>();
+        if (field.TryGetProperty("args", out var args) && args.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var arg in args.EnumerateArray())
+            {
+                if (arg.TryGetProperty("name", out var name) &&
+                    arg.TryGetProperty("type", out var type) &&
+                    !type.ToString().EndsWith("!"))
+                {
+                    variables.Add(new { name = name.GetString() });
+                }
+            }
+        }
+        return variables;
+    }
     private static object ValidateVariables(Dictionary<string, object> vars, JsonElement field) => new { valid = true };
     private static object AnalyzeQueryPerformance(string query) => new { rating = "good" };
     private static object GenerateCachingStrategy(string query, string operation) => new { recommended = true, ttl = 300 };
     private static object PerformComplexityAnalysis(string query) => new { score = CalculateQueryComplexity(query) };
     private static object GenerateBasicUsageExample(string query, Dictionary<string, object> vars) => new { example = query };
-    private static List<object> GenerateAdvancedPatterns(JsonElement field, JsonElement schema) => [];
-    private static List<object> GenerateBestPracticeExamples(string name, JsonElement field) => [];
-    private static List<object> GenerateCommonMistakeExamples(string name) => [];
+    private static List<object> GenerateAdvancedPatterns(JsonElement field, JsonElement schema)
+    {
+        var patterns = new List<object>();
+        if (field.TryGetProperty("name", out var nameProp))
+        {
+            var name = nameProp.GetString() ?? string.Empty;
+            if (name.EndsWith("s"))
+                patterns.Add("pagination");
+            if (name.Contains("search", StringComparison.OrdinalIgnoreCase))
+                patterns.Add("filtering");
+        }
+        return patterns;
+    }
+
+    private static List<object> GenerateBestPracticeExamples(string name, JsonElement field)
+    {
+        return new List<object>
+        {
+            $"Use fragments when querying {name}",
+            "Limit selected fields to reduce payload"
+        };
+    }
+
+    private static List<object> GenerateCommonMistakeExamples(string name)
+    {
+        return new List<object>
+        {
+            $"Requesting unnecessary fields in {name}",
+            "Ignoring pagination for large result sets"
+        };
+    }
     private static object AnalyzeQuerySecurity(string query) => new { riskLevel = "low" };
-    private static List<object> GenerateSecurityBestPractices() => [];
-    private static List<object> PerformVulnerabilityChecks(string query) => [];
-    private static List<object> FindRelatedOperations(JsonElement schema, string name, JsonElement field) => [];
+    private static List<object> GenerateSecurityBestPractices()
+        => new() { "Validate user input", "Use parameterized queries" };
+
+    private static List<object> PerformVulnerabilityChecks(string query)
+    {
+        var checks = new List<object>();
+        if (query.Contains("__schema"))
+            checks.Add("Introspection query detected");
+        if (query.Length > 1000)
+            checks.Add("Query length may expose denial of service risk");
+        return checks;
+    }
+
+    private static List<object> FindRelatedOperations(JsonElement schema, string name, JsonElement field)
+    {
+        var operations = new List<object>();
+        if (schema.ValueKind == JsonValueKind.Object && schema.TryGetProperty("types", out var types))
+        {
+            foreach (var type in types.EnumerateArray())
+            {
+                if (type.TryGetProperty("name", out var typeName) &&
+                    typeName.GetString()?.Equals(name, StringComparison.OrdinalIgnoreCase) == true &&
+                    type.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
+                {
+                    operations.AddRange(fields.EnumerateArray().Select(f => f.GetProperty("name").GetString() ?? string.Empty));
+                    break;
+                }
+            }
+        }
+        return operations;
+    }
     private static string GeneratePaginatedQuery(JsonElement field, JsonElement schema, string name, Dictionary<string, object> vars) => $"query {{ {name}(first: 10) {{ id }} }}";
     private static string GenerateFilteredQuery(JsonElement field, JsonElement schema, string name, Dictionary<string, object> vars) => $"query {{ {name}(filter: {{}}) {{ id }} }}";
 }
