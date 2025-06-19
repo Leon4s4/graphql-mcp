@@ -599,7 +599,33 @@ Returns comprehensive JSON response with all registration data, generated tools,
     private static List<string> DetectAuthenticationMethods(Dictionary<string, string>? headers) => headers?.Keys.Where(k => k.Contains("Auth") || k.Contains("Key"))
         .ToList() ?? [];
 
-    private static List<dynamic> ParseGeneratedTools(string result) => []; // Would parse actual tool generation result
+    private static List<dynamic> ParseGeneratedTools(string result)
+    {
+        var tools = new List<dynamic>();
+
+        if (string.IsNullOrWhiteSpace(result))
+            return tools;
+
+        try
+        {
+            var doc = JsonDocument.Parse(result);
+            if (doc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var element in doc.RootElement.EnumerateArray())
+                {
+                    tools.Add(JsonSerializer.Deserialize<dynamic>(element.GetRawText())!);
+                }
+            }
+        }
+        catch
+        {
+            // Fallback: treat as newline separated values
+            tools.AddRange(result.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(v => new { name = v.Trim() } as dynamic));
+        }
+
+        return tools;
+    }
     private static int CalculateSchemaComplexity(dynamic schema) => 10; // Simplified
     private static int CountSchemaTypes(dynamic schema) => 50; // Simplified
     private static int CountSchemaFields(dynamic schema) => 200; // Simplified

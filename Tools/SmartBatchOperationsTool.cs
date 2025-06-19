@@ -384,7 +384,24 @@ Use this before executing large batches to:
     // Helper methods for analysis (simplified implementations)
     private static int CalculateQueryComplexity(string query) => query.Split('{').Length - 1;
     private static TimeSpan EstimateExecutionTime(string query, int complexity) => TimeSpan.FromMilliseconds(complexity * 10);
-    private static List<string> AnalyzeSecurityRisks(string query) => [];
+    private static List<string> AnalyzeSecurityRisks(string query)
+    {
+        var risks = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(query))
+            return risks;
+
+        var lowered = query.ToLowerInvariant();
+        if (lowered.Contains("password") || lowered.Contains("token"))
+            risks.Add("Query may expose sensitive credentials");
+        if (lowered.Contains("__schema") || lowered.Contains("__type"))
+            risks.Add("Query performs schema introspection");
+
+        if (query.Length > 1000)
+            risks.Add("Large query size could impact performance");
+
+        return risks;
+    }
     private static int CountFields(string query) => query.Split(' ').Count(w => !w.Contains('{') && !w.Contains('}'));
     private static List<string> GenerateOperationRecommendations(string query, int complexity) => complexity > 10 ? ["Consider query optimization"] : [];
     private static int CalculateRecommendedConcurrency(List<BatchQueryRequest> operations, int totalComplexity) => Math.Max(1, Math.Min(10, 50 / Math.Max(1, totalComplexity / operations.Count)));

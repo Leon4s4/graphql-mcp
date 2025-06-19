@@ -2368,18 +2368,105 @@ namespace {namespaceName}.Client
     private PaginationHints GetPaginationHints(object data) => new() { ShouldPaginate = false, RecommendedPageSize = 10 };
     private bool ShouldCacheQuery(QueryAnalysis analysis) => true;
     private PaginationRecommendation GetOptimalPagination(QueryAnalysis analysis) => new() { Method = "cursor", RecommendedPageSize = 20 };
-    private List<string> GetIndexHints(QueryAnalysis analysis) => [];
+    private List<string> GetIndexHints(QueryAnalysis analysis)
+    {
+        var hints = new List<string>();
+        if (analysis.FieldCount > 20)
+        {
+            hints.Add("Consider adding indexes for frequently queried fields");
+        }
+        if (analysis.Metadata.TryGetValue("fields", out var fieldsObj) &&
+            fieldsObj is IEnumerable<string> fields)
+        {
+            foreach (var field in fields)
+            {
+                if (field.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    hints.Add($"Index field '{field}' for faster lookups");
+                }
+            }
+        }
+        return hints.Distinct().ToList();
+    }
     private QueryComplexityRating GetComplexityRating(QueryAnalysis analysis) => QueryComplexityRating.Simple;
     private List<string> GenerateOptimizationSuggestions(QueryAnalysis analysis, TimeSpan executionTime) => ["Consider using fragments", "Reduce nesting depth"];
-    private List<string> GenerateSecurityWarnings(string query) => [];
-    private List<string> ExtractRequiredPermissions(string query) => [];
+    private List<string> GenerateSecurityWarnings(string query)
+    {
+        var warnings = new List<string>();
+        var lowered = query.ToLowerInvariant();
+        if (lowered.Contains("__schema") || lowered.Contains("__type"))
+            warnings.Add("Query includes introspection fields");
+        if (lowered.Contains("password") || lowered.Contains("token"))
+            warnings.Add("Query may reveal sensitive data");
+        return warnings;
+    }
+    private List<string> ExtractRequiredPermissions(string query)
+    {
+        var perms = new List<string>();
+        if (query.Contains("mutation", StringComparison.OrdinalIgnoreCase))
+            perms.Add("write");
+        if (query.Contains("delete", StringComparison.OrdinalIgnoreCase))
+            perms.Add("admin");
+        if (!perms.Any())
+            perms.Add("read");
+        return perms.Distinct().ToList();
+    }
     private bool DetectSensitiveData(object data) => false;
-    private List<string> GenerateSecurityRecommendations(string query, object data) => [];
+    private List<string> GenerateSecurityRecommendations(string query, object data)
+    {
+        var recs = new List<string>();
+        recs.AddRange(GenerateSecurityWarnings(query));
+        if (DetectSensitiveData(data))
+            recs.Add("Mask sensitive data in logs");
+        recs.Add("Validate user permissions");
+        return recs.Distinct().ToList();
+    }
 
-    private async Task<List<QueryExample>> GenerateCommonQueriesAsync(SchemaIntrospectionData? schema, int maxExamples) => [];
-    private async Task<List<MutationExample>> GenerateCommonMutationsAsync(SchemaIntrospectionData? schema, int maxExamples) => [];
+    private async Task<List<QueryExample>> GenerateCommonQueriesAsync(SchemaIntrospectionData? schema, int maxExamples)
+    {
+        var examples = new List<QueryExample>();
+        if (schema == null) return examples;
+        foreach (var op in schema.AvailableOperations.Take(maxExamples))
+        {
+            examples.Add(new QueryExample
+            {
+                Name = op,
+                Description = $"Example query for {op}",
+                Query = $"query {{ {op} }}",
+                ComplexityScore = 1,
+                EstimatedExecutionTime = TimeSpan.FromMilliseconds(50)
+            });
+        }
+        return examples;
+    }
+    private async Task<List<MutationExample>> GenerateCommonMutationsAsync(SchemaIntrospectionData? schema, int maxExamples)
+    {
+        var examples = new List<MutationExample>();
+        if (schema == null) return examples;
+        foreach (var op in schema.AvailableOperations.Where(o => o.StartsWith("create", StringComparison.OrdinalIgnoreCase)).Take(maxExamples))
+        {
+            examples.Add(new MutationExample
+            {
+                Name = op,
+                Description = $"Example mutation for {op}",
+                Mutation = $"mutation {{ {op} }}",
+                ComplexityScore = 1,
+                IsIdempotent = false
+            });
+        }
+        await Task.CompletedTask;
+        return examples;
+    }
     private List<string> GenerateSchemaRecommendations(object schema, object? additional = null, string? focusArea = null) => ["Follow GraphQL best practices"];
-    private List<string> GenerateRecommendedActions(JsonElement schema, object queryStats, object performanceProfile) => [];
+    private List<string> GenerateRecommendedActions(JsonElement schema, object queryStats, object performanceProfile)
+    {
+        var actions = new List<string>
+        {
+            "Monitor query performance",
+            "Review schema for deprecated fields"
+        };
+        return actions;
+    }
     private QueryStatistics GetQueryStatistics(string query) => new() { ExecutionCount = 0, AverageTime = "0ms", LastExecuted = "Never" };
     private PerformanceAnalysisResult GetPerformanceProfile(object schema) => new() { Rating = "Good", Recommendations = [], EstimatedTime = "100ms" };
 
@@ -2529,7 +2616,14 @@ namespace {namespaceName}.Client
     }
     private string DetermineOverallValidationStatus(object syntaxValidation, object schemaValidation, object performanceAnalysis) => "Valid";
     private QueryComplexityRating GetValidationComplexityRating(object syntaxValidation, object schemaValidation) => QueryComplexityRating.Simple;
-    private List<string> GenerateValidationNextSteps(object syntaxValidation, object performanceAnalysis) => [];
+    private List<string> GenerateValidationNextSteps(object syntaxValidation, object performanceAnalysis)
+    {
+        var steps = new List<string> { "Fix validation issues" };
+        if (performanceAnalysis != null)
+            steps.Add("Benchmark query performance");
+        steps.Add("Add unit tests for edge cases");
+        return steps;
+    }
     private List<TestScenario> GenerateTestScenarios(string query, object validationAnalysis, object? performanceAnalysis = null)
     {
         var scenarios = new List<TestScenario>();
@@ -2983,7 +3077,17 @@ namespace {namespaceName}.Client
         return recommendations.Distinct().Take(6).ToList();
     }
     private QueryComplexityRating GetUsageAnalyticsComplexityRating(object analytics) => QueryComplexityRating.Simple;
-    private List<string> GenerateUsageAnalyticsNextSteps(object analytics, string analysisFocus) => [];
+    private List<string> GenerateUsageAnalyticsNextSteps(object analytics, string analysisFocus)
+    {
+        var steps = new List<string>
+        {
+            "Monitor field usage over time",
+            "Refine schema based on usage patterns"
+        };
+        if (analysisFocus.Equals("performance", StringComparison.OrdinalIgnoreCase))
+            steps.Add("Cache heavy queries");
+        return steps;
+    }
 
     private int CalculateComplexity(string query)
     {
