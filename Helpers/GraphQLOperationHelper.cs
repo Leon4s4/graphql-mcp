@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using HotChocolate.Language;
 
 namespace Graphql.Mcp.Helpers;
 
@@ -9,7 +10,91 @@ namespace Graphql.Mcp.Helpers;
 public static class GraphQLOperationHelper
 {
     /// <summary>
-    /// Generates a GraphQL operation string
+    /// Generates a GraphQL operation string (HotChocolate version)
+    /// </summary>
+    public static string GenerateOperationString(FieldDefinitionNode field, string operationType, string fieldName)
+    {
+        var operation = new StringBuilder();
+
+        operation.AppendLine($"{operationType.ToLower()} {operationType}_{fieldName}(");
+
+        if (field.Arguments.Any())
+        {
+            var parameters = new List<string>();
+            foreach (var arg in field.Arguments)
+            {
+                var paramName = arg.Name.Value;
+                var paramType = GetTypeName(arg.Type);
+                parameters.Add($"${paramName}: {paramType}");
+            }
+
+            if (parameters.Count > 0)
+            {
+                operation.AppendLine(string.Join(",\n  ", parameters));
+            }
+        }
+
+        operation.AppendLine(") {");
+        operation.AppendLine($"  {fieldName}");
+
+        // Add arguments if any
+        if (field.Arguments.Any())
+        {
+            operation.Append("(");
+            var argList = field.Arguments.Select(arg => $"{arg.Name.Value}: ${arg.Name.Value}").ToList();
+            operation.Append(string.Join(", ", argList));
+            operation.Append(")");
+        }
+
+        // For now, just add basic scalar fields - this could be enhanced to traverse the schema
+        operation.AppendLine(" {");
+        operation.AppendLine("    # Fields will be selected based on return type");
+        operation.AppendLine("  }");
+        operation.AppendLine("}");
+
+        return operation.ToString();
+    }
+
+    /// <summary>
+    /// Gets field description (HotChocolate version)
+    /// </summary>
+    public static string GetFieldDescription(FieldDefinitionNode field, string operationType, string fieldName)
+    {
+        var description = field.Description?.Value ?? $"Execute {operationType} operation: {fieldName}";
+        
+        if (field.Arguments.Any())
+        {
+            description += "\n\nParameters:";
+            foreach (var arg in field.Arguments)
+            {
+                var argType = GetTypeName(arg.Type);
+                description += $"\n- {arg.Name.Value} ({argType})";
+                if (!string.IsNullOrEmpty(arg.Description?.Value))
+                {
+                    description += $": {arg.Description.Value}";
+                }
+            }
+        }
+
+        return description;
+    }
+
+    /// <summary>
+    /// Helper method to get type name from HotChocolate type node
+    /// </summary>
+    private static string GetTypeName(ITypeNode type)
+    {
+        return type switch
+        {
+            NonNullTypeNode nonNull => GetTypeName(nonNull.Type) + "!",
+            ListTypeNode list => "[" + GetTypeName(list.Type) + "]",
+            NamedTypeNode named => named.Name.Value,
+            _ => "Unknown"
+        };
+    }
+
+    /// <summary>
+    /// Generates a GraphQL operation string (legacy JsonElement version)
     /// </summary>
     public static string GenerateOperationString(JsonElement field, string operationType, string fieldName)
     {

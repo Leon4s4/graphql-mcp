@@ -20,6 +20,10 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0-preview.5.25277.114"/>
         <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0-preview.5.25277.114"/>
         <PackageReference Include="ModelContextProtocol" Version="0.2.0-preview.3"/>
+        <PackageReference Include="StrawberryShake.Core" Version="12.22.6"/>
+        <PackageReference Include="StrawberryShake.Transport.Http" Version="12.22.6"/>
+        <PackageReference Include="StrawberryShake.CodeGeneration.CSharp" Version="12.22.6"/>
+        <PackageReference Include="HotChocolate.Language" Version="12.22.6"/>
     </ItemGroup>
 
 </Project>

@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Graphql.Mcp.DTO;
 using Graphql.Mcp.Tools;
+using HotChocolate.Language;
 
 namespace Graphql.Mcp.Helpers;
 
@@ -10,29 +11,36 @@ namespace Graphql.Mcp.Helpers;
 /// </summary>
 public static class GraphQlSchemaHelper
 {
+    private static readonly StrawberryShakeSchemaService _schemaService = new();
     /// <summary>
     /// Generates tools from a GraphQL schema
     /// </summary>
     public static async Task<string> GenerateToolsFromSchema(GraphQlEndpointInfo endpointInfo)
     {
-        var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        var schemaResult = await _schemaService.GetSchemaAsync(endpointInfo);
         if (!schemaResult.IsSuccess)
-            return schemaResult.FormatForDisplay();
+            return $"Failed to retrieve schema: {schemaResult.ErrorMessage}";
 
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaResult.Content!);
-
-        if (!schemaData.TryGetProperty("data", out var data) || !data.TryGetProperty("__schema", out var schema))
-        {
-            return "Failed to parse schema introspection data";
-        }
-
+        var schema = schemaResult.Schema!;
+        var rootTypes = _schemaService.GetRootTypes(schema);
         var toolsGenerated = 0;
         
         // Process Query type
-        toolsGenerated += ProcessRootType(schema, "queryType", "Query", endpointInfo, true);
+        var queryType = _schemaService.FindTypeDefinition<ObjectTypeDefinitionNode>(schema, rootTypes.QueryType);
+        if (queryType != null)
+        {
+            toolsGenerated += GraphQLToolGenerator.GenerateToolsForType(queryType, "Query", endpointInfo);
+        }
         
         // Process Mutation type (only if mutations are allowed)
-        toolsGenerated += ProcessRootType(schema, "mutationType", "Mutation", endpointInfo, endpointInfo.AllowMutations);
+        if (endpointInfo.AllowMutations && !string.IsNullOrEmpty(rootTypes.MutationType))
+        {
+            var mutationType = _schemaService.FindTypeDefinition<ObjectTypeDefinitionNode>(schema, rootTypes.MutationType);
+            if (mutationType != null)
+            {
+                toolsGenerated += GraphQLToolGenerator.GenerateToolsForType(mutationType, "Mutation", endpointInfo);
+            }
+        }
 
         return GenerateResultMessage(toolsGenerated, endpointInfo);
     }

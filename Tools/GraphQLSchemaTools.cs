@@ -4,12 +4,14 @@ using System.Text.Json;
 using Graphql.Mcp.DTO;
 using Graphql.Mcp.Helpers;
 using ModelContextProtocol.Server;
+using HotChocolate.Language;
 
 namespace Graphql.Mcp.Tools;
 
 [McpServerToolType]
 public static class GraphQlSchemaTools
 {
+    private static readonly StrawberryShakeSchemaService _schemaService = new();
     [McpServerTool, Description("Retrieve and format specific GraphQL schema information with filtering and type focus")]
     public static async Task<string> GetSchema(
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
@@ -26,71 +28,56 @@ public static class GraphQlSchemaTools
             return $"Error: Endpoint '{endpointName}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        var schemaResult = await _schemaService.GetSchemaAsync(endpointInfo);
         if (!schemaResult.IsSuccess)
-            return schemaResult.FormatForDisplay();
-
-        var schemaData = JsonSerializer.Deserialize<JsonElement>(schemaResult.Content!);
-
-        if (!schemaData.TryGetProperty("data", out var data) ||
-            !data.TryGetProperty("__schema", out var schema))
         {
-            return "Failed to retrieve schema data";
+            return $"Failed to retrieve schema: {schemaResult.ErrorMessage}";
         }
 
+        var schema = schemaResult.Schema!;
         var result = new StringBuilder();
         result.AppendLine("# GraphQL Schema\n");
 
-        var queryType = schema.TryGetProperty("queryType", out var qt)
-            ? qt.GetProperty("name")
-                .GetString()
-            : null;
-        var mutationType = schema.TryGetProperty("mutationType", out var mt)
-            ? mt.GetProperty("name")
-                .GetString()
-            : null;
-        var subscriptionType = schema.TryGetProperty("subscriptionType", out var st)
-            ? st.GetProperty("name")
-                .GetString()
-            : null;
-
+        // Get root types using StrawberryShake
+        var rootTypes = _schemaService.GetRootTypes(schema);
+        
         result.AppendLine("## Root Types");
-        result.AppendLine($"- **Query:** {queryType ?? "None"}");
-        result.AppendLine($"- **Mutation:** {mutationType ?? "None"}");
-        result.AppendLine($"- **Subscription:** {subscriptionType ?? "None"}\n");
+        result.AppendLine($"- **Query:** {rootTypes.QueryType}");
+        result.AppendLine($"- **Mutation:** {rootTypes.MutationType ?? "None"}");
+        result.AppendLine($"- **Subscription:** {rootTypes.SubscriptionType ?? "None"}\n");
 
-        if (!schema.TryGetProperty("types", out var types))
+        // Get type definitions
+        var typeDefinitions = _schemaService.GetTypeDefinitions(schema);
+        
+        // Filter types based on parameters
+        var filteredTypes = typeDefinitions.Where(def =>
         {
-            return result.ToString() + "No types found in schema";
-        }
-
-        var filteredTypes = new List<JsonElement>();
-        foreach (var type in types.EnumerateArray())
-        {
-            if (!type.TryGetProperty("name", out var nameElement))
-                continue;
-
-            var currentTypeName = nameElement.GetString();
-            if (currentTypeName?.StartsWith("__") == true)
-                continue;
-
-            if (!string.IsNullOrEmpty(typeName) && !string.IsNullOrEmpty(currentTypeName) &&
+            if (def is not INamedSyntaxNode namedDef) return false;
+            
+            var currentTypeName = namedDef.Name.Value;
+            
+            // Skip introspection types
+            if (currentTypeName.StartsWith("__")) return false;
+            
+            // Filter by specific type name if provided
+            if (!string.IsNullOrEmpty(typeName) && 
                 !currentTypeName.Equals(typeName, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            if (queryOnly && currentTypeName != queryType)
-                continue;
-
-            if (mutationOnly && currentTypeName != mutationType)
-                continue;
-
-            filteredTypes.Add(type);
-        }
+                return false;
+            
+            // Filter by operation type
+            if (queryOnly && currentTypeName != rootTypes.QueryType)
+                return false;
+                
+            if (mutationOnly && currentTypeName != rootTypes.MutationType)
+                return false;
+            
+            return true;
+        }).ToList();
 
         result.AppendLine("## Types\n");
-        foreach (var type in filteredTypes)
+        foreach (var typeDef in filteredTypes)
         {
-            result.AppendLine(FormatTypeDefinition(type));
+            result.AppendLine(_schemaService.FormatTypeDefinition(typeDef));
             result.AppendLine();
         }
 
@@ -116,23 +103,10 @@ public static class GraphQlSchemaTools
             return $"Error: Endpoint '{endpointName2}' not found. Please register the endpoint first using RegisterEndpoint.";
         }
 
-        // Get both schemas
-        var schema1Result = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo1);
-        if (!schema1Result.IsSuccess)
-            return schema1Result.FormatForDisplay();
-        var schema2Result = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo2);
-        if (!schema2Result.IsSuccess)
-            return schema2Result.FormatForDisplay();
-
-        var schema1Data = JsonSerializer.Deserialize<JsonElement>(schema1Result.Content!);
-        var schema2Data = JsonSerializer.Deserialize<JsonElement>(schema2Result.Content!);
-
-        if (!schema1Data.TryGetProperty("data", out var data1) ||
-            !data1.TryGetProperty("__schema", out var schema1) ||
-            !schema2Data.TryGetProperty("data", out var data2) ||
-            !data2.TryGetProperty("__schema", out var schema2))
+        var comparison = await _schemaService.CompareSchemas(endpointInfo1, endpointInfo2);
+        if (!comparison.IsSuccess)
         {
-            return "Failed to retrieve schema data from one or both endpoints";
+            return $"Schema comparison failed: {comparison.ErrorMessage}";
         }
 
         var result = new StringBuilder();
@@ -140,45 +114,41 @@ public static class GraphQlSchemaTools
         result.AppendLine($"**Schema 1:** {endpointName1} ({endpointInfo1.Url})");
         result.AppendLine($"**Schema 2:** {endpointName2} ({endpointInfo2.Url})\n");
 
-        // Compare types
-        var types1 = GetTypeNames(schema1);
-        var types2 = GetTypeNames(schema2);
-
-        var addedTypes = types2.Except(types1)
-            .ToList();
-        var removedTypes = types1.Except(types2)
-            .ToList();
-        var commonTypes = types1.Intersect(types2)
-            .ToList();
+        var addedTypes = comparison.Differences.Where(d => d.Type == DifferenceType.TypeAdded).ToList();
+        var removedTypes = comparison.Differences.Where(d => d.Type == DifferenceType.TypeRemoved).ToList();
+        var totalDifferences = comparison.Differences.Count;
 
         result.AppendLine("## Type Changes\n");
 
         if (addedTypes.Any())
         {
             result.AppendLine("### Added Types");
-            foreach (var type in addedTypes)
+            foreach (var diff in addedTypes)
             {
-                result.AppendLine($"+ {type}");
+                result.AppendLine($"+ {diff.TypeName} - {diff.Description}");
             }
-
             result.AppendLine();
         }
 
         if (removedTypes.Any())
         {
             result.AppendLine("### Removed Types");
-            foreach (var type in removedTypes)
+            foreach (var diff in removedTypes)
             {
-                result.AppendLine($"- {type}");
+                result.AppendLine($"- {diff.TypeName} - {diff.Description}");
             }
-
             result.AppendLine();
         }
 
-        result.AppendLine($"### Summary");
-        result.AppendLine($"- **Common types:** {commonTypes.Count}");
+        result.AppendLine("### Summary");
         result.AppendLine($"- **Added types:** {addedTypes.Count}");
         result.AppendLine($"- **Removed types:** {removedTypes.Count}");
+        result.AppendLine($"- **Total differences:** {totalDifferences}");
+
+        if (totalDifferences == 0)
+        {
+            result.AppendLine("\n🎉 **Schemas are identical!**");
+        }
 
         return result.ToString();
     }
