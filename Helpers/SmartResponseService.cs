@@ -234,6 +234,8 @@ public class SmartResponseService
                         CacheHit = false,
                         LastUpdated = DateTime.UtcNow,
                         Recommendations = GenerateSchemaRecommendations(schemaData)
+                            .Select(r => new PerformanceRecommendation { Description = r })
+                            .ToList()
                     }
                     : null,
                 CacheInfo = new CacheMetadata
@@ -242,7 +244,7 @@ public class SmartResponseService
                     ExpiresAt = DateTime.UtcNow.AddMinutes(30),
                     CacheKey = cacheKey
                 },
-                RecommendedActions = GenerateRecommendedActions(schemaData, new QueryStatistics { ExecutionCount = 0 }, new PerformanceAnalysisResult()),
+                RecommendedActions = GenerateRecommendedActions(JsonSerializer.SerializeToElement(schemaData), new QueryStatistics { ExecutionCount = 0 }, new PerformanceAnalysisResult()),
                 Extensions = new Dictionary<string, object>
                 {
                     ["queryStats"] = GetQueryStatistics(""),
@@ -282,11 +284,11 @@ public class SmartResponseService
                 {
                     Index = index,
                     QueryId = query.Id ?? $"{batchId}_{index}",
-                    Data = result.Data,
-                    Errors = result.Errors?.Select(e => e.Message)
-                        .ToList() ?? [],
+                    Data = ((dynamic)result).Data,
+                    Errors = ((dynamic)result).Errors?.Select((Func<dynamic, string>)(e => e.Message))
+                        .ToList() ?? new List<string>(),
                     ExecutionTimeMs = (int)queryTime.TotalMilliseconds,
-                    Success = result.Errors?.Count == 0
+                    Success = ((dynamic)result).Errors?.Count == 0
                 });
             }
             finally
@@ -453,7 +455,7 @@ public class SmartResponseService
 
             // Get schema information
             var schemaData = await GetSchemaIntrospectionAsync(endpointInfo);
-            var schemaAnalysis = await AnalyzeSchemaStructureAsync(schemaData, focusArea);
+            var schemaAnalysis = await AnalyzeSchemaStructureAsync(null, focusArea);
             var typeRelationships = GenerateTypeRelationships(schemaData, maxRelationshipDepth);
             var usageAnalytics = includeUsageAnalytics ? await AnalyzeFieldUsagePatternsAsync(schemaData) : null;
             var architecturalAnalysis = includeArchitecturalAnalysis ? await AnalyzeSchemaArchitectureAsync(schemaData) : null;
@@ -560,9 +562,9 @@ public class SmartResponseService
 
             // Perform validation based on mode
             var syntaxValidation = ValidateQuerySyntax(query);
-            var schemaValidation = validationMode != "basic" ? await ValidateAgainstSchemaAsync(query, endpointInfo) : null;
+            var schemaValidation = validationMode != "basic" ? await ValidateAgainstSchemaAsync(query, JsonSerializer.SerializeToElement(endpointInfo)) : null;
             var performanceAnalysis = includePerformanceAnalysis ? await AnalyzeQueryPerformanceAsync(query) : null;
-            var executionResult = executeQuery && validationMode == "comprehensive" ? await TestQueryExecutionAsync(query, endpointInfo, variables) : null;
+            var executionResult = executeQuery && validationMode == "comprehensive" ? await TestQueryExecutionAsync(query, JsonSerializer.SerializeToElement(endpointInfo), ParseVariables(variables)) : null;
 
             // Parse variables
             var parsedVariables = ParseVariables(variables);
@@ -573,7 +575,7 @@ public class SmartResponseService
 
             var response = new ComprehensiveResponse
             {
-                Success = syntaxValidation.IsValid,
+                Success = ((dynamic)syntaxValidation).IsValid,
                 ResponseId = responseId,
                 Timestamp = DateTime.UtcNow,
                 Data = new
@@ -593,11 +595,11 @@ public class SmartResponseService
                         Endpoint = endpointName,
                         ValidationMode = validationMode,
                         Complexity = await AnalyzeQueryComplexityAsync(query),
-                        EstimatedExecutionTime = performanceAnalysis?.EstimatedTime ?? "Unknown"
+                        EstimatedExecutionTime = ((dynamic)performanceAnalysis)?.EstimatedTime ?? "Unknown"
                     },
                     Recommendations = recommendations,
                     OptimizationSuggestions = optimizationSuggestions,
-                    TestScenarios = GenerateTestScenarios(query, endpointInfo)
+                    TestScenarios = GenerateTestScenarios(query, endpointInfo, performanceAnalysis)
                 },
                 Metadata = new ResponseMetadata
                 {
@@ -613,7 +615,7 @@ public class SmartResponseService
                 {
                     ComplexityRating = GetValidationComplexityRating(syntaxValidation, schemaValidation)
                         .ToString(),
-                    PerformanceImpact = performanceAnalysis?.Impact ?? "Unknown",
+                    PerformanceImpact = ((dynamic)performanceAnalysis)?.Impact ?? "Unknown",
                     ResourceUsage = "Low",
                     RecommendedNextSteps = GenerateValidationNextSteps(syntaxValidation, performanceAnalysis)
                 }
@@ -684,15 +686,15 @@ public class SmartResponseService
             }
 
             // Perform comprehensive analytics
-            var usageStats = AnalyzeFieldUsagePatterns(queries, endpointInfo);
+            var usageStats = AnalyzeFieldUsagePatterns(queries);
             var performanceCorrelation = includePerformanceCorrelation ? AnalyzePerformanceCorrelation(queries, usageStats) : null;
-            var trendAnalysis = AnalyzeUsageTrends(queries, trendAnalysisPeriod);
+            var trendAnalysis = AnalyzeUsageTrends(queries);
             var predictiveAnalytics = includePredictiveAnalytics ? GeneratePredictiveAnalytics(usageStats, trendAnalysis) : null;
             var schemaOptimization = GenerateSchemaOptimizationRecommendations(usageStats, analysisFocus);
 
             // Generate insights based on focus area
-            var insights = GenerateUsageInsights(usageStats, trendAnalysis, analysisFocus);
-            var recommendations = GenerateUsageRecommendations(usageStats, performanceCorrelation, analysisFocus);
+            var insights = GenerateUsageInsights(usageStats, trendAnalysis);
+            var recommendations = GenerateUsageRecommendations(usageStats, performanceCorrelation);
 
             var response = new ComprehensiveResponse
             {
@@ -704,10 +706,10 @@ public class SmartResponseService
                     UsageStatistics = new
                     {
                         TotalQueries = queries.Count,
-                        UniqueFields = usageStats.TotalUniqueFields,
-                        MostUsedFields = usageStats.TopFields,
-                        UnusedFields = usageStats.UnusedFields,
-                        DeprecationCandidates = usageStats.DeprecationCandidates
+                        UniqueFields = ((dynamic)usageStats).TotalUniqueFields,
+                        MostUsedFields = ((dynamic)usageStats).TopFields,
+                        UnusedFields = ((dynamic)usageStats).UnusedFields,
+                        DeprecationCandidates = ((dynamic)usageStats).DeprecationCandidates
                     },
                     TrendAnalysis = trendAnalysis,
                     PerformanceCorrelation = performanceCorrelation,
@@ -729,7 +731,8 @@ public class SmartResponseService
                 },
                 Analytics = new AnalyticsInfo
                 {
-                    ComplexityRating = GetUsageAnalyticsComplexityRating(usageStats),
+                    ComplexityRating = GetUsageAnalyticsComplexityRating(usageStats)
+                        .ToString(),
                     PerformanceImpact = "Low",
                     ResourceUsage = "Moderate",
                     RecommendedNextSteps = GenerateUsageAnalyticsNextSteps(usageStats, analysisFocus)
@@ -1171,8 +1174,8 @@ namespace {namespaceName}.Client
             ReferencedTypes = ExtractReferencedTypes(query),
             AvailableFields = ExtractAvailableFields(query),
             RequiredArguments = ExtractRequiredArguments(query),
-            EnumValues = ExtractEnumValues(query),
-            RelatedOperations = GenerateRelatedOperations(query)
+            EnumValues = new Dictionary<string, List<string>>(),
+            RelatedOperations = ExtractEnumValues(query)
         };
     }
 
@@ -1245,8 +1248,8 @@ namespace {namespaceName}.Client
             };
 
             // Generate additional metadata
-            schemaData.TypeRelationships = GenerateTypeRelationships(schemaData.Types);
-            schemaData.AvailableOperations = GenerateAvailableOperations(schemaData);
+            schemaData.TypeRelationships = (TypeRelationships)GenerateTypeRelationships(JsonSerializer.SerializeToElement(schemaData.Types), 3);
+            schemaData.AvailableOperations = GenerateAvailableOperations(JsonSerializer.SerializeToElement(schemaData));
 
             return schemaData;
         }
@@ -1882,7 +1885,7 @@ namespace {namespaceName}.Client
     private string DetermineOverallValidationStatus(object syntaxValidation, object schemaValidation, object performanceAnalysis) => "Valid";
     private QueryComplexityRating GetValidationComplexityRating(object syntaxValidation, object schemaValidation) => QueryComplexityRating.Simple;
     private List<string> GenerateValidationNextSteps(object syntaxValidation, object performanceAnalysis) => [];
-    private List<object> GenerateTestScenarios(string query, object validationAnalysis, object performanceAnalysis) => [];
+    private List<object> GenerateTestScenarios(string query, object validationAnalysis, object? performanceAnalysis = null) => [];
 
     private List<object> ParseQueryLog(string log) => [];
 
@@ -1891,11 +1894,11 @@ namespace {namespaceName}.Client
     private object AnalyzePerformanceCorrelation(List<object> queries, object fieldUsage) => new { Correlations = new object[0] };
     private object AnalyzeUsageTrends(List<object> queries) => new { Trends = new object[0] };
     private object GeneratePredictiveAnalytics(object usageTrends, object performanceData) => new { Predictions = new object[0] };
-    private List<string> GenerateSchemaOptimizationRecommendations(object fieldUsage, object performanceData) => [];
+    private List<string> GenerateSchemaOptimizationRecommendations(object fieldUsage, string analysisFocus) => [];
     private List<object> GenerateUsageInsights(object fieldUsage, object trends) => [];
     private List<string> GenerateUsageRecommendations(object insights, object trends) => [];
     private QueryComplexityRating GetUsageAnalyticsComplexityRating(object analytics) => QueryComplexityRating.Simple;
-    private List<string> GenerateUsageAnalyticsNextSteps(object analytics, object insights) => [];
+    private List<string> GenerateUsageAnalyticsNextSteps(object analytics, string analysisFocus) => [];
 
     private int CalculateComplexity(string query) => query.Count(c => c == '{');
     private int CalculateDepth(string query) => CalculateQueryDepth(query);
