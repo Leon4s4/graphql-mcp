@@ -29,7 +29,7 @@ public class GraphQLService
     private readonly ILogger<GraphQLService> _logger;
     
     // Cache schema information to avoid repeated introspection
-    private static readonly Dictionary<string, object> _schemaCache = new();
+    private static readonly ConcurrentDictionary<string, object> _schemaCache = new();
     private static readonly List<string> _availableEndpoints = new() { "local-crm", "inventory", "analytics" };
 
     public GraphQLService(ILogger<GraphQLService> logger)
