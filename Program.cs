@@ -1,4 +1,4 @@
-﻿using Graphql.Mcp.Helpers;
+using Graphql.Mcp.Helpers;
 using Graphql.Mcp.Prompts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
