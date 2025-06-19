@@ -707,3 +707,186 @@ public class BatchQueryRequest
     public string Query { get; set; } = "";
     public Dictionary<string, object> Variables { get; set; } = new();
 }
+
+// Additional DTO classes for replacing object returns
+
+
+public class SecurityComplianceResult
+{
+    public ComplianceCheck OWASP_Compliance { get; set; } = new();
+    public ComplianceCheck GraphQL_Best_Practices { get; set; } = new();
+    public ComplianceCheck? Industry_Standards { get; set; }
+    public List<string> Recommendations { get; set; } = [];
+}
+
+public class ComplianceCheck
+{
+    public bool IsCompliant { get; set; }
+    public int Score { get; set; }
+    public List<string> Issues { get; set; } = [];
+    public List<string> Recommendations { get; set; } = [];
+}
+
+public class PenetrationTestResult
+{
+    public string TestName { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string TestQuery { get; set; } = "";
+    public string ExpectedBehavior { get; set; } = "";
+    public string Risk { get; set; } = "";
+}
+
+
+public class SchemaArchitectureAnalysisResult
+{
+    public List<string> ArchitecturalPatterns { get; set; } = [];
+    public int BestPracticesCompliance { get; set; }
+    public List<string> PotentialImprovements { get; set; } = [];
+    public List<string> PerformanceConsiderations { get; set; } = [];
+}
+
+public class QueryDebuggingResult
+{
+    public bool IsValid { get; set; }
+    public List<string> SyntaxErrors { get; set; } = [];
+    public List<string> Warnings { get; set; } = [];
+    public List<string> Suggestions { get; set; } = [];
+    public QueryComplexityInfo? Complexity { get; set; }
+    public int Depth { get; set; }
+    public List<string> Fields { get; set; } = [];
+}
+
+public class QueryComplexityInfo
+{
+    public int Score { get; set; }
+    public string Rating { get; set; } = "";
+    public List<string> FactorsContributing { get; set; } = [];
+}
+
+public class ValidationResult
+{
+    public bool IsValid { get; set; }
+    public List<string> Errors { get; set; } = [];
+    public List<string> Warnings { get; set; } = [];
+    public List<string> Suggestions { get; set; } = [];
+}
+
+public class PerformanceProfilingResult
+{
+    public string EstimatedTime { get; set; } = "";
+    public string Impact { get; set; } = "";
+    public List<string> Bottlenecks { get; set; } = [];
+    public List<string> Optimizations { get; set; } = [];
+}
+
+public class ErrorAnalysisResult
+{
+    public string ErrorType { get; set; } = "";
+    public string ErrorMessage { get; set; } = "";
+    public List<string> PossibleCauses { get; set; } = [];
+    public List<string> SuggestedFixes { get; set; } = [];
+    public string Severity { get; set; } = "";
+}
+
+public class InteractiveDebuggingSession
+{
+    public string SessionId { get; set; } = "";
+    public string Focus { get; set; } = "";
+    public List<string> AvailableCommands { get; set; } = [];
+    public Dictionary<string, string> DebugInfo { get; set; } = new();
+}
+
+public class UtilityOptimizationResult
+{
+    public List<string> PerformanceOptimizations { get; set; } = [];
+    public List<string> SizeOptimizations { get; set; } = [];
+    public List<string> ReadabilityImprovements { get; set; } = [];
+}
+
+public class FormatOptions
+{
+    public string IndentationStyle { get; set; } = "";
+    public int IndentSize { get; set; }
+    public string LineBreaks { get; set; } = "";
+    public string FieldOrdering { get; set; } = "";
+}
+
+public class TransformationOptions
+{
+    public List<string> AvailableTransformations { get; set; } = [];
+    public List<string> SuggestedTransformations { get; set; } = [];
+}
+
+public class BestPracticesAdvice
+{
+    public List<string> FormattingBestPractices { get; set; } = [];
+    public List<string> OptimizationBestPractices { get; set; } = [];
+    public List<string> GeneralAdvice { get; set; } = [];
+}
+
+public class RelatedTools
+{
+    public List<string> SuggestedTools { get; set; } = [];
+    public List<string> WorkflowTools { get; set; } = [];
+}
+
+public class UtilityMetrics
+{
+    public int InputSize { get; set; }
+    public int OutputSize { get; set; }
+    public double CompressionRatio { get; set; }
+    public string ProcessingEfficiency { get; set; } = "";
+}
+
+public class ProjectStructure
+{
+    public string RootFolder { get; set; } = "";
+    public List<string> Folders { get; set; } = [];
+    public List<string> Files { get; set; } = [];
+}
+
+public class BuildConfiguration
+{
+    public string? ProjectFile { get; set; }
+    public string? ConfigFile { get; set; }
+    public List<string> Packages { get; set; } = [];
+    public List<string> Dependencies { get; set; } = [];
+}
+
+public class UsageExamples
+{
+    public string BasicUsage { get; set; } = "";
+    public string QueryExample { get; set; } = "";
+    public string ClientExample { get; set; } = "";
+}
+
+
+
+public class PerformanceCorrelationResult
+{
+    public List<object> Correlations { get; set; } = [];
+}
+
+public class UsageTrendsResult
+{
+    public List<object> Trends { get; set; } = [];
+}
+
+public class PredictiveAnalyticsResult
+{
+    public List<object> Predictions { get; set; } = [];
+}
+
+public class ExecutionResult
+{
+    public object? Data { get; set; }
+    public List<ExecutionError>? Errors { get; set; }
+}
+
+public class TestScenario
+{
+    public string Name { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string TestData { get; set; } = "";
+    public string ExpectedResult { get; set; } = "";
+}
