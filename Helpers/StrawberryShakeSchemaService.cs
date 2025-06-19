@@ -37,17 +37,61 @@ public class StrawberryShakeSchemaService
             }
 
             // Parse the introspection result
-            var introspectionResult = JsonSerializer.Deserialize<JsonElement>(result.Content!);
+            JsonElement introspectionResult;
+            try
+            {
+                introspectionResult = JsonSerializer.Deserialize<JsonElement>(result.Content!);
+            }
+            catch (JsonException ex)
+            {
+                return SchemaResult.Error($"Invalid JSON response from GraphQL endpoint: {ex.Message}");
+            }
+
             if (!introspectionResult.TryGetProperty("data", out var data))
             {
-                return SchemaResult.Error("Invalid introspection response format");
+                // Check if there are GraphQL errors
+                if (introspectionResult.TryGetProperty("errors", out var errors))
+                {
+                    var errorMessages = new List<string>();
+                    foreach (var error in errors.EnumerateArray())
+                    {
+                        if (error.TryGetProperty("message", out var errorMessage))
+                        {
+                            errorMessages.Add(errorMessage.GetString() ?? "Unknown error");
+                        }
+                    }
+                    return SchemaResult.Error($"GraphQL errors in introspection response: {string.Join(", ", errorMessages)}");
+                }
+                return SchemaResult.Error("Invalid introspection response format - missing 'data' property");
+            }
+
+            // Check if data is null
+            if (data.ValueKind == JsonValueKind.Null)
+            {
+                return SchemaResult.Error("Introspection returned null data - the endpoint may not support introspection or may require authentication");
             }
 
             // Convert introspection result to SDL (Schema Definition Language)
-            var sdl = ConvertIntrospectionToSdl(data);
+            string sdl;
+            try
+            {
+                sdl = ConvertIntrospectionToSdl(data);
+            }
+            catch (Exception ex)
+            {
+                return SchemaResult.Error($"Error converting introspection result to schema: {ex.Message}");
+            }
             
             // Parse SDL using HotChocolate
-            var document = Utf8GraphQLParser.Parse(sdl);
+            DocumentNode document;
+            try
+            {
+                document = Utf8GraphQLParser.Parse(sdl);
+            }
+            catch (Exception ex)
+            {
+                return SchemaResult.Error($"Error parsing generated schema SDL: {ex.Message}");
+            }
             
             // Cache the parsed schema
             _cachedSchemas[endpointInfo.Name] = document;
@@ -56,7 +100,7 @@ public class StrawberryShakeSchemaService
         }
         catch (Exception ex)
         {
-            return SchemaResult.Error($"Error processing schema: {ex.Message}");
+            return SchemaResult.Error($"Unexpected error processing schema: {ex.Message}");
         }
     }
 
@@ -255,92 +299,137 @@ public class StrawberryShakeSchemaService
 
     private string ConvertIntrospectionToSdl(JsonElement introspectionData)
     {
-        // This is a simplified conversion - you might want to use a more robust library
-        // or implement a complete introspection-to-SDL converter
-        
         var sdl = new StringBuilder();
         
         if (!introspectionData.TryGetProperty("__schema", out var schema))
-            throw new InvalidOperationException("Invalid introspection result");
+            throw new InvalidOperationException("Invalid introspection result - missing '__schema' property");
+
+        // Check if schema is null
+        if (schema.ValueKind == JsonValueKind.Null)
+            throw new InvalidOperationException("Schema data is null - the endpoint may not support introspection");
 
         // Add schema definition if we have explicit root types
         if (schema.TryGetProperty("queryType", out var queryType) &&
-            queryType.TryGetProperty("name", out var queryTypeName))
+            queryType.ValueKind != JsonValueKind.Null &&
+            queryType.TryGetProperty("name", out var queryTypeName) &&
+            queryTypeName.ValueKind != JsonValueKind.Null)
         {
             var schemaDefParts = new List<string>();
-            schemaDefParts.Add($"query: {queryTypeName.GetString()}");
+            var queryName = queryTypeName.GetString();
+            if (!string.IsNullOrEmpty(queryName))
+            {
+                schemaDefParts.Add($"query: {queryName}");
+            }
             
             if (schema.TryGetProperty("mutationType", out var mutationType) &&
-                mutationType.TryGetProperty("name", out var mutationTypeName))
+                mutationType.ValueKind != JsonValueKind.Null &&
+                mutationType.TryGetProperty("name", out var mutationTypeName) &&
+                mutationTypeName.ValueKind != JsonValueKind.Null)
             {
-                schemaDefParts.Add($"mutation: {mutationTypeName.GetString()}");
+                var mutationName = mutationTypeName.GetString();
+                if (!string.IsNullOrEmpty(mutationName))
+                {
+                    schemaDefParts.Add($"mutation: {mutationName}");
+                }
             }
             
             if (schema.TryGetProperty("subscriptionType", out var subscriptionType) &&
-                subscriptionType.TryGetProperty("name", out var subscriptionTypeName))
+                subscriptionType.ValueKind != JsonValueKind.Null &&
+                subscriptionType.TryGetProperty("name", out var subscriptionTypeName) &&
+                subscriptionTypeName.ValueKind != JsonValueKind.Null)
             {
-                schemaDefParts.Add($"subscription: {subscriptionTypeName.GetString()}");
+                var subscriptionName = subscriptionTypeName.GetString();
+                if (!string.IsNullOrEmpty(subscriptionName))
+                {
+                    schemaDefParts.Add($"subscription: {subscriptionName}");
+                }
             }
             
-            sdl.AppendLine("schema {");
-            foreach (var part in schemaDefParts)
+            if (schemaDefParts.Count > 0)
             {
-                sdl.AppendLine($"  {part}");
+                sdl.AppendLine("schema {");
+                foreach (var part in schemaDefParts)
+                {
+                    sdl.AppendLine($"  {part}");
+                }
+                sdl.AppendLine("}");
+                sdl.AppendLine();
             }
-            sdl.AppendLine("}");
-            sdl.AppendLine();
         }
 
         // Add type definitions
-        if (schema.TryGetProperty("types", out var types))
+        if (schema.TryGetProperty("types", out var types) && types.ValueKind != JsonValueKind.Null)
         {
             foreach (var type in types.EnumerateArray())
             {
                 if (!type.TryGetProperty("name", out var nameElement) || 
+                    nameElement.ValueKind == JsonValueKind.Null ||
                     nameElement.GetString()?.StartsWith("__") == true)
                     continue;
 
                 var typeName = nameElement.GetString();
-                var kind = type.GetProperty("kind").GetString();
-                var description = type.TryGetProperty("description", out var desc) ? desc.GetString() : null;
+                if (string.IsNullOrEmpty(typeName))
+                    continue;
 
-                switch (kind)
+                if (!type.TryGetProperty("kind", out var kindElement) ||
+                    kindElement.ValueKind == JsonValueKind.Null)
+                    continue;
+
+                var kind = kindElement.GetString();
+                if (string.IsNullOrEmpty(kind))
+                    continue;
+
+                var description = type.TryGetProperty("description", out var desc) && desc.ValueKind != JsonValueKind.Null ? desc.GetString() : null;
+
+                try
                 {
-                    case "OBJECT":
-                        sdl.AppendLine(ConvertObjectType(type));
-                        break;
-                    case "ENUM":
-                        sdl.AppendLine(ConvertEnumType(type));
-                        break;
-                    case "SCALAR":
-                        // Only add custom scalars, not built-in ones
-                        var scalarName = type.GetProperty("name").GetString();
-                        if (!string.IsNullOrEmpty(scalarName) && 
-                            !new[] { "String", "Int", "Float", "Boolean", "ID" }.Contains(scalarName))
-                        {
-                            sdl.AppendLine($"scalar {scalarName}");
-                        }
-                        break;
-                    case "INTERFACE":
-                        // For now, just convert as object type - could be enhanced later
-                        sdl.AppendLine(ConvertObjectType(type));
-                        break;
-                    case "UNION":
-                        // Simple union conversion
-                        var unionName = type.GetProperty("name").GetString();
-                        if (type.TryGetProperty("possibleTypes", out var possibleTypes))
-                        {
-                            var typeNames = possibleTypes.EnumerateArray()
-                                .Select(t => t.GetProperty("name").GetString())
-                                .Where(n => !string.IsNullOrEmpty(n));
-                            sdl.AppendLine($"union {unionName} = {string.Join(" | ", typeNames)}");
-                        }
-                        break;
-                    case "INPUT_OBJECT":
-                        // Convert input object type
-                        sdl.AppendLine(ConvertInputType(type));
-                        break;
-                    // Add other types as needed
+                    switch (kind)
+                    {
+                        case "OBJECT":
+                            sdl.AppendLine(ConvertObjectType(type));
+                            break;
+                        case "ENUM":
+                            sdl.AppendLine(ConvertEnumType(type));
+                            break;
+                        case "SCALAR":
+                            // Only add custom scalars, not built-in ones
+                            if (!string.IsNullOrEmpty(typeName) && 
+                                !new[] { "String", "Int", "Float", "Boolean", "ID" }.Contains(typeName))
+                            {
+                                sdl.AppendLine($"scalar {typeName}");
+                            }
+                            break;
+                        case "INTERFACE":
+                            // For now, just convert as object type - could be enhanced later
+                            sdl.AppendLine(ConvertObjectType(type));
+                            break;
+                        case "UNION":
+                            // Simple union conversion
+                            if (type.TryGetProperty("possibleTypes", out var possibleTypes) &&
+                                possibleTypes.ValueKind != JsonValueKind.Null)
+                            {
+                                var typeNames = possibleTypes.EnumerateArray()
+                                    .Select(t => t.TryGetProperty("name", out var n) && n.ValueKind != JsonValueKind.Null ? n.GetString() : null)
+                                    .Where(n => !string.IsNullOrEmpty(n))
+                                    .ToList();
+                                
+                                if (typeNames.Count > 0)
+                                {
+                                    sdl.AppendLine($"union {typeName} = {string.Join(" | ", typeNames)}");
+                                }
+                            }
+                            break;
+                        case "INPUT_OBJECT":
+                            // Convert input object type
+                            sdl.AppendLine(ConvertInputType(type));
+                            break;
+                        // Add other types as needed
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log the error but continue processing other types
+                    Console.WriteLine($"Error processing type {typeName}: {ex.Message}");
                 }
             }
         }
@@ -351,9 +440,18 @@ public class StrawberryShakeSchemaService
     private string ConvertObjectType(JsonElement type)
     {
         var result = new StringBuilder();
-        var typeName = type.GetProperty("name").GetString();
         
-        if (type.TryGetProperty("description", out var desc) && !string.IsNullOrEmpty(desc.GetString()))
+        if (!type.TryGetProperty("name", out var nameElement) || 
+            nameElement.ValueKind == JsonValueKind.Null)
+            return "";
+            
+        var typeName = nameElement.GetString();
+        if (string.IsNullOrEmpty(typeName))
+            return "";
+        
+        if (type.TryGetProperty("description", out var desc) && 
+            desc.ValueKind != JsonValueKind.Null && 
+            !string.IsNullOrEmpty(desc.GetString()))
         {
             result.AppendLine($"\"\"\"{desc.GetString()}\"\"\"");
         }
@@ -361,13 +459,25 @@ public class StrawberryShakeSchemaService
         result.Append($"type {typeName}");
         
         // Add interfaces if any
-        if (type.TryGetProperty("interfaces", out var interfaces) && interfaces.GetArrayLength() > 0)
+        if (type.TryGetProperty("interfaces", out var interfaces) && 
+            interfaces.ValueKind != JsonValueKind.Null && 
+            interfaces.GetArrayLength() > 0)
         {
-            var interfaceNames = interfaces.EnumerateArray()
-                .Select(i => i.GetProperty("name").GetString())
-                .Where(name => !string.IsNullOrEmpty(name));
+            var interfaceNames = new List<string>();
+            foreach (var iface in interfaces.EnumerateArray())
+            {
+                if (iface.TryGetProperty("name", out var ifaceNameElement) &&
+                    ifaceNameElement.ValueKind != JsonValueKind.Null)
+                {
+                    var ifaceName = ifaceNameElement.GetString();
+                    if (!string.IsNullOrEmpty(ifaceName))
+                    {
+                        interfaceNames.Add(ifaceName);
+                    }
+                }
+            }
             
-            if (interfaceNames.Any())
+            if (interfaceNames.Count > 0)
             {
                 result.Append($" implements {string.Join(" & ", interfaceNames)}");
             }
@@ -376,14 +486,25 @@ public class StrawberryShakeSchemaService
         result.AppendLine(" {");
         
         // Add fields
-        if (type.TryGetProperty("fields", out var fields))
+        if (type.TryGetProperty("fields", out var fields) && fields.ValueKind != JsonValueKind.Null)
         {
             foreach (var field in fields.EnumerateArray())
             {
-                var fieldName = field.GetProperty("name").GetString();
-                var fieldType = ConvertTypeReference(field.GetProperty("type"));
+                if (!field.TryGetProperty("name", out var fieldNameElement) ||
+                    fieldNameElement.ValueKind == JsonValueKind.Null ||
+                    !field.TryGetProperty("type", out var fieldTypeElement) ||
+                    fieldTypeElement.ValueKind == JsonValueKind.Null)
+                    continue;
+                    
+                var fieldName = fieldNameElement.GetString();
+                if (string.IsNullOrEmpty(fieldName))
+                    continue;
+                    
+                var fieldType = ConvertTypeReference(fieldTypeElement);
                 
-                if (field.TryGetProperty("description", out var fieldDesc) && !string.IsNullOrEmpty(fieldDesc.GetString()))
+                if (field.TryGetProperty("description", out var fieldDesc) && 
+                    fieldDesc.ValueKind != JsonValueKind.Null && 
+                    !string.IsNullOrEmpty(fieldDesc.GetString()))
                 {
                     result.AppendLine($"  \"\"\"{fieldDesc.GetString()}\"\"\"");
                 }
@@ -391,16 +512,30 @@ public class StrawberryShakeSchemaService
                 result.Append($"  {fieldName}");
                 
                 // Add arguments if any
-                if (field.TryGetProperty("args", out var args) && args.GetArrayLength() > 0)
+                if (field.TryGetProperty("args", out var args) && 
+                    args.ValueKind != JsonValueKind.Null && 
+                    args.GetArrayLength() > 0)
                 {
                     var argStrings = new List<string>();
                     foreach (var arg in args.EnumerateArray())
                     {
-                        var argName = arg.GetProperty("name").GetString();
-                        var argType = ConvertTypeReference(arg.GetProperty("type"));
+                        if (!arg.TryGetProperty("name", out var argNameElement) ||
+                            argNameElement.ValueKind == JsonValueKind.Null ||
+                            !arg.TryGetProperty("type", out var argTypeElement) ||
+                            argTypeElement.ValueKind == JsonValueKind.Null)
+                            continue;
+                            
+                        var argName = argNameElement.GetString();
+                        if (string.IsNullOrEmpty(argName))
+                            continue;
+                            
+                        var argType = ConvertTypeReference(argTypeElement);
                         argStrings.Add($"{argName}: {argType}");
                     }
-                    result.Append($"({string.Join(", ", argStrings)})");
+                    if (argStrings.Count > 0)
+                    {
+                        result.Append($"({string.Join(", ", argStrings)})");
+                    }
                 }
                 
                 result.AppendLine($": {fieldType}");
@@ -476,13 +611,22 @@ public class StrawberryShakeSchemaService
 
     private string ConvertTypeReference(JsonElement typeRef)
     {
-        var kind = typeRef.GetProperty("kind").GetString();
+        if (!typeRef.TryGetProperty("kind", out var kindElement))
+            return "Unknown";
+            
+        var kind = kindElement.GetString();
         
         return kind switch
         {
-            "NON_NULL" => ConvertTypeReference(typeRef.GetProperty("ofType")) + "!",
-            "LIST" => "[" + ConvertTypeReference(typeRef.GetProperty("ofType")) + "]",
-            _ => typeRef.GetProperty("name").GetString() ?? "Unknown"
+            "NON_NULL" => typeRef.TryGetProperty("ofType", out var nonNullOfType) 
+                ? ConvertTypeReference(nonNullOfType) + "!" 
+                : "Unknown!",
+            "LIST" => typeRef.TryGetProperty("ofType", out var listOfType) 
+                ? "[" + ConvertTypeReference(listOfType) + "]" 
+                : "[Unknown]",
+            _ => typeRef.TryGetProperty("name", out var nameElement) 
+                ? nameElement.GetString() ?? "Unknown" 
+                : "Unknown"
         };
     }
 

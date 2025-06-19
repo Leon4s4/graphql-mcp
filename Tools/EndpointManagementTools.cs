@@ -76,13 +76,23 @@ Error Handling:
                 ToolPrefix = toolPrefix
             };
 
+            // Test connection and generate tools before registering the endpoint
+            var toolGenerationResult = await GraphQlSchemaHelper.GenerateToolsFromSchema(endpointInfo);
+            
+            // Check if the result indicates a connection failure or other error
+            if (!toolGenerationResult.Success)
+            {
+                return $"Error: Unable to connect to GraphQL endpoint '{endpoint}'. Please verify the URL is correct and the endpoint is accessible. Details: {toolGenerationResult.ErrorMessage}";
+            }
+
+            // Only register the endpoint if schema generation was successful
             EndpointRegistryService.Instance.RegisterEndpoint(endpointName, endpointInfo);
 
-            return await GraphQlSchemaHelper.GenerateToolsFromSchema(endpointInfo);
+            return toolGenerationResult.FormatForDisplay();
         }
         catch (Exception ex)
         {
-            return $"Error registering endpoint: {ex.Message}";
+            return $"Error: Failed to register endpoint '{endpointName}'. {ex.Message}";
         }
     }
 
@@ -179,11 +189,25 @@ Note: This operation will replace all existing dynamic tools for the specified e
             return $"Endpoint '{endpointName}' not found. Use RegisterEndpoint first.";
         }
 
-        EndpointRegistryService.Instance.RemoveEndpoint(endpointName, out var toolsRemoved);
+        try
+        {
+            var toolGenerationResult = await GraphQlSchemaHelper.GenerateToolsFromSchema(endpointInfo);
 
-        var result = await GraphQlSchemaHelper.GenerateToolsFromSchema(endpointInfo);
+            // Check if the result indicates a connection failure
+            if (!toolGenerationResult.Success)
+            {
+                return $"Error: Unable to refresh endpoint '{endpointName}'. Connection failed. Details: {toolGenerationResult.ErrorMessage}";
+            }
 
-        return $"Refreshed tools for endpoint '{endpointName}'. Removed {toolsRemoved} existing tools. {result}";
+            // Only remove old tools if the refresh was successful
+            EndpointRegistryService.Instance.RemoveEndpoint(endpointName, out var toolsRemoved);
+
+            return $"Refreshed tools for endpoint '{endpointName}'. Removed {toolsRemoved} existing tools. {toolGenerationResult.FormatForDisplay()}";
+        }
+        catch (Exception ex)
+        {
+            return $"Error: Failed to refresh endpoint '{endpointName}'. {ex.Message}";
+        }
     }
 
     [McpServerTool, Description("Remove a GraphQL endpoint and clean up all its auto-generated dynamic tools")]
@@ -278,12 +302,33 @@ Returns comprehensive JSON response with all registration data, generated tools,
             // Perform comprehensive endpoint analysis
             var analysis = await PerformEndpointAnalysisAsync(endpointInfo, includeSchemaAnalysis, includeSecurityAnalysis, includePerformanceAnalysis, includeHealthChecks);
 
-            // Register endpoint
-            EndpointRegistryService.Instance.RegisterEndpoint(endpointName, endpointInfo);
-
             // Generate tools with analysis
             var toolGenerationResult = await GraphQlSchemaHelper.GenerateToolsFromSchema(endpointInfo);
-            var generatedTools = ParseGeneratedTools(toolGenerationResult);
+            
+            // Check if tool generation was successful
+            if (!toolGenerationResult.Success)
+            {
+                return CreateRegistrationErrorResponse("Tool Generation Failed", 
+                    toolGenerationResult.ErrorMessage ?? "Failed to generate tools", 
+                    "Unable to generate dynamic tools from the GraphQL schema", 
+                    ["Check endpoint connectivity", "Verify GraphQL schema is valid", "Ensure authentication is correct"]);
+            }
+
+            // Only register endpoint if tool generation was successful
+            EndpointRegistryService.Instance.RegisterEndpoint(endpointName, endpointInfo);
+
+            var generatedTools = toolGenerationResult.Data?.GeneratedTools ?? new List<GeneratedToolInfo>();
+            
+            // Convert to dynamic list for compatibility with existing methods
+            var generatedToolsDynamic = generatedTools.Select(t => new
+            {
+                name = t.Name,
+                type = t.Type,
+                description = t.Description,
+                parameters = t.Parameters,
+                isDeprecated = t.IsDeprecated,
+                deprecationReason = t.DeprecationReason
+            }).ToList<dynamic>();
 
             var processingTime = DateTime.UtcNow - startTime;
 
@@ -303,7 +348,7 @@ Returns comprehensive JSON response with all registration data, generated tools,
                 },
                 tools = new
                 {
-                    generated = generatedTools,
+                    generated = generatedToolsDynamic,
                     summary = new
                     {
                         totalTools = generatedTools.Count,
@@ -313,7 +358,7 @@ Returns comprehensive JSON response with all registration data, generated tools,
                     }
                 },
                 analysis = analysis,
-                recommendations = GenerateRegistrationRecommendations(endpointInfo, analysis, generatedTools),
+                recommendations = GenerateRegistrationRecommendations(endpointInfo, analysis, generatedToolsDynamic),
                 configuration = new
                 {
                     optimal = GenerateOptimalConfiguration(analysis),
@@ -327,7 +372,7 @@ Returns comprehensive JSON response with all registration data, generated tools,
                     version = "2.0",
                     features = new[] { "comprehensive-analysis", "smart-recommendations", "health-monitoring", "security-assessment" }
                 },
-                nextSteps = GenerateNextSteps(endpointInfo, generatedTools, analysis),
+                nextSteps = GenerateNextSteps(endpointInfo, generatedToolsDynamic, analysis),
                 monitoring = includeHealthChecks
                     ? new
                     {

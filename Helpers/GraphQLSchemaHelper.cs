@@ -16,66 +16,118 @@ public static class GraphQlSchemaHelper
     /// <summary>
     /// Generates tools from a GraphQL schema
     /// </summary>
-    public static async Task<string> GenerateToolsFromSchema(GraphQlEndpointInfo endpointInfo)
+    public static async Task<ToolGenerationResponse> GenerateToolsFromSchema(GraphQlEndpointInfo endpointInfo)
     {
-        var schemaResult = await SchemaService.GetSchemaAsync(endpointInfo);
-        if (!schemaResult.IsSuccess)
-            return $"Failed to retrieve schema: {schemaResult.ErrorMessage}";
-
-        var schema = schemaResult.Schema!;
-        var rootTypes = SchemaService.GetRootTypes(schema);
-        var toolsGenerated = 0;
-
-        // Debug information
-        var debugInfo = new StringBuilder();
-        debugInfo.AppendLine($"Schema root types detected:");
-        debugInfo.AppendLine($"- Query: {rootTypes.QueryType}");
-        debugInfo.AppendLine($"- Mutation: {rootTypes.MutationType ?? "None"}");
-        debugInfo.AppendLine($"- Subscription: {rootTypes.SubscriptionType ?? "None"}");
-        debugInfo.AppendLine($"- Allow Mutations: {endpointInfo.AllowMutations}");
-        debugInfo.AppendLine();
-
-        // Process Query type
-        var queryType = SchemaService.FindTypeDefinition<ObjectTypeDefinitionNode>(schema, rootTypes.QueryType);
-        if (queryType != null)
+        try
         {
-            var queryToolsCount = GraphQlToolGenerator.GenerateToolsForType(queryType, "Query", endpointInfo);
-            toolsGenerated += queryToolsCount;
-            debugInfo.AppendLine($"Generated {queryToolsCount} query tools from {queryType.Fields.Count} fields");
-        }
-        else
-        {
-            debugInfo.AppendLine($"Warning: Could not find Query type '{rootTypes.QueryType}' in schema");
-        }
-
-        // Process Mutation type (only if mutations are allowed)
-        if (endpointInfo.AllowMutations && !string.IsNullOrEmpty(rootTypes.MutationType))
-        {
-            var mutationType = SchemaService.FindTypeDefinition<ObjectTypeDefinitionNode>(schema, rootTypes.MutationType);
-            if (mutationType != null)
+            var schemaResult = await SchemaService.GetSchemaAsync(endpointInfo);
+            if (!schemaResult.IsSuccess)
             {
-                var mutationToolsCount = GraphQlToolGenerator.GenerateToolsForType(mutationType, "Mutation", endpointInfo);
-                toolsGenerated += mutationToolsCount;
-                debugInfo.AppendLine($"Generated {mutationToolsCount} mutation tools from {mutationType.Fields.Count} fields");
+                return ToolGenerationResponse.CreateError(
+                    "SCHEMA_RETRIEVAL_FAILED", 
+                    $"Failed to retrieve schema: {schemaResult.ErrorMessage}",
+                    "Unable to connect to the GraphQL endpoint or retrieve its schema");
             }
-            else
+
+            var schema = schemaResult.Schema!;
+            var rootTypes = SchemaService.GetRootTypes(schema);
+
+            var queryToolsCount = 0;
+            var mutationToolsCount = 0;
+            var queryFieldsCount = 0;
+            var mutationFieldsCount = 0;
+            var generatedTools = new List<GeneratedToolInfo>();
+
+            // Process Query type
+            var queryType = SchemaService.FindTypeDefinition<ObjectTypeDefinitionNode>(schema, rootTypes.QueryType);
+            if (queryType != null)
             {
-                debugInfo.AppendLine($"Warning: Could not find Mutation type '{rootTypes.MutationType}' in schema");
+                queryFieldsCount = queryType.Fields.Count;
+                queryToolsCount = GraphQlToolGenerator.GenerateToolsForType(queryType, "Query", endpointInfo);
+                
+                // Collect query tool information
+                foreach (var field in queryType.Fields)
+                {
+                    generatedTools.Add(new GeneratedToolInfo
+                    {
+                        Name = $"{endpointInfo.ToolPrefix}{(string.IsNullOrEmpty(endpointInfo.ToolPrefix) ? "" : "_")}query_{field.Name.Value}",
+                        Type = "query",
+                        Description = field.Description?.Value ?? $"GraphQL query: {field.Name.Value}",
+                        Parameters = field.Arguments.Select(arg => arg.Name.Value).ToList(),
+                        IsDeprecated = field.Directives.Any(d => d.Name.Value == "deprecated"),
+                        DeprecationReason = field.Directives
+                            .FirstOrDefault(d => d.Name.Value == "deprecated")
+                            ?.Arguments
+                            ?.FirstOrDefault(a => a.Name.Value == "reason")
+                            ?.Value.ToString()
+                    });
+                }
             }
-        }
-        else if (!endpointInfo.AllowMutations)
-        {
-            debugInfo.AppendLine("Mutations are disabled for this endpoint");
-        }
-        else
-        {
-            debugInfo.AppendLine("No mutation type found in schema");
-        }
 
-        debugInfo.AppendLine();
-        debugInfo.AppendLine(GenerateResultMessage(toolsGenerated, endpointInfo));
+            // Process Mutation type (only if mutations are allowed)
+            if (endpointInfo.AllowMutations && !string.IsNullOrEmpty(rootTypes.MutationType))
+            {
+                var mutationType = SchemaService.FindTypeDefinition<ObjectTypeDefinitionNode>(schema, rootTypes.MutationType);
+                if (mutationType != null)
+                {
+                    mutationFieldsCount = mutationType.Fields.Count;
+                    mutationToolsCount = GraphQlToolGenerator.GenerateToolsForType(mutationType, "Mutation", endpointInfo);
+                    
+                    // Collect mutation tool information
+                    foreach (var field in mutationType.Fields)
+                    {
+                        generatedTools.Add(new GeneratedToolInfo
+                        {
+                            Name = $"{endpointInfo.ToolPrefix}{(string.IsNullOrEmpty(endpointInfo.ToolPrefix) ? "" : "_")}mutation_{field.Name.Value}",
+                            Type = "mutation",
+                            Description = field.Description?.Value ?? $"GraphQL mutation: {field.Name.Value}",
+                            Parameters = field.Arguments.Select(arg => arg.Name.Value).ToList(),
+                            IsDeprecated = field.Directives.Any(d => d.Name.Value == "deprecated"),
+                            DeprecationReason = field.Directives
+                                .FirstOrDefault(d => d.Name.Value == "deprecated")
+                                ?.Arguments
+                                ?.FirstOrDefault(a => a.Name.Value == "reason")
+                                ?.Value.ToString()
+                        });
+                    }
+                }
+            }
 
-        return debugInfo.ToString();
+            var totalToolsGenerated = queryToolsCount + mutationToolsCount;
+
+            var data = new ToolGenerationData
+            {
+                EndpointName = endpointInfo.Name,
+                EndpointUrl = endpointInfo.Url,
+                QueryType = rootTypes.QueryType,
+                MutationType = rootTypes.MutationType,
+                SubscriptionType = rootTypes.SubscriptionType,
+                AllowMutations = endpointInfo.AllowMutations,
+                QueryToolsGenerated = queryToolsCount,
+                MutationToolsGenerated = mutationToolsCount,
+                TotalToolsGenerated = totalToolsGenerated,
+                QueryFieldsCount = queryFieldsCount,
+                MutationFieldsCount = mutationFieldsCount,
+                GeneratedTools = generatedTools,
+                SchemaMetadata = new Dictionary<string, object>
+                {
+                    ["hasQuery"] = queryType != null,
+                    ["hasMutation"] = !string.IsNullOrEmpty(rootTypes.MutationType),
+                    ["hasSubscription"] = !string.IsNullOrEmpty(rootTypes.SubscriptionType),
+                    ["totalTypes"] = schema.Definitions.Count
+                }
+            };
+
+            return ToolGenerationResponse.CreateSuccess(data, 
+                $"Successfully registered endpoint '{endpointInfo.Name}' with {totalToolsGenerated} dynamic tools.");
+        }
+        catch (Exception ex)
+        {
+            return ToolGenerationResponse.CreateError(
+                "UNEXPECTED_ERROR", 
+                $"Unexpected error during tool generation: {ex.Message}",
+                "An unexpected error occurred while processing the GraphQL schema");
+        }
     }
 
     /// <summary>
