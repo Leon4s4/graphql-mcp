@@ -472,4 +472,337 @@ public class GraphQlPrompts
 
         return prompt.ToString();
     }
+
+    [McpServerPrompt, Description("Migrate C# REST API code to GraphQL with comprehensive analysis")]
+    public static string MigrateCSharpToGraphQL(
+        [Description("C# code containing REST API calls (HttpClient patterns)")]
+        string csharpCode,
+        [Description("Target GraphQL endpoint name")]
+        string graphqlEndpoint,
+        [Description("Analysis depth: basic, detailed, comprehensive")]
+        string analysisLevel = "comprehensive")
+    {
+        var prompt = new StringBuilder();
+
+        prompt.AppendLine("# C# to GraphQL Migration Assistant");
+        prompt.AppendLine();
+        prompt.AppendLine("You are a GraphQL migration expert. Analyze the provided C# REST API code and generate equivalent GraphQL queries with comprehensive migration guidance.");
+        prompt.AppendLine();
+        prompt.AppendLine("## Source Code to Analyze:");
+        prompt.AppendLine("```csharp");
+        prompt.AppendLine(csharpCode);
+        prompt.AppendLine("```");
+        prompt.AppendLine();
+        prompt.AppendLine($"**Target GraphQL Endpoint:** {graphqlEndpoint}");
+        prompt.AppendLine($"**Analysis Level:** {analysisLevel}");
+        prompt.AppendLine();
+
+        prompt.AppendLine("## Migration Analysis Tasks:");
+        prompt.AppendLine("1. **REST Call Extraction**: Identify all HTTP client calls (GET, POST, PUT, DELETE)");
+        prompt.AppendLine("2. **Data Flow Analysis**: Understand how data flows between API calls");
+        prompt.AppendLine("3. **Entity Relationship Mapping**: Identify related entities and their connections");
+        prompt.AppendLine("4. **Aggregation Pattern Detection**: Find data combination and transformation logic");
+        prompt.AppendLine("5. **GraphQL Query Generation**: Create equivalent queries that combine multiple REST calls");
+        prompt.AppendLine();
+
+        prompt.AppendLine("## Performance Benefits to Calculate:");
+        prompt.AppendLine("- Network round trip reduction (from N calls to 1 query)");
+        prompt.AppendLine("- Data over-fetching elimination");
+        prompt.AppendLine("- Bandwidth usage optimization");
+        prompt.AppendLine("- Client-side complexity reduction");
+        prompt.AppendLine();
+
+        prompt.AppendLine("## Migration Guide Requirements:");
+        prompt.AppendLine("- Step-by-step migration instructions");
+        prompt.AppendLine("- Before/after code comparisons");
+        prompt.AppendLine("- GraphQL client implementation examples");
+        prompt.AppendLine("- Error handling adaptation strategies");
+        prompt.AppendLine("- Testing approach for GraphQL queries");
+        prompt.AppendLine();
+
+        prompt.AppendLine("## Use ExtractGraphQLFromCSharpCode tool with these parameters:");
+        prompt.AppendLine($"- csharpCode: [the provided code]");
+        prompt.AppendLine($"- graphqlEndpoint: \"{graphqlEndpoint}\"");
+        prompt.AppendLine($"- analysisMode: \"{analysisLevel}\"");
+        prompt.AppendLine("- includeDataFlowAnalysis: true");
+        prompt.AppendLine("- includeOptimizations: true");
+        prompt.AppendLine("- includeMigrationGuide: true");
+
+        return prompt.ToString();
+    }
+
+    [McpServerPrompt, Description("Convert REST API endpoints to optimized GraphQL queries")]
+    public static string ConvertRestToGraphQL(
+        [Description("JSON array of REST endpoints with method, endpoint, and purpose")]
+        string restEndpoints,
+        [Description("Target GraphQL endpoint name")]
+        string graphqlEndpoint,
+        [Description("Entity relationships as JSON (optional)")]
+        string? entityRelationships = null)
+    {
+        var prompt = new StringBuilder();
+
+        prompt.AppendLine("# REST to GraphQL Conversion Assistant");
+        prompt.AppendLine();
+        prompt.AppendLine("You are a GraphQL optimization expert. Convert the provided REST API endpoints into efficient GraphQL queries that combine multiple operations.");
+        prompt.AppendLine();
+        prompt.AppendLine("## REST Endpoints to Convert:");
+        prompt.AppendLine(restEndpoints);
+        prompt.AppendLine();
+        prompt.AppendLine($"**Target GraphQL Endpoint:** {graphqlEndpoint}");
+
+        if (!string.IsNullOrEmpty(entityRelationships))
+        {
+            prompt.AppendLine();
+            prompt.AppendLine("**Entity Relationships:**");
+            prompt.AppendLine(entityRelationships);
+        }
+
+        prompt.AppendLine();
+        prompt.AppendLine("## Optimization Goals:");
+        prompt.AppendLine("1. **Combine Operations**: Merge related REST calls into single GraphQL queries");
+        prompt.AppendLine("2. **Field Selection**: Include only necessary fields to reduce payload");
+        prompt.AppendLine("3. **Fragment Usage**: Create reusable field sets for common patterns");
+        prompt.AppendLine("4. **Variable Implementation**: Use variables for dynamic query parameters");
+        prompt.AppendLine("5. **Pagination Strategy**: Implement proper pagination for list queries");
+        prompt.AppendLine();
+
+        prompt.AppendLine("## Query Variations to Generate:");
+        prompt.AppendLine("- **List Queries**: Paginated collections with filtering");
+        prompt.AppendLine("- **Detail Queries**: Complete entity data with relationships");
+        prompt.AppendLine("- **Search Queries**: Filtered results with search criteria");
+        prompt.AppendLine("- **Minimal Queries**: Essential fields only for performance");
+        prompt.AppendLine();
+
+        prompt.AppendLine("## Performance Analysis Required:");
+        prompt.AppendLine("- Network round trip reduction calculation");
+        prompt.AppendLine("- Data over-fetching elimination metrics");
+        prompt.AppendLine("- Query complexity assessment");
+        prompt.AppendLine("- Caching strategy recommendations");
+        prompt.AppendLine();
+
+        prompt.AppendLine("## Use GenerateOptimizedGraphQLQueries tool with these parameters:");
+        prompt.AppendLine($"- restEndpoints: {restEndpoints}");
+        prompt.AppendLine($"- graphqlEndpoint: \"{graphqlEndpoint}\"");
+        if (!string.IsNullOrEmpty(entityRelationships))
+        {
+            prompt.AppendLine($"- entityRelationships: {entityRelationships}");
+        }
+        prompt.AppendLine("- includeOptimizations: true");
+        prompt.AppendLine("- includeVariations: true");
+
+        return prompt.ToString();
+    }
+
+    [McpServerPrompt, Description("Plan a comprehensive REST to GraphQL migration strategy")]
+    public static string PlanGraphQLMigration(
+        [Description("Current REST API architecture description")]
+        string currentArchitecture,
+        [Description("Migration goals and business objectives")]
+        string migrationGoals,
+        [Description("Team size and timeline constraints")]
+        string constraints,
+        [Description("Risk tolerance: conservative, moderate, aggressive")]
+        string riskTolerance = "moderate")
+    {
+        var prompt = new StringBuilder();
+
+        prompt.AppendLine("# GraphQL Migration Planning Assistant");
+        prompt.AppendLine();
+        prompt.AppendLine("You are a GraphQL migration strategist. Create a comprehensive, phased migration plan from REST to GraphQL that minimizes risk and maximizes business value.");
+        prompt.AppendLine();
+        prompt.AppendLine("## Current State Analysis:");
+        prompt.AppendLine($"**REST Architecture:** {currentArchitecture}");
+        prompt.AppendLine($"**Migration Goals:** {migrationGoals}");
+        prompt.AppendLine($"**Constraints:** {constraints}");
+        prompt.AppendLine($"**Risk Tolerance:** {riskTolerance}");
+        prompt.AppendLine();
+
+        prompt.AppendLine("## Migration Planning Framework:");
+        prompt.AppendLine("### Phase 1: Assessment and Preparation");
+        prompt.AppendLine("- REST API inventory and dependency mapping");
+        prompt.AppendLine("- Client application analysis and impact assessment");
+        prompt.AppendLine("- Team skill assessment and training needs");
+        prompt.AppendLine("- Infrastructure and tooling requirements");
+        prompt.AppendLine();
+
+        prompt.AppendLine("### Phase 2: Pilot Implementation");
+        prompt.AppendLine("- Select low-risk, high-value endpoints for initial migration");
+        prompt.AppendLine("- Implement GraphQL schema and resolvers");
+        prompt.AppendLine("- Create testing and validation procedures");
+        prompt.AppendLine("- Establish monitoring and performance baselines");
+        prompt.AppendLine();
+
+        prompt.AppendLine("### Phase 3: Gradual Rollout");
+        prompt.AppendLine("- Phased migration of remaining endpoints");
+        prompt.AppendLine("- Client application updates and testing");
+        prompt.AppendLine("- Performance monitoring and optimization");
+        prompt.AppendLine("- Documentation and team knowledge transfer");
+        prompt.AppendLine();
+
+        prompt.AppendLine("### Phase 4: Optimization and Scaling");
+        prompt.AppendLine("- Advanced GraphQL features implementation");
+        prompt.AppendLine("- Performance tuning and caching strategies");
+        prompt.AppendLine("- Legacy REST API deprecation planning");
+        prompt.AppendLine("- Long-term maintenance and evolution strategy");
+        prompt.AppendLine();
+
+        switch (riskTolerance.ToLower())
+        {
+            case "conservative":
+                prompt.AppendLine("## Conservative Migration Approach:");
+                prompt.AppendLine("- Maintain parallel REST and GraphQL APIs during transition");
+                prompt.AppendLine("- Extensive testing and validation at each phase");
+                prompt.AppendLine("- Gradual client migration with feature flags");
+                prompt.AppendLine("- Comprehensive rollback procedures");
+                break;
+
+            case "aggressive":
+                prompt.AppendLine("## Aggressive Migration Approach:");
+                prompt.AppendLine("- Rapid GraphQL implementation with direct replacement");
+                prompt.AppendLine("- Automated testing and CI/CD pipeline integration");
+                prompt.AppendLine("- Quick client migration with bulk updates");
+                prompt.AppendLine("- Focus on performance gains and new capabilities");
+                break;
+
+            default: // moderate
+                prompt.AppendLine("## Moderate Migration Approach:");
+                prompt.AppendLine("- Balanced approach with calculated risks");
+                prompt.AppendLine("- Phased implementation with validation gates");
+                prompt.AppendLine("- Client migration based on criticality and complexity");
+                prompt.AppendLine("- Regular performance and business impact assessment");
+                break;
+        }
+
+        prompt.AppendLine();
+        prompt.AppendLine("## Success Metrics to Track:");
+        prompt.AppendLine("- API response time improvements");
+        prompt.AppendLine("- Network bandwidth reduction");
+        prompt.AppendLine("- Developer productivity gains");
+        prompt.AppendLine("- Client application performance");
+        prompt.AppendLine("- Business feature delivery velocity");
+        prompt.AppendLine();
+
+        prompt.AppendLine("## Deliverables Required:");
+        prompt.AppendLine("1. **Migration Roadmap**: Timeline with phases and milestones");
+        prompt.AppendLine("2. **Risk Assessment**: Potential issues and mitigation strategies");
+        prompt.AppendLine("3. **Resource Plan**: Team allocation and skill development");
+        prompt.AppendLine("4. **Technical Architecture**: GraphQL implementation design");
+        prompt.AppendLine("5. **Testing Strategy**: Validation and quality assurance approach");
+        prompt.AppendLine("6. **Communication Plan**: Stakeholder updates and change management");
+
+        return prompt.ToString();
+    }
+
+    [McpServerPrompt, Description("Create comprehensive GraphQL development workflow")]
+    public static string SetupGraphQLWorkflow(
+        [Description("GraphQL endpoint URL or name")]
+        string endpoint,
+        [Description("Development focus: exploration, development, testing, production")]
+        string developmentFocus,
+        [Description("Team experience level: beginner, intermediate, advanced")]
+        string experienceLevel = "intermediate")
+    {
+        var prompt = new StringBuilder();
+
+        prompt.AppendLine("# GraphQL Development Workflow Setup");
+        prompt.AppendLine();
+        prompt.AppendLine("You are a GraphQL development expert. Set up a comprehensive development workflow that maximizes team productivity and code quality.");
+        prompt.AppendLine();
+        prompt.AppendLine($"**Target Endpoint:** {endpoint}");
+        prompt.AppendLine($"**Development Focus:** {developmentFocus}");
+        prompt.AppendLine($"**Team Experience:** {experienceLevel}");
+        prompt.AppendLine();
+
+        prompt.AppendLine("## Workflow Components to Establish:");
+
+        switch (developmentFocus.ToLower())
+        {
+            case "exploration":
+                prompt.AppendLine("### Schema Exploration Workflow:");
+                prompt.AppendLine("1. **Endpoint Registration**: Set up GraphQL endpoint with proper authentication");
+                prompt.AppendLine("2. **Schema Introspection**: Discover all available types, queries, and mutations");
+                prompt.AppendLine("3. **Documentation Generation**: Create comprehensive API documentation");
+                prompt.AppendLine("4. **Query Examples**: Generate practical query examples for key use cases");
+                prompt.AppendLine("5. **Interactive Exploration**: Set up GraphQL playground or similar tools");
+                break;
+
+            case "development":
+                prompt.AppendLine("### Development Workflow:");
+                prompt.AppendLine("1. **Code Generation**: Generate typed client code from schema");
+                prompt.AppendLine("2. **Query Building**: Establish patterns for query construction");
+                prompt.AppendLine("3. **Error Handling**: Implement robust error handling strategies");
+                prompt.AppendLine("4. **Performance Monitoring**: Set up query performance tracking");
+                prompt.AppendLine("5. **Development Tools**: Configure IDE extensions and debugging tools");
+                break;
+
+            case "testing":
+                prompt.AppendLine("### Testing Workflow:");
+                prompt.AppendLine("1. **Test Suite Generation**: Create comprehensive test scenarios");
+                prompt.AppendLine("2. **Mock Data Creation**: Generate realistic test data");
+                prompt.AppendLine("3. **Integration Testing**: Set up end-to-end testing procedures");
+                prompt.AppendLine("4. **Performance Testing**: Establish query performance benchmarks");
+                prompt.AppendLine("5. **Continuous Testing**: Integrate tests into CI/CD pipeline");
+                break;
+
+            case "production":
+                prompt.AppendLine("### Production Workflow:");
+                prompt.AppendLine("1. **Monitoring Setup**: Implement comprehensive observability");
+                prompt.AppendLine("2. **Performance Optimization**: Establish optimization procedures");
+                prompt.AppendLine("3. **Security Hardening**: Implement security best practices");
+                prompt.AppendLine("4. **Deployment Strategy**: Set up safe deployment procedures");
+                prompt.AppendLine("5. **Incident Response**: Create troubleshooting and recovery procedures");
+                break;
+        }
+
+        // Add experience-level specific guidance
+        prompt.AppendLine();
+        switch (experienceLevel.ToLower())
+        {
+            case "beginner":
+                prompt.AppendLine("## Beginner-Friendly Approach:");
+                prompt.AppendLine("- Start with simple queries and gradually increase complexity");
+                prompt.AppendLine("- Use GraphQL playground for interactive learning");
+                prompt.AppendLine("- Focus on understanding GraphQL fundamentals");
+                prompt.AppendLine("- Provide extensive documentation and examples");
+                prompt.AppendLine("- Implement guardrails to prevent common mistakes");
+                break;
+
+            case "advanced":
+                prompt.AppendLine("## Advanced Team Optimizations:");
+                prompt.AppendLine("- Implement advanced features like subscriptions and federation");
+                prompt.AppendLine("- Set up sophisticated caching and performance strategies");
+                prompt.AppendLine("- Use custom directives and advanced schema patterns");
+                prompt.AppendLine("- Implement comprehensive monitoring and alerting");
+                prompt.AppendLine("- Focus on architectural patterns and best practices");
+                break;
+
+            default: // intermediate
+                prompt.AppendLine("## Intermediate Development Approach:");
+                prompt.AppendLine("- Balance learning with productivity");
+                prompt.AppendLine("- Implement standard patterns and practices");
+                prompt.AppendLine("- Focus on practical application and real-world scenarios");
+                prompt.AppendLine("- Provide guidance on common challenges and solutions");
+                prompt.AppendLine("- Establish code review and quality processes");
+                break;
+        }
+
+        prompt.AppendLine();
+        prompt.AppendLine("## Tools and Configuration:");
+        prompt.AppendLine("1. **Use CompleteGraphQLWorkflow** to set up comprehensive development environment");
+        prompt.AppendLine("2. **Use RegisterEndpoint** to properly configure the GraphQL endpoint");
+        prompt.AppendLine("3. **Use CreateTestSuite** to establish testing procedures");
+        prompt.AppendLine("4. **Use GenerateCode** to create typed client libraries");
+        prompt.AppendLine("5. **Use DebugGraphQL** to set up debugging and troubleshooting procedures");
+        prompt.AppendLine();
+
+        prompt.AppendLine("## Success Criteria:");
+        prompt.AppendLine("- Team can efficiently explore and understand GraphQL schemas");
+        prompt.AppendLine("- Developers can confidently write and optimize GraphQL queries");
+        prompt.AppendLine("- Comprehensive testing ensures quality and reliability");
+        prompt.AppendLine("- Performance monitoring provides actionable insights");
+        prompt.AppendLine("- Documentation supports team knowledge sharing and onboarding");
+
+        return prompt.ToString();
+    }
 }

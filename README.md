@@ -423,6 +423,339 @@ Register endpoints with optional analysis and monitoring.
 }
 ```
 
+## Predefined MCP Prompts
+
+The GraphQL MCP Server includes predefined prompts that provide structured guidance for common GraphQL tasks. These prompts automatically include the correct tool parameters and best practices.
+
+### Available Predefined Prompts
+
+## Migration and REST-to-GraphQL Prompts
+
+#### `MigrateCSharpToGraphQL`
+**Comprehensive C# to GraphQL migration with analysis**
+- **Parameters**: `csharpCode`, `graphqlEndpoint`, `analysisLevel`
+- Analyzes C# REST API code patterns (HttpClient, async/await, LINQ)
+- Generates equivalent GraphQL queries that combine multiple REST calls
+- Provides migration guidance with performance benefits analysis
+- Includes before/after code comparisons and step-by-step migration guide
+
+#### `ConvertRestToGraphQL`
+**Convert REST API endpoints to optimized GraphQL queries**
+- **Parameters**: `restEndpoints`, `graphqlEndpoint`, `entityRelationships`
+- Takes JSON array of REST endpoints with method, endpoint, and purpose
+- Creates optimized GraphQL queries with fragments and variables
+- Implements pagination, field selection, and query variations
+- Generates list, search, and minimal query variations
+
+#### `PlanGraphQLMigration`
+**Strategic migration planning from REST to GraphQL**
+- **Parameters**: `currentArchitecture`, `migrationGoals`, `constraints`, `riskTolerance`
+- Creates comprehensive phased migration roadmaps
+- Provides risk assessment and mitigation strategies
+- Includes team training recommendations and resource planning
+- Supports conservative, moderate, and aggressive migration approaches
+
+#### `SetupGraphQLWorkflow`
+**Comprehensive GraphQL development workflow setup**
+- **Parameters**: `endpoint`, `developmentFocus`, `experienceLevel`
+- Configures complete development environment
+- Sets up testing, debugging, and performance monitoring procedures
+- Provides team-specific guidance (beginner, intermediate, advanced)
+- Includes tool configuration and best practices implementation
+
+## Core GraphQL Development Prompts
+
+#### `GenerateQuery`
+**Optimized GraphQL query generation based on requirements**
+- **Parameters**: `dataRequirement`, `endpointName`, `performance`, `includeRelated`
+- Creates efficient queries with proper structure and optimization
+- Includes fragments for reusable field sets and proper variable definitions
+- Optimizes for performance levels (fast, normal, comprehensive)
+- Provides usage examples and query explanation
+
+#### `AnalyzeSchema`
+**Comprehensive schema analysis with multiple focus areas**
+- **Parameters**: `focus`, `endpointName`, `specificType`
+- **Focus Areas**: structure, performance, security, evolution
+- Provides actionable recommendations and identifies potential issues
+- Includes implementation guidance and priority ranking
+- Covers type relationships, naming conventions, and optimization opportunities
+
+#### `DebuggingAssistant`
+**Context-aware GraphQL troubleshooting guidance**
+- **Parameters**: `issueType`, `severity`, `environment`
+- **Issue Types**: query-error, performance, schema, resolver
+- Provides systematic debugging approach with root cause analysis
+- Environment-specific recommendations (development, staging, production)
+- Includes resolution steps and prevention strategies
+
+#### `TestingStrategy`
+**Comprehensive testing strategies for GraphQL APIs**
+- **Parameters**: `testingType`, `operationType`, `framework`
+- **Testing Types**: unit, integration, performance, security
+- Framework-specific implementations (jest, vitest, xunit, pytest)
+- Generates test cases with examples and CI/CD integration guidance
+- Includes mocking strategies and assertion recommendations
+
+#### `SchemaDesign`
+**GraphQL schema architecture and design guidance**
+- **Parameters**: `designFocus`, `domain`, `scale`
+- **Design Focus**: new-schema, refactoring, migration, optimization
+- **Domains**: e-commerce, social, api-gateway, microservices
+- Scale-appropriate recommendations (small, medium, large, enterprise)
+- Includes best practices, patterns, and future considerations
+
+## Workflow and Development Process Prompts
+
+#### `DevelopmentWorkflow`
+**GraphQL best practices for development workflows**
+- **Parameters**: `phase`, `teamSize`, `techStack`
+- **Phases**: planning, implementation, testing, deployment
+- **Tech Stacks**: node, dotnet, python, java with specific recommendations
+- Team size considerations (solo, small, medium, large)
+- Includes quality gates, tools, and success metrics
+
+#### `DocumentationGuide`
+**Generate comprehensive GraphQL API documentation**
+- **Parameters**: `docType`, `audience`, `format`
+- **Doc Types**: api-reference, getting-started, best-practices, migration
+- **Audiences**: developers, qa, devops, business
+- **Formats**: markdown, interactive, video-script
+- Audience-specific content and interactive features
+
+#### `TrainingMaterial`
+**Create GraphQL learning and training materials**
+- **Parameters**: `level`, `format`, `focus`, `duration`
+- **Levels**: beginner, intermediate, advanced, expert
+- **Formats**: workshop, course, bootcamp, self-paced
+- **Focus Areas**: concepts, implementation, optimization, architecture
+- Includes learning objectives, hands-on exercises, and assessment strategies
+
+## MCP Server Management Prompts
+
+#### `EndpointManagementGuide`
+**Guidance for managing GraphQL endpoints in the MCP server**
+- **Parameters**: `detailLevel`
+- Explains dynamic endpoint registration and tool generation
+- Covers typical workflow for multi-endpoint management
+- Includes best practices for endpoint lifecycle management
+
+#### `ToolsOverview`
+**Overview of available MCP server tools and capabilities**
+- **Parameters**: `focus`
+- **Focus Areas**: all, query, schema, performance, security
+- Comprehensive overview of available tools by category
+- Helps discover the right tool for specific tasks
+
+### Using Predefined Prompts
+
+Predefined prompts automatically structure your requests with the right parameters and guidance:
+
+```
+Use the MigrateCSharpToGraphQL prompt with:
+- C# code: [your REST API code]
+- GraphQL endpoint: "my-api"
+- Analysis level: "comprehensive"
+```
+
+The prompt will automatically:
+- Include all necessary analysis parameters
+- Provide structured guidance for the migration
+- Ensure you get comprehensive results
+- Include tool-specific recommendations
+
+## Migration Tool Prompts
+
+### Using ExtractGraphQLFromCSharpCode
+
+Here are practical prompts to get the most out of the C# to GraphQL migration tool:
+
+#### **Basic Migration Analysis**
+```
+I have C# code that makes multiple REST API calls to fetch user data. Can you analyze this code and suggest equivalent GraphQL queries?
+
+[Paste your C# code here]
+
+Target GraphQL endpoint: "my-api"
+```
+
+#### **Comprehensive Migration with Performance Analysis**
+```
+Please perform a comprehensive analysis of my C# REST API code. I want to:
+1. Extract all REST calls and understand the data flow
+2. Generate optimized GraphQL queries that combine multiple calls
+3. Get a detailed migration guide with code examples
+4. Understand the performance benefits of switching to GraphQL
+
+C# Code:
+[Your code here]
+
+GraphQL endpoint: "production-api"
+Analysis mode: "comprehensive"
+```
+
+#### **Data Aggregation Pattern Analysis**
+```
+I have C# code that fetches data from multiple endpoints and aggregates it into objects. Can you:
+- Identify the aggregation patterns
+- Show how GraphQL can replace multiple REST calls with single queries
+- Provide migration recommendations
+
+Focus on: data flow analysis and optimization opportunities
+
+[Your C# code]
+```
+
+#### **Entity Relationship Migration**
+```
+My C# application makes REST calls to get related entities (users → posts → comments). Can you:
+1. Analyze the entity relationships in my code
+2. Generate GraphQL queries that efficiently fetch related data
+3. Show the performance improvements from reducing N+1 queries
+
+C# Code: [paste code]
+GraphQL endpoint: "content-api"
+```
+
+### Using GenerateOptimizedGraphQLQueries
+
+#### **REST Endpoint Replacement**
+```
+I want to replace these REST endpoints with optimized GraphQL queries:
+
+REST Endpoints:
+- GET /api/users/{id} - Get user details
+- GET /api/users/{id}/posts - Get user's posts  
+- GET /api/posts/{id}/comments - Get post comments
+- GET /api/users/{id}/followers - Get user followers
+
+Please generate GraphQL queries that:
+1. Combine these calls efficiently
+2. Use fragments for reusable field sets
+3. Include pagination and filtering
+4. Provide query variations for different use cases
+
+Target endpoint: "social-api"
+```
+
+#### **E-commerce API Migration**
+```
+Help me migrate our e-commerce REST API to GraphQL. Generate optimized queries for:
+
+REST Endpoints:
+- GET /api/products/{id} - Product details
+- GET /api/products/{id}/reviews - Product reviews
+- GET /api/products/{id}/related - Related products
+- GET /api/categories/{id}/products - Category products
+- GET /api/users/{id}/cart - User shopping cart
+- GET /api/users/{id}/orders - User order history
+
+Entity Relationships:
+- Product: [reviews, related, category]
+- User: [cart, orders, reviews]
+- Category: [products, subcategories]
+
+Include optimization techniques and performance comparisons.
+```
+
+#### **Microservices Consolidation**
+```
+I have multiple microservices with REST APIs that I want to consolidate through GraphQL:
+
+Service 1 - User Service:
+- GET /users/{id}
+- GET /users/{id}/profile
+- GET /users/{id}/preferences
+
+Service 2 - Content Service:  
+- GET /posts/{userId}
+- GET /posts/{id}/details
+- GET /categories
+
+Service 3 - Analytics Service:
+- GET /users/{id}/stats
+- GET /posts/{id}/metrics
+
+Generate unified GraphQL queries that can replace these distributed REST calls. Include data aggregation patterns and cross-service query optimization.
+```
+
+### Advanced Migration Scenarios
+
+#### **Legacy System Migration**
+```
+I'm migrating a legacy .NET application with complex REST API patterns. Can you:
+
+1. Analyze this C# code for REST API usage patterns
+2. Identify opportunities for GraphQL optimization
+3. Generate a phased migration plan
+4. Provide performance impact analysis
+
+Focus on: reducing network overhead, improving data fetching efficiency, and maintaining backwards compatibility during migration.
+
+[Large C# codebase excerpt]
+```
+
+#### **Performance Optimization Focus**
+```
+My application has performance issues due to multiple REST API calls. Analyze this code and:
+
+1. Calculate current network overhead
+2. Show how GraphQL can reduce round trips
+3. Generate optimized queries with field selection
+4. Provide performance benchmarking data
+
+Specific concerns:
+- N+1 query problems
+- Over-fetching data
+- Multiple sequential API calls
+- Mobile app performance
+
+[C# code with performance issues]
+```
+
+#### **API Documentation Migration**
+```
+I have REST API documentation and want to understand how it would translate to GraphQL:
+
+REST API Endpoints: [JSON array of endpoints]
+
+Please generate:
+1. Equivalent GraphQL schema suggestions
+2. Optimized query patterns
+3. Migration complexity assessment
+4. Query variations for different client needs
+
+Include fragments, variables, and best practices for the generated queries.
+```
+
+### Migration Planning Prompts
+
+#### **Assessment and Planning**
+```
+Before starting my REST to GraphQL migration, I need to understand:
+
+1. What REST patterns in my C# code are good candidates for GraphQL?
+2. Which parts of my API would benefit most from migration?
+3. What's the estimated effort and complexity?
+4. How should I phase the migration?
+
+Please analyze my codebase and provide a migration assessment:
+[C# code or REST endpoint list]
+```
+
+#### **Team Training and Documentation**
+```
+I need to train my development team on GraphQL migration. Can you:
+
+1. Analyze our current REST patterns
+2. Show before/after examples with our actual code
+3. Generate training materials with practical examples
+4. Provide best practices specific to our use cases
+
+Our current C# patterns: [code examples]
+Target GraphQL endpoint: "training-api"
+```
+
 ## Tool Consolidation Benefits
 
 The GraphQL MCP Server has been optimized through comprehensive tool consolidation:
