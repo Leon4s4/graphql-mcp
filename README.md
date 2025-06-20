@@ -257,6 +257,82 @@ Advanced utility suite with intelligent formatting, optimization, and transforma
 
 Tools for managing GraphQL endpoint registration and configuration.
 
+### 7. CodeMigrationTools
+
+**NEW**: Tools for migrating from REST API code to GraphQL queries.
+
+#### `ExtractGraphQLFromCSharpCode`
+**Analyze C# code that makes REST API calls and generate equivalent GraphQL queries.**
+
+This powerful migration tool helps transition from REST to GraphQL by:
+- Extracting REST API calls from C# code
+- Analyzing data aggregation patterns  
+- Identifying entity relationships and dependencies
+- Generating equivalent GraphQL queries that combine multiple REST calls
+- Providing migration recommendations and optimizations
+
+**Supported C# Patterns:**
+- HttpClient REST calls (GET, POST, PUT, DELETE)
+- Multiple API calls with data aggregation
+- Async/await patterns
+- LINQ operations on API responses
+- Entity mapping and transformation
+- Conditional API calls based on previous responses
+
+**Parameters:**
+- `csharpCode`: C# code containing REST API calls to analyze
+- `graphqlEndpoint`: Target GraphQL endpoint name (must be registered)
+- `includeDataFlowAnalysis`: Include detailed analysis of data flows (default: true)
+- `includeOptimizations`: Generate optimized GraphQL queries (default: true)
+- `includeMigrationGuide`: Include migration recommendations (default: true)
+- `analysisMode`: Analysis depth - "basic", "detailed", "comprehensive" (default: "detailed")
+
+**Example Usage:**
+```json
+{
+  "csharpCode": "var user = await httpClient.GetAsync(\"/api/users/{id}\");\nvar posts = await httpClient.GetAsync(\"/api/users/{id}/posts\");",
+  "graphqlEndpoint": "my-api",
+  "analysisMode": "comprehensive"
+}
+```
+
+#### `GenerateOptimizedGraphQLQueries`
+**Generate optimized GraphQL queries to replace multiple REST API calls.**
+
+Creates equivalent GraphQL queries that:
+- Combine multiple REST calls into single GraphQL operations
+- Optimize data fetching with precise field selection
+- Implement proper pagination and filtering
+- Use fragments for reusable field sets
+- Include variables for dynamic queries
+
+**Parameters:**
+- `restEndpoints`: JSON array of REST endpoints to replace
+- `graphqlEndpoint`: Target GraphQL endpoint name
+- `entityRelationships`: Entity relationships as JSON (optional)
+- `includeOptimizations`: Include optimization techniques (default: true)
+- `includeVariations`: Generate queries for different use cases (default: true)
+
+**Example REST Endpoints Format:**
+```json
+[
+  {
+    "method": "GET",
+    "endpoint": "/api/users/{id}",
+    "purpose": "Get user details"
+  },
+  {
+    "method": "GET", 
+    "endpoint": "/api/users/{id}/posts",
+    "purpose": "Get user posts"
+  }
+]
+```
+
+### 6. EndpointManagementTools
+
+Tools for managing GraphQL endpoint registration and configuration.
+
 #### `RegisterEndpoint`
 Register a GraphQL endpoint and automatically generate MCP tools.
 
@@ -324,11 +400,34 @@ Register endpoints with optional analysis and monitoring.
 }
 ```
 
+### REST to GraphQL Migration
+```json
+{
+  "tool": "ExtractGraphQLFromCSharpCode",
+  "csharpCode": "var user = await httpClient.GetAsync(\"/api/users/{id}\");\nvar posts = await httpClient.GetAsync(\"/api/users/{id}/posts\");\nvar comments = await httpClient.GetAsync(\"/api/posts/{postId}/comments\");",
+  "graphqlEndpoint": "my-api",
+  "analysisMode": "comprehensive",
+  "includeMigrationGuide": true
+}
+```
+
+### Optimized Query Generation
+```json
+{
+  "tool": "GenerateOptimizedGraphQLQueries",
+  "restEndpoints": "[{\"method\": \"GET\", \"endpoint\": \"/api/users/{id}\", \"purpose\": \"Get user\"}, {\"method\": \"GET\", \"endpoint\": \"/api/users/{id}/posts\", \"purpose\": \"Get posts\"}]",
+  "graphqlEndpoint": "my-api",
+  "entityRelationships": "{\"User\": [\"posts\", \"comments\"], \"Post\": [\"author\"]}",
+  "includeOptimizations": true,
+  "includeVariations": true
+}
+```
+
 ## Tool Consolidation Benefits
 
 The GraphQL MCP Server has been optimized through comprehensive tool consolidation:
 
-- **Reduced Complexity**: From 19 tool files with 60+ tools to 6 core files with 30-35 tools
+- **Reduced Complexity**: From 19 tool files with 60+ tools to 7 core files with 35-40 tools
 - **Unified Interfaces**: Related operations grouped with optional parameters
 - **Better Performance**: Reduced tool registration overhead and faster discovery
 - **Improved UX**: Clear tool purposes and comprehensive functionality

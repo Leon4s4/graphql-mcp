@@ -832,7 +832,8 @@ This tool provides comprehensive testing support including:
             });
         }
 
-        return new { [typeName?.ToLower() + "s" ?? "items"] = records };
+        var propertyName = typeName?.ToLower() + "s" ?? "items";
+        return new Dictionary<string, object> { [propertyName] = records };
     }
 
     private static int CountJsonFields(JsonElement element)

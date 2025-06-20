@@ -106,9 +106,9 @@ Use this as your primary tool for all query-related analysis.")]
                 result.AppendLine();
 
                 // Performance analysis
-                if (includePerformance)
+                var performance = includePerformance ? AnalyzePerformance(query) : null;
+                if (includePerformance && performance != null)
                 {
-                    var performance = AnalyzePerformance(query);
                     result.AppendLine("## Performance Analysis");
                     
                     if (performance.Recommendations.Any())
@@ -161,7 +161,8 @@ Use this as your primary tool for all query-related analysis.")]
                 // Optimization suggestions for comprehensive analysis
                 if (analysisLevel == "comprehensive" && includeOptimizations)
                 {
-                    var optimizations = GenerateOptimizations(query, complexity, performance.Recommendations);
+                    var performanceRecs = performance?.Recommendations ?? new List<string>();
+                    var optimizations = GenerateOptimizations(query, complexity, performanceRecs);
                     result.AppendLine("## Optimization Suggestions");
                     foreach (var opt in optimizations)
                     {
