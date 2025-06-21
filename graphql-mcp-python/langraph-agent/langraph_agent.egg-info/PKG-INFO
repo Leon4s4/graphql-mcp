@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: langraph-agent
+Version: 0.1.0
+Summary: GraphQL LangGraph Agent
+Requires-Python: >=3.8
+Requires-Dist: langchain>=0.3.0
+Requires-Dist: langchain-openai>=0.3.0
+Requires-Dist: langchain-core>=0.3.0
+Requires-Dist: langgraph>=0.4.0
+Requires-Dist: graphql-core
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: flake8; extra == "dev"

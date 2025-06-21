@@ -1,0 +1,8 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "csharp_migration": {
+      "path": "csharp_to_graphql_agent:graph"
+    }
+  }
+}
