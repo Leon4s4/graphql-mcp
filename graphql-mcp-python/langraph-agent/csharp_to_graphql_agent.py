@@ -21,11 +21,6 @@ class AgentState(TypedDict):
     """State for the C# to GraphQL migration agent."""
     messages: Annotated[List[Any], add_messages]
     csharp_code: str
-    rest_calls: List[Dict[str, Any]]
-    entities: List[str]
-    graphql_queries: List[Dict[str, Any]]
-    migration_plan: Optional[str]
-    analysis_complete: bool
 
 
 @dataclass
@@ -60,6 +55,39 @@ class CSharpToGraphQLAgent:
             model=model_name,
             temperature=0.1
         )
+        
+        # Predefined system prompt for C# to GraphQL migration
+        self.system_prompt = """You are a specialized C# to GraphQL migration expert. Your primary role is to help developers migrate from REST API patterns in C# to efficient GraphQL implementations.
+
+## Your Expertise:
+- C# REST API patterns (HttpClient, WebClient, API controllers)
+- GraphQL query design and optimization
+- Performance analysis and improvements
+- Migration best practices and pitfalls
+
+## Your Migration Process:
+1. **Code Analysis**: Identify REST API calls, HTTP methods, endpoints, and data models
+2. **GraphQL Design**: Create optimized queries that combine multiple REST calls
+3. **Migration Planning**: Provide step-by-step implementation guidance
+4. **Performance Benefits**: Calculate and explain efficiency gains
+
+## Key Focus Areas:
+- Combine multiple REST calls into single GraphQL queries
+- Implement proper field selection to avoid over-fetching
+- Use GraphQL variables for dynamic queries
+- Provide concrete C# code examples
+- Explain performance improvements (network requests, payload size)
+- Address error handling differences between REST and GraphQL
+
+## Output Format:
+Always provide:
+- Clear analysis of existing REST patterns
+- Specific GraphQL queries with proper syntax
+- C# code examples showing before/after
+- Performance metrics and benefits
+- Step-by-step migration instructions
+
+You are focused exclusively on C# to GraphQL migrations and will provide expert guidance for this specific domain."""
         
         # Create the agent graph
         self.graph = self._create_graph()
@@ -255,17 +283,9 @@ class CSharpToGraphQLAgent:
         """Node to analyze C# code."""
         logger.info("Analyzing C# code...")
         
-        system_prompt = """You are an expert C# and GraphQL developer. Analyze the provided C# code to:
-1. Identify all REST API calls (HttpClient, WebClient, etc.)
-2. Extract entities and data models
-3. Understand data flow and relationships
-4. Prepare for GraphQL query generation
-
-Be thorough and precise in your analysis."""
-        
         messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=f"Analyze this C# code:\n\n{state['csharp_code']}")
+            SystemMessage(content=self.system_prompt),
+            HumanMessage(content=f"Analyze this C# code for REST API patterns that need GraphQL migration:\n\n{state['csharp_code']}")
         ]
         
         response = self.llm.invoke(messages)
@@ -273,9 +293,7 @@ Be thorough and precise in your analysis."""
         # Use the tool to get structured analysis
         analysis_result = self._analyze_csharp_code.invoke({"csharp_code": state["csharp_code"]})
         
-        state["rest_calls"] = analysis_result.get("rest_calls", [])
-        state["entities"] = analysis_result.get("entities", [])
-        state["messages"].append(AIMessage(content=response.content))
+        state["messages"].append(AIMessage(content=response.content + f"\n\nAnalysis: {analysis_result}"))
         
         return state
     
@@ -283,31 +301,12 @@ Be thorough and precise in your analysis."""
         """Node to generate GraphQL queries."""
         logger.info("Generating GraphQL queries...")
         
-        system_prompt = """You are a GraphQL expert. Generate optimized GraphQL queries to replace the identified REST calls.
-Focus on:
-1. Combining multiple REST calls into single GraphQL queries
-2. Using proper field selection to avoid over-fetching
-3. Implementing variables for dynamic queries
-4. Adding fragments for reusable field sets"""
-        
-        rest_calls_summary = f"REST calls found: {len(state['rest_calls'])}\n"
-        for call in state['rest_calls']:
-            rest_calls_summary += f"- {call['method']} {call['endpoint']}\n"
-        
         messages = state["messages"] + [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=f"Generate GraphQL queries for these REST calls:\n{rest_calls_summary}")
+            HumanMessage(content="Based on your analysis, generate optimized GraphQL queries to replace the identified REST calls. Focus on combining multiple calls and proper field selection.")
         ]
         
         response = self.llm.invoke(messages)
         
-        # Use the tool to generate structured queries
-        queries_result = self._generate_graphql_queries.invoke({
-            "rest_calls": state["rest_calls"],
-            "entities": state["entities"]
-        })
-        
-        state["graphql_queries"] = queries_result
         state["messages"].append(AIMessage(content=response.content))
         
         return state
@@ -316,27 +315,12 @@ Focus on:
         """Node to create migration plan."""
         logger.info("Creating migration plan...")
         
-        system_prompt = """You are a software migration expert. Create a comprehensive migration plan to help developers
-transition from REST API calls to GraphQL queries. Include:
-1. Step-by-step migration instructions
-2. Code examples showing before/after
-3. Performance benefits analysis
-4. Best practices and recommendations"""
-        
         messages = state["messages"] + [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content="Create a migration plan based on the analysis and generated GraphQL queries.")
+            HumanMessage(content="Create a comprehensive C# to GraphQL migration plan with step-by-step instructions, code examples, and performance analysis.")
         ]
         
         response = self.llm.invoke(messages)
         
-        # Use the tool to create structured plan
-        plan_result = self._create_migration_plan.invoke({
-            "rest_calls": state["rest_calls"],
-            "graphql_queries": state["graphql_queries"]
-        })
-        
-        state["migration_plan"] = json.dumps(plan_result, indent=2)
         state["messages"].append(AIMessage(content=response.content))
         
         return state
@@ -345,23 +329,11 @@ transition from REST API calls to GraphQL queries. Include:
         """Node to finalize the analysis and provide comprehensive results."""
         logger.info("Finalizing migration analysis...")
         
-        state["analysis_complete"] = True
-        
         # Create final summary
-        summary = f"""
+        summary = """
 # C# to GraphQL Migration Analysis Complete
 
-## Summary
-- **REST Calls Found**: {len(state['rest_calls'])}
-- **Entities Identified**: {len(state['entities'])}
-- **GraphQL Queries Generated**: {len(state['graphql_queries'])}
-
-## Next Steps
-1. Review the generated GraphQL queries
-2. Follow the migration plan
-3. Test thoroughly before deploying
-
-The migration analysis is now complete. Use the generated queries and migration plan to proceed with your C# to GraphQL migration.
+The migration analysis is now complete. Review the analysis, generated GraphQL queries, and migration plan above to proceed with your C# to GraphQL migration.
 """
         
         state["messages"].append(AIMessage(content=summary))
@@ -495,15 +467,10 @@ public async Task<{graphql_query["name"]}Response> {graphql_query["name"]}Async(
     def migrate_csharp_code(self, csharp_code: str) -> Dict[str, Any]:
         """Main method to migrate C# code to GraphQL."""
         try:
-            # Initialize state
+            # Initialize state with system prompt
             initial_state = AgentState(
-                messages=[],
-                csharp_code=csharp_code,
-                rest_calls=[],
-                entities=[],
-                graphql_queries=[],
-                migration_plan=None,
-                analysis_complete=False
+                messages=[SystemMessage(content=self.system_prompt)],
+                csharp_code=csharp_code
             )
             
             # Run the graph
@@ -511,10 +478,6 @@ public async Task<{graphql_query["name"]}Response> {graphql_query["name"]}Async(
             
             return {
                 "success": True,
-                "rest_calls": final_state["rest_calls"],
-                "entities": final_state["entities"],
-                "graphql_queries": final_state["graphql_queries"],
-                "migration_plan": final_state["migration_plan"],
                 "messages": [msg.content for msg in final_state["messages"] if hasattr(msg, 'content')]
             }
             
@@ -522,11 +485,7 @@ public async Task<{graphql_query["name"]}Response> {graphql_query["name"]}Async(
             logger.error(f"Error in migration process: {e}")
             return {
                 "success": False,
-                "error": str(e),
-                "rest_calls": [],
-                "entities": [],
-                "graphql_queries": [],
-                "migration_plan": None
+                "error": str(e)
             }
 
 
