@@ -527,6 +527,10 @@ public class GraphQlPrompts
         prompt.AppendLine("- includeDataFlowAnalysis: true");
         prompt.AppendLine("- includeOptimizations: true");
         prompt.AppendLine("- includeMigrationGuide: true");
+        prompt.AppendLine();
+        prompt.AppendLine("## Alternative: Use SchemaTools for schema analysis:");
+        prompt.AppendLine("- IntrospectSchema for understanding the target GraphQL schema");
+        prompt.AppendLine("- SearchSchema to find relevant types and operations");
 
         return prompt.ToString();
     }
@@ -789,11 +793,13 @@ public class GraphQlPrompts
 
         prompt.AppendLine();
         prompt.AppendLine("## Tools and Configuration:");
-        prompt.AppendLine("1. **Use CompleteGraphQLWorkflow** to set up comprehensive development environment");
+        prompt.AppendLine("1. **Use GraphqlServiceManager** to set up comprehensive development environment");
         prompt.AppendLine("2. **Use RegisterEndpoint** to properly configure the GraphQL endpoint");
-        prompt.AppendLine("3. **Use CreateTestSuite** to establish testing procedures");
-        prompt.AppendLine("4. **Use GenerateCode** to create typed client libraries");
-        prompt.AppendLine("5. **Use DebugGraphQL** to set up debugging and troubleshooting procedures");
+        prompt.AppendLine("3. **Use CreateTestSuite** (DevelopmentTools) to establish testing procedures");
+        prompt.AppendLine("4. **Use GenerateCode** (UtilityTools) to create typed client libraries");
+        prompt.AppendLine("5. **Use DebugGraphQL** (DevelopmentTools) to set up debugging and troubleshooting procedures");
+        prompt.AppendLine("6. **Use IntrospectSchema** (SchemaTools) for comprehensive schema analysis");
+        prompt.AppendLine("7. **Use AnalyzeQuery** (QueryTools) for query validation and optimization");
         prompt.AppendLine();
 
         prompt.AppendLine("## Success Criteria:");
@@ -802,6 +808,504 @@ public class GraphQlPrompts
         prompt.AppendLine("- Comprehensive testing ensures quality and reliability");
         prompt.AppendLine("- Performance monitoring provides actionable insights");
         prompt.AppendLine("- Documentation supports team knowledge sharing and onboarding");
+
+        return prompt.ToString();
+    }
+
+    [McpServerPrompt, Description("Optimize GraphQL queries for performance and efficiency")]
+    public static string QueryOptimization(
+        [Description("GraphQL query to optimize")]
+        string query,
+        [Description("Target endpoint name")]
+        string endpointName,
+        [Description("Optimization focus: performance, size, complexity, security")]
+        string focus = "performance",
+        [Description("Performance target: fast, balanced, comprehensive")]
+        string target = "balanced")
+    {
+        var prompt = new StringBuilder();
+
+        prompt.AppendLine("# GraphQL Query Optimization Assistant");
+        prompt.AppendLine();
+        prompt.AppendLine("You are a GraphQL performance expert. Analyze and optimize the provided GraphQL query for maximum efficiency.");
+        prompt.AppendLine();
+        prompt.AppendLine("## Query to Optimize:");
+        prompt.AppendLine("```graphql");
+        prompt.AppendLine(query);
+        prompt.AppendLine("```");
+        prompt.AppendLine();
+        prompt.AppendLine($"**Target Endpoint:** {endpointName}");
+        prompt.AppendLine($"**Optimization Focus:** {focus}");
+        prompt.AppendLine($"**Performance Target:** {target}");
+        prompt.AppendLine();
+
+        switch (focus.ToLower())
+        {
+            case "performance":
+                prompt.AppendLine("## Performance Optimization Focus:");
+                prompt.AppendLine("- Reduce query depth and complexity");
+                prompt.AppendLine("- Optimize field selection for minimal data transfer");
+                prompt.AppendLine("- Implement proper pagination strategies");
+                prompt.AppendLine("- Use fragments to reduce duplication");
+                prompt.AppendLine("- Consider DataLoader patterns for N+1 prevention");
+                break;
+
+            case "size":
+                prompt.AppendLine("## Size Optimization Focus:");
+                prompt.AppendLine("- Minimize query string length");
+                prompt.AppendLine("- Remove unnecessary fields and nesting");
+                prompt.AppendLine("- Use aliases effectively");
+                prompt.AppendLine("- Optimize variable usage");
+                break;
+
+            case "complexity":
+                prompt.AppendLine("## Complexity Optimization Focus:");
+                prompt.AppendLine("- Reduce query complexity score");
+                prompt.AppendLine("- Simplify nested selections");
+                prompt.AppendLine("- Break complex queries into smaller operations");
+                prompt.AppendLine("- Optimize resolver execution paths");
+                break;
+
+            case "security":
+                prompt.AppendLine("## Security Optimization Focus:");
+                prompt.AppendLine("- Prevent potential DoS attacks");
+                prompt.AppendLine("- Avoid sensitive data exposure");
+                prompt.AppendLine("- Implement proper authorization checks");
+                prompt.AppendLine("- Use variables instead of inline values");
+                break;
+        }
+
+        prompt.AppendLine();
+        prompt.AppendLine("## Use OptimizeQuery tool with these parameters:");
+        prompt.AppendLine($"- query: [the provided query]");
+        prompt.AppendLine($"- optimizationType: \"{focus}\"");
+        prompt.AppendLine("- extractVariables: true");
+        prompt.AppendLine("- suggestFragments: true");
+        prompt.AppendLine();
+        prompt.AppendLine("## Use AnalyzeQuery tool for comprehensive analysis:");
+        prompt.AppendLine($"- query: [the provided query]");
+        prompt.AppendLine($"- endpointName: \"{endpointName}\"");
+        prompt.AppendLine("- analysisLevel: \"comprehensive\"");
+
+        return prompt.ToString();
+    }
+
+    [McpServerPrompt, Description("Comprehensive GraphQL security analysis and hardening guidance")]
+    public static string GraphQLSecurity(
+        [Description("Security focus: assessment, hardening, monitoring, compliance")]
+        string focus = "assessment",
+        [Description("Target endpoint name")]
+        string? endpointName = null,
+        [Description("Environment: development, staging, production")]
+        string environment = "production",
+        [Description("Compliance requirements: GDPR, HIPAA, SOC2, PCI")]
+        string? compliance = null)
+    {
+        var prompt = new StringBuilder();
+
+        prompt.AppendLine("# GraphQL Security Assistant");
+        prompt.AppendLine();
+        prompt.AppendLine("You are a GraphQL security expert. Provide comprehensive security guidance for GraphQL APIs.");
+        prompt.AppendLine();
+        prompt.AppendLine($"**Security Focus:** {focus}");
+        if (!string.IsNullOrEmpty(endpointName))
+            prompt.AppendLine($"**Target Endpoint:** {endpointName}");
+        prompt.AppendLine($"**Environment:** {environment}");
+        if (!string.IsNullOrEmpty(compliance))
+            prompt.AppendLine($"**Compliance Requirements:** {compliance}");
+        prompt.AppendLine();
+
+        switch (focus.ToLower())
+        {
+            case "assessment":
+                prompt.AppendLine("## Security Assessment Areas:");
+                prompt.AppendLine("### Query Security:");
+                prompt.AppendLine("- Query complexity and depth limits");
+                prompt.AppendLine("- Rate limiting and request throttling");
+                prompt.AppendLine("- Query whitelisting/blacklisting");
+                prompt.AppendLine("- Introspection exposure in production");
+                prompt.AppendLine();
+                prompt.AppendLine("### Authentication & Authorization:");
+                prompt.AppendLine("- Field-level authorization patterns");
+                prompt.AppendLine("- Token validation and expiration");
+                prompt.AppendLine("- Role-based access control (RBAC)");
+                prompt.AppendLine("- Context-aware permissions");
+                prompt.AppendLine();
+                prompt.AppendLine("### Data Protection:");
+                prompt.AppendLine("- Sensitive data exposure prevention");
+                prompt.AppendLine("- Input validation and sanitization");
+                prompt.AppendLine("- Error message information leakage");
+                prompt.AppendLine("- Data masking and filtering");
+                break;
+
+            case "hardening":
+                prompt.AppendLine("## Security Hardening Checklist:");
+                prompt.AppendLine("### Infrastructure Security:");
+                prompt.AppendLine("- HTTPS enforcement with proper TLS configuration");
+                prompt.AppendLine("- CORS policy configuration");
+                prompt.AppendLine("- HTTP security headers implementation");
+                prompt.AppendLine("- Network-level access controls");
+                prompt.AppendLine();
+                prompt.AppendLine("### Application Security:");
+                prompt.AppendLine("- Query complexity analysis and limits");
+                prompt.AppendLine("- Request size and timeout limits");
+                prompt.AppendLine("- Disable introspection in production");
+                prompt.AppendLine("- Implement query whitelisting");
+                break;
+
+            case "monitoring":
+                prompt.AppendLine("## Security Monitoring Strategy:");
+                prompt.AppendLine("### Real-time Monitoring:");
+                prompt.AppendLine("- Suspicious query pattern detection");
+                prompt.AppendLine("- Abnormal request volume alerts");
+                prompt.AppendLine("- Failed authentication tracking");
+                prompt.AppendLine("- Performance anomaly detection");
+                prompt.AppendLine();
+                prompt.AppendLine("### Audit and Logging:");
+                prompt.AppendLine("- Comprehensive request logging");
+                prompt.AppendLine("- Security event correlation");
+                prompt.AppendLine("- Compliance audit trails");
+                prompt.AppendLine("- Incident response procedures");
+                break;
+
+            case "compliance":
+                prompt.AppendLine("## Compliance Implementation:");
+                if (!string.IsNullOrEmpty(compliance))
+                {
+                    switch (compliance.ToUpper())
+                    {
+                        case "GDPR":
+                            prompt.AppendLine("### GDPR Compliance:");
+                            prompt.AppendLine("- Data minimization in GraphQL responses");
+                            prompt.AppendLine("- Right to erasure implementation");
+                            prompt.AppendLine("- Consent management integration");
+                            prompt.AppendLine("- Data portability features");
+                            break;
+                        case "HIPAA":
+                            prompt.AppendLine("### HIPAA Compliance:");
+                            prompt.AppendLine("- PHI data encryption and protection");
+                            prompt.AppendLine("- Access logging and audit trails");
+                            prompt.AppendLine("- Minimum necessary access principles");
+                            prompt.AppendLine("- Breach notification procedures");
+                            break;
+                    }
+                }
+                break;
+        }
+
+        prompt.AppendLine();
+        prompt.AppendLine("## Tools to Use:");
+        if (!string.IsNullOrEmpty(endpointName))
+        {
+            prompt.AppendLine($"1. **AnalyzeQuery** - Security analysis of queries");
+            prompt.AppendLine($"2. **IntrospectSchema** - Schema security assessment");
+            prompt.AppendLine($"3. **DebugGraphQL** - Security issue debugging");
+        }
+        prompt.AppendLine("4. **CreateTestSuite** - Security testing scenarios");
+
+        return prompt.ToString();
+    }
+
+    [McpServerPrompt, Description("Track and analyze GraphQL schema evolution over time")]
+    public static string SchemaEvolution(
+        [Description("Base endpoint for comparison")]
+        string baseEndpoint,
+        [Description("Evolution analysis type: changes, impact, migration, versioning")]
+        string analysisType = "changes",
+        [Description("Target endpoint for comparison")]
+        string? targetEndpoint = null,
+        [Description("Time period: days, weeks, months")]
+        string timePeriod = "months")
+    {
+        var prompt = new StringBuilder();
+
+        prompt.AppendLine("# GraphQL Schema Evolution Assistant");
+        prompt.AppendLine();
+        prompt.AppendLine("You are a GraphQL schema evolution expert. Analyze schema changes and provide migration guidance.");
+        prompt.AppendLine();
+        prompt.AppendLine($"**Analysis Type:** {analysisType}");
+        prompt.AppendLine($"**Base Endpoint:** {baseEndpoint}");
+        if (!string.IsNullOrEmpty(targetEndpoint))
+            prompt.AppendLine($"**Target Endpoint:** {targetEndpoint}");
+        prompt.AppendLine($"**Time Period:** {timePeriod}");
+        prompt.AppendLine();
+
+        switch (analysisType.ToLower())
+        {
+            case "changes":
+                prompt.AppendLine("## Schema Change Analysis:");
+                prompt.AppendLine("### Breaking Changes Detection:");
+                prompt.AppendLine("- Removed fields, types, or operations");
+                prompt.AppendLine("- Changed field types or nullability");
+                prompt.AppendLine("- Modified argument requirements");
+                prompt.AppendLine("- Deprecated field removals");
+                prompt.AppendLine();
+                prompt.AppendLine("### Non-Breaking Changes:");
+                prompt.AppendLine("- New fields, types, or operations");
+                prompt.AppendLine("- Added optional arguments");
+                prompt.AppendLine("- Enhanced descriptions");
+                prompt.AppendLine("- New deprecation markers");
+                break;
+
+            case "impact":
+                prompt.AppendLine("## Impact Assessment:");
+                prompt.AppendLine("### Client Impact Analysis:");
+                prompt.AppendLine("- Affected client applications");
+                prompt.AppendLine("- Query compatibility assessment");
+                prompt.AppendLine("- Migration effort estimation");
+                prompt.AppendLine("- Rollback considerations");
+                prompt.AppendLine();
+                prompt.AppendLine("### Business Impact:");
+                prompt.AppendLine("- Feature availability changes");
+                prompt.AppendLine("- Performance implications");
+                prompt.AppendLine("- User experience effects");
+                prompt.AppendLine("- Integration disruptions");
+                break;
+
+            case "migration":
+                prompt.AppendLine("## Migration Strategy:");
+                prompt.AppendLine("### Phased Migration Plan:");
+                prompt.AppendLine("- Deprecation announcement timeline");
+                prompt.AppendLine("- Client update coordination");
+                prompt.AppendLine("- Backward compatibility period");
+                prompt.AppendLine("- Legacy support sunset");
+                prompt.AppendLine();
+                prompt.AppendLine("### Migration Tools:");
+                prompt.AppendLine("- Query transformation utilities");
+                prompt.AppendLine("- Client code generators");
+                prompt.AppendLine("- Testing and validation tools");
+                prompt.AppendLine("- Monitoring and rollback procedures");
+                break;
+
+            case "versioning":
+                prompt.AppendLine("## Schema Versioning Strategy:");
+                prompt.AppendLine("### Versioning Approaches:");
+                prompt.AppendLine("- Additive-only schema evolution");
+                prompt.AppendLine("- Semantic versioning for schemas");
+                prompt.AppendLine("- Feature flags and conditional fields");
+                prompt.AppendLine("- Multiple schema versions support");
+                break;
+        }
+
+        prompt.AppendLine();
+        prompt.AppendLine("## Tools to Use:");
+        prompt.AppendLine($"1. **CompareSchemas** - Compare base and target schemas");
+        prompt.AppendLine($"2. **IntrospectSchema** - Analyze current schema state");
+        if (!string.IsNullOrEmpty(targetEndpoint))
+            prompt.AppendLine($"3. **CompareAndAnalyzeSchemas** - Multi-endpoint comparison");
+
+        return prompt.ToString();
+    }
+
+    [McpServerPrompt, Description("Systematic GraphQL error diagnosis and troubleshooting")]
+    public static string ErrorDiagnosis(
+        [Description("Error message or response")]
+        string errorInput,
+        [Description("Error category: syntax, schema, resolver, network, performance")]
+        string category = "unknown",
+        [Description("Severity level: critical, high, medium, low")]
+        string severity = "medium",
+        [Description("Context information: query, endpoint, environment details")]
+        string? context = null)
+    {
+        var prompt = new StringBuilder();
+
+        prompt.AppendLine("# GraphQL Error Diagnosis Assistant");
+        prompt.AppendLine();
+        prompt.AppendLine("You are a GraphQL debugging expert. Provide systematic diagnosis and resolution for GraphQL errors.");
+        prompt.AppendLine();
+        prompt.AppendLine("## Error Information:");
+        prompt.AppendLine("```");
+        prompt.AppendLine(errorInput);
+        prompt.AppendLine("```");
+        prompt.AppendLine();
+        prompt.AppendLine($"**Category:** {category}");
+        prompt.AppendLine($"**Severity:** {severity}");
+        if (!string.IsNullOrEmpty(context))
+        {
+            prompt.AppendLine($"**Context:** {context}");
+        }
+        prompt.AppendLine();
+
+        prompt.AppendLine("## Diagnostic Approach:");
+        
+        switch (category.ToLower())
+        {
+            case "syntax":
+                prompt.AppendLine("### Syntax Error Diagnosis:");
+                prompt.AppendLine("1. **Query Structure Validation**:");
+                prompt.AppendLine("   - Check balanced braces and parentheses");
+                prompt.AppendLine("   - Verify proper field selection syntax");
+                prompt.AppendLine("   - Validate fragment definitions and usage");
+                prompt.AppendLine("   - Confirm variable declarations");
+                prompt.AppendLine();
+                prompt.AppendLine("2. **Common Syntax Issues**:");
+                prompt.AppendLine("   - Missing commas between fields");
+                prompt.AppendLine("   - Incorrect argument syntax");
+                prompt.AppendLine("   - Invalid characters in names");
+                prompt.AppendLine("   - Malformed string literals");
+                break;
+
+            case "schema":
+                prompt.AppendLine("### Schema Error Diagnosis:");
+                prompt.AppendLine("1. **Schema Compliance Check**:");
+                prompt.AppendLine("   - Verify field existence in target types");
+                prompt.AppendLine("   - Check argument requirements and types");
+                prompt.AppendLine("   - Validate enum values and input types");
+                prompt.AppendLine("   - Confirm interface implementations");
+                prompt.AppendLine();
+                prompt.AppendLine("2. **Schema Evolution Issues**:");
+                prompt.AppendLine("   - Check for deprecated field usage");
+                prompt.AppendLine("   - Verify schema version compatibility");
+                prompt.AppendLine("   - Look for recent breaking changes");
+                break;
+
+            case "resolver":
+                prompt.AppendLine("### Resolver Error Diagnosis:");
+                prompt.AppendLine("1. **Resolver Implementation**:");
+                prompt.AppendLine("   - Check resolver function existence");
+                prompt.AppendLine("   - Verify return type compatibility");
+                prompt.AppendLine("   - Validate context and argument usage");
+                prompt.AppendLine("   - Review error handling patterns");
+                prompt.AppendLine();
+                prompt.AppendLine("2. **Data Source Issues**:");
+                prompt.AppendLine("   - Database connectivity and queries");
+                prompt.AppendLine("   - External API integration problems");
+                prompt.AppendLine("   - Permission and authorization failures");
+                break;
+
+            case "performance":
+                prompt.AppendLine("### Performance Error Diagnosis:");
+                prompt.AppendLine("1. **Query Complexity Analysis**:");
+                prompt.AppendLine("   - Calculate query complexity score");
+                prompt.AppendLine("   - Identify deep nesting issues");
+                prompt.AppendLine("   - Check for N+1 query problems");
+                prompt.AppendLine("   - Analyze resolver execution time");
+                prompt.AppendLine();
+                prompt.AppendLine("2. **Resource Constraints**:");
+                prompt.AppendLine("   - Memory usage and limits");
+                prompt.AppendLine("   - Database connection pooling");
+                prompt.AppendLine("   - Network latency and timeouts");
+                break;
+
+            default:
+                prompt.AppendLine("### General Error Diagnosis:");
+                prompt.AppendLine("1. **Error Pattern Analysis**:");
+                prompt.AppendLine("   - Classify error type and source");
+                prompt.AppendLine("   - Identify error frequency and conditions");
+                prompt.AppendLine("   - Check for environmental factors");
+                prompt.AppendLine("   - Review recent changes and deployments");
+                break;
+        }
+
+        prompt.AppendLine();
+        prompt.AppendLine("## Tools to Use:");
+        prompt.AppendLine("1. **ExplainError** (DevelopmentTools) - Detailed error analysis");
+        prompt.AppendLine("2. **DebugGraphQL** (DevelopmentTools) - Comprehensive debugging");
+        if (!string.IsNullOrEmpty(context) && context.Contains("query"))
+        {
+            prompt.AppendLine("3. **AnalyzeQuery** (QueryTools) - Query-specific analysis");
+        }
+
+        return prompt.ToString();
+    }
+
+    [McpServerPrompt, Description("Performance monitoring and profiling for GraphQL operations")]
+    public static string PerformanceMonitoring(
+        [Description("Monitoring focus: setup, analysis, optimization, alerts")]
+        string focus = "analysis",
+        [Description("Target endpoint name")]
+        string? endpointName = null,
+        [Description("Performance metrics: latency, throughput, errors, complexity")]
+        string metrics = "latency",
+        [Description("Environment: development, staging, production")]
+        string environment = "production")
+    {
+        var prompt = new StringBuilder();
+
+        prompt.AppendLine("# GraphQL Performance Monitoring Assistant");
+        prompt.AppendLine();
+        prompt.AppendLine("You are a GraphQL performance expert. Provide comprehensive performance monitoring and optimization guidance.");
+        prompt.AppendLine();
+        prompt.AppendLine($"**Monitoring Focus:** {focus}");
+        if (!string.IsNullOrEmpty(endpointName))
+            prompt.AppendLine($"**Target Endpoint:** {endpointName}");
+        prompt.AppendLine($"**Performance Metrics:** {metrics}");
+        prompt.AppendLine($"**Environment:** {environment}");
+        prompt.AppendLine();
+
+        switch (focus.ToLower())
+        {
+            case "setup":
+                prompt.AppendLine("## Performance Monitoring Setup:");
+                prompt.AppendLine("### Metrics Collection:");
+                prompt.AppendLine("- Query execution time tracking");
+                prompt.AppendLine("- Resolver-level performance monitoring");
+                prompt.AppendLine("- Database query performance");
+                prompt.AppendLine("- Memory and CPU utilization");
+                prompt.AppendLine();
+                prompt.AppendLine("### Monitoring Tools Integration:");
+                prompt.AppendLine("- Application Performance Monitoring (APM)");
+                prompt.AppendLine("- Custom metrics and dashboards");
+                prompt.AppendLine("- Real-time alerting systems");
+                prompt.AppendLine("- Log aggregation and analysis");
+                break;
+
+            case "analysis":
+                prompt.AppendLine("## Performance Analysis Framework:");
+                prompt.AppendLine("### Query Performance Analysis:");
+                prompt.AppendLine("- Identify slow-performing queries");
+                prompt.AppendLine("- Analyze query complexity patterns");
+                prompt.AppendLine("- Track performance trends over time");
+                prompt.AppendLine("- Compare performance across environments");
+                prompt.AppendLine();
+                prompt.AppendLine("### Bottleneck Identification:");
+                prompt.AppendLine("- Resolver performance profiling");
+                prompt.AppendLine("- Database query optimization opportunities");
+                prompt.AppendLine("- Network latency impact assessment");
+                prompt.AppendLine("- Caching effectiveness analysis");
+                break;
+
+            case "optimization":
+                prompt.AppendLine("## Performance Optimization Strategy:");
+                prompt.AppendLine("### Query Optimization:");
+                prompt.AppendLine("- Query complexity reduction techniques");
+                prompt.AppendLine("- Field selection optimization");
+                prompt.AppendLine("- Pagination implementation");
+                prompt.AppendLine("- Fragment usage for efficiency");
+                prompt.AppendLine();
+                prompt.AppendLine("### System Optimization:");
+                prompt.AppendLine("- DataLoader implementation for N+1 prevention");
+                prompt.AppendLine("- Response caching strategies");
+                prompt.AppendLine("- Database query optimization");
+                prompt.AppendLine("- Resource scaling recommendations");
+                break;
+
+            case "alerts":
+                prompt.AppendLine("## Performance Alerting Strategy:");
+                prompt.AppendLine("### Alert Thresholds:");
+                prompt.AppendLine("- Response time SLA violations");
+                prompt.AppendLine("- Error rate threshold breaches");
+                prompt.AppendLine("- Query complexity limit warnings");
+                prompt.AppendLine("- Resource utilization alerts");
+                prompt.AppendLine();
+                prompt.AppendLine("### Incident Response:");
+                prompt.AppendLine("- Automated scaling triggers");
+                prompt.AppendLine("- Performance degradation workflows");
+                prompt.AppendLine("- Escalation procedures");
+                prompt.AppendLine("- Post-incident analysis processes");
+                break;
+        }
+
+        prompt.AppendLine();
+        prompt.AppendLine("## Tools to Use:");
+        if (!string.IsNullOrEmpty(endpointName))
+        {
+            prompt.AppendLine($"1. **ExecuteQuery** (QueryTools) - Query performance testing");
+            prompt.AppendLine($"2. **AnalyzeQuery** (QueryTools) - Performance analysis");
+        }
+        prompt.AppendLine("3. **DebugGraphQL** (DevelopmentTools) - Performance debugging");
+        prompt.AppendLine("4. **CreateTestSuite** (DevelopmentTools) - Performance test scenarios");
 
         return prompt.ToString();
     }

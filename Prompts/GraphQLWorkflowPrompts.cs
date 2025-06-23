@@ -485,8 +485,8 @@ public class GraphQlWorkflowPrompts
         prompt.AppendLine("Use the following tools to manage GraphQL endpoints at runtime:");
         prompt.AppendLine();
         prompt.AppendLine("- `RegisterEndpoint` – add a GraphQL endpoint and generate tools");
-        prompt.AppendLine("- `ListDynamicTools` – list all registered endpoints and generated tools");
-        prompt.AppendLine("- `ExecuteDynamicOperation` – run any generated query or mutation");
+        prompt.AppendLine("- `GetAllEndpoints` – list all registered endpoints and their status");
+        prompt.AppendLine("- `GraphqlServiceManager` – primary interface for GraphQL operations");
         prompt.AppendLine("- `RefreshEndpointTools` – update tools after schema changes");
         prompt.AppendLine("- `UnregisterEndpoint` – remove an endpoint and its tools");
 
@@ -496,10 +496,11 @@ public class GraphQlWorkflowPrompts
             prompt.AppendLine("## Typical Workflow");
             prompt.AppendLine("1. Start the server with `dotnet run`.");
             prompt.AppendLine("2. Call `RegisterEndpoint` with endpoint URL, name, and optional headers.");
-            prompt.AppendLine("3. Use `ListDynamicTools` to see newly created tools (e.g., `gh_query_viewer`).");
-            prompt.AppendLine("4. Execute operations with `ExecuteDynamicOperation` or the generated tools.");
-            prompt.AppendLine("5. When the schema updates, call `RefreshEndpointTools` to sync tools.");
-            prompt.AppendLine("6. Use `UnregisterEndpoint` to clean up when an API is no longer needed.");
+            prompt.AppendLine("3. Use `GetAllEndpoints` to see newly registered endpoints and their status.");
+            prompt.AppendLine("4. Execute operations with `GraphqlServiceManager` or specific tool operations.");
+            prompt.AppendLine("5. Use `IntrospectSchema` (SchemaTools) to explore the schema structure.");
+            prompt.AppendLine("6. When the schema updates, call `RefreshEndpointTools` to sync tools.");
+            prompt.AppendLine("7. Use `UnregisterEndpoint` to clean up when an API is no longer needed.");
         }
 
         prompt.AppendLine();
@@ -524,35 +525,54 @@ public class GraphQlWorkflowPrompts
 
         if (focus == "all" || focus == "query")
         {
-            prompt.AppendLine("## Query & Validation");
-            prompt.AppendLine("- `ValidateQuery`, `TestQuery`, `ExplainQuery`, `OptimizeQuery`");
-            prompt.AppendLine("- `QueryGraphQL` and auto-generated tools for endpoint operations");
+            prompt.AppendLine("## Query Tools (Consolidated)");
+            prompt.AppendLine("- `AnalyzeQuery` - Comprehensive query analysis and validation");
+            prompt.AppendLine("- `ExecuteQuery` - Execute queries with metrics and analysis");
+            prompt.AppendLine("- `BuildQuery` - Intelligent query construction from schema");
+            prompt.AppendLine("- `OptimizeQuery` - Query formatting and optimization");
         }
 
         if (focus == "all" || focus == "schema")
         {
             prompt.AppendLine();
-            prompt.AppendLine("## Schema & Introspection");
-            prompt.AppendLine("- `GetSchema`, `DiffSchemas`, `IntrospectSchema`");
-            prompt.AppendLine("- `SchemaEvolutionReport` and resolver documentation helpers");
+            prompt.AppendLine("## Schema Tools (Consolidated)");
+            prompt.AppendLine("- `IntrospectSchema` - Comprehensive schema introspection");
+            prompt.AppendLine("- `CompareSchemas` - Schema comparison and evolution");
+            prompt.AppendLine("- `GetTypeDefinition` - Detailed type information");
+            prompt.AppendLine("- `ListOperations` - Available operations discovery");
+            prompt.AppendLine("- `SearchSchema` - Pattern-based schema searching");
         }
 
         if (focus == "all" || focus == "performance")
         {
             prompt.AppendLine();
-            prompt.AppendLine("## Performance & Analytics");
-            prompt.AppendLine("- `MeasureQueryPerformance`, field usage analytics, query analyzers");
+            prompt.AppendLine("## Development & Testing Tools (Consolidated)");
+            prompt.AppendLine("- `DebugGraphQL` - Comprehensive debugging and troubleshooting");
+            prompt.AppendLine("- `GenerateTestData` - Test data and mock generation");
+            prompt.AppendLine("- `ExplainError` - Error analysis and resolution guidance");
+            prompt.AppendLine("- `CreateTestSuite` - Testing suite generation");
         }
 
         if (focus == "all" || focus == "security")
         {
             prompt.AppendLine();
-            prompt.AppendLine("## Security & Testing");
-            prompt.AppendLine("- `SecurityAnalysis`, testing helpers, mock data generation");
+            prompt.AppendLine("## Utility & Code Generation Tools");
+            prompt.AppendLine("- `GenerateCode` - Multi-language client code generation");
+            prompt.AppendLine("- `FormatQuery`, `MinifyQuery`, `ExtractVariables` - Query utilities");
+            prompt.AppendLine("- `GenerateAliases` - Field alias generation");
         }
 
         prompt.AppendLine();
-        prompt.AppendLine("Endpoint management tools are always available: `RegisterEndpoint`, `ListDynamicTools`, `ExecuteDynamicOperation`, `RefreshEndpointTools`, and `UnregisterEndpoint`.");
+        prompt.AppendLine("## Core Operation Tools");
+        prompt.AppendLine("- `GraphqlServiceManager` - Primary GraphQL operations interface");
+        prompt.AppendLine("- `ExecuteMultipleOperations` - Batch operation execution");
+        prompt.AppendLine("- `CompareAndAnalyzeSchemas` - Multi-endpoint schema comparison");
+        prompt.AppendLine();
+        prompt.AppendLine("## Endpoint Management Tools");
+        prompt.AppendLine("- `RegisterEndpoint` - Add GraphQL endpoints");
+        prompt.AppendLine("- `GetAllEndpoints` - List registered endpoints");
+        prompt.AppendLine("- `RefreshEndpointTools` - Update tools after schema changes");
+        prompt.AppendLine("- `UnregisterEndpoint` - Remove endpoints");
 
         prompt.AppendLine();
         prompt.AppendLine("Use this overview to discover which tool best fits your current task.");
