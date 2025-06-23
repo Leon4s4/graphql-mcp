@@ -9,7 +9,41 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class ResolverDocumentationTools
 {
-    [McpServerTool, Description("Create comprehensive documentation for GraphQL resolvers based on schema analysis")]
+    [McpServerTool, Description(@"Advanced GraphQL resolver documentation generator with intelligent schema analysis and comprehensive developer guidance.
+
+This sophisticated documentation tool provides complete resolver analysis including:
+1. Schema-driven resolver requirement identification
+2. Type-specific resolver documentation with examples
+3. Parameter and return type analysis with validation
+4. Implementation guidance and best practices
+5. Error handling patterns and exception management
+6. Performance considerations and optimization strategies
+
+Documentation Features:
+- Complete resolver signatures with parameter specifications
+- Detailed argument analysis with type validation
+- Return type documentation with nested field mapping
+- Implementation examples and code patterns
+- Error handling strategies and exception patterns
+- Performance optimization recommendations
+
+Generated Content:
+- Resolver function signatures and interfaces
+- Parameter validation and type checking guidance
+- Return value structure and field mapping
+- Error response patterns and status codes
+- Authentication and authorization requirements
+- Caching strategies and performance optimization
+
+Developer Benefits:
+- Accelerates resolver implementation and development
+- Ensures consistent error handling across resolvers
+- Provides type-safe implementation guidance
+- Reduces documentation maintenance overhead
+- Facilitates team collaboration and knowledge sharing
+- Supports multiple programming languages and frameworks
+
+Essential for GraphQL server development, API documentation, and team onboarding workflows.")]
     public static async Task<string> GenerateResolverDocs(
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Type name to document resolvers for (optional)")]
@@ -100,7 +134,46 @@ public static class ResolverDocumentationTools
         return documentation.ToString();
     }
 
-    [McpServerTool, Description("Create boilerplate resolver code templates for GraphQL types with error handling")]
+    [McpServerTool, Description(@"Professional GraphQL resolver code generation system with multi-language support and enterprise-grade error handling patterns.
+
+This advanced code generation tool provides comprehensive resolver templates including:
+1. Multi-language resolver boilerplate generation (C#, TypeScript, JavaScript, Python)
+2. Schema-aware type mapping and validation
+3. Enterprise-grade error handling and exception management
+4. Authentication and authorization integration patterns
+5. Performance optimization and caching implementations
+6. Database integration and ORM compatibility
+
+Code Generation Features:
+- Language-specific resolver implementations with idiomatic patterns
+- Type-safe parameter validation and conversion
+- Comprehensive error handling with custom exception types
+- Async/await patterns for optimal performance
+- Logging and monitoring integration points
+- Unit test template generation and testing patterns
+
+Supported Languages:
+- C#: Full .NET integration with Entity Framework support
+- TypeScript: Type-safe implementations with decorators
+- JavaScript: Modern ES6+ patterns with async support
+- Python: AsyncIO support with type hints and validation
+
+Enterprise Features:
+- Security best practices and input sanitization
+- Performance monitoring and metrics collection
+- Caching strategies and invalidation patterns
+- Database connection pooling and optimization
+- Rate limiting and throttling implementations
+- Documentation generation and API contracts
+
+Development Benefits:
+- Accelerates resolver development with consistent patterns
+- Ensures enterprise-grade error handling and security
+- Reduces boilerplate code and development time
+- Facilitates code review and maintenance workflows
+- Supports rapid prototyping and MVP development
+
+Essential for professional GraphQL server development and enterprise API implementation.")]
     public static async Task<string> GenerateResolverTemplates(
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Type name to generate templates for")]
@@ -164,7 +237,49 @@ public static class ResolverDocumentationTools
         return templates.ToString();
     }
 
-    [McpServerTool, Description("Analyze and document GraphQL resolver performance patterns with optimization recommendations")]
+    [McpServerTool, Description(@"Comprehensive GraphQL resolver performance analysis system with intelligent optimization recommendations and monitoring guidance.
+
+This advanced performance analysis tool provides complete optimization analysis including:
+1. N+1 query problem detection and DataLoader recommendations
+2. Resolver execution time analysis and bottleneck identification
+3. Database query optimization and indexing strategies
+4. Caching implementation patterns and invalidation strategies
+5. Memory usage analysis and garbage collection optimization
+6. Concurrency patterns and async/await best practices
+
+Performance Analysis Features:
+- Resolver execution profiling and timing analysis
+- Database query pattern analysis and optimization
+- Memory allocation tracking and leak detection
+- Concurrency bottleneck identification and solutions
+- Cache hit/miss ratio analysis and improvement strategies
+- Query complexity scoring and risk assessment
+
+Optimization Recommendations:
+- DataLoader implementation for batch query optimization
+- Field-level caching strategies and cache key design
+- Database connection pooling and transaction management
+- Async resolver patterns for improved throughput
+- Query complexity limits and depth analysis
+- Resource allocation and scaling recommendations
+
+Monitoring and Profiling:
+- Key performance metrics and KPI identification
+- APM integration patterns and monitoring setup
+- Custom logging and instrumentation guidance
+- Production performance monitoring strategies
+- Alert thresholds and notification configurations
+- Performance regression detection and prevention
+
+Enterprise Benefits:
+- Identifies performance bottlenecks before production deployment
+- Provides actionable optimization recommendations
+- Ensures scalable resolver implementation patterns
+- Facilitates performance testing and benchmarking
+- Supports capacity planning and resource optimization
+- Enables proactive performance monitoring and alerting
+
+Essential for high-performance GraphQL APIs, enterprise scalability, and production optimization workflows.")]
     public static async Task<string> DocumentResolverPerformance(
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Type name to analyze (optional)")]

@@ -210,7 +210,41 @@ Note: This operation will replace all existing dynamic tools for the specified e
         }
     }
 
-    [McpServerTool, Description("Remove a GraphQL endpoint and clean up all its auto-generated dynamic tools")]
+    [McpServerTool, Description(@"Comprehensive GraphQL endpoint deregistration and cleanup system with intelligent tool management.
+
+This endpoint lifecycle management tool provides complete deregistration including:
+1. Endpoint registry removal and validation
+2. Dynamic tool cleanup and memory management
+3. Resource deallocation and connection cleanup
+4. Registry integrity verification and consistency
+5. Cascading cleanup of dependent components
+6. Safe removal with error handling and rollback
+
+Cleanup Operations:
+- Removes endpoint from active registry
+- Cleans up all auto-generated dynamic MCP tools
+- Deallocates cached schema information
+- Closes active connections and resources
+- Removes endpoint-specific configurations
+- Maintains registry consistency and integrity
+
+Use Cases:
+- Development environment cleanup and reset
+- Endpoint migration and replacement workflows
+- Testing environment teardown automation
+- Resource management and memory optimization
+- CI/CD pipeline cleanup operations
+- Dynamic endpoint lifecycle management
+
+Safety Features:
+- Validates endpoint existence before removal
+- Provides detailed cleanup operation reports
+- Handles cascading dependency cleanup
+- Maintains system stability during removal
+- Prevents orphaned tool references
+- Ensures clean removal without side effects
+
+Essential for maintaining clean development environments and efficient resource management.")]
     public static string UnregisterEndpoint(
         [Description("Name of the endpoint to unregister")]
         string endpointName)

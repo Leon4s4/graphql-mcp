@@ -74,55 +74,96 @@ class PersonaMigrationAgent:
     def __init__(self, use_online_models: bool = True):
         """Initialize the agent with OpenAI or local LLM configuration."""
         if use_online_models:
-            self.product_manager_llm = ChatOpenAI(
-                model="gpt-4o-mini",
-                temperature=0.1
-            )
-            self.architect_llm = ChatOpenAI(
-                model="o1-mini",  # Use reasoning model for complex design
-                temperature=0.1
-            )
-            self.implementer_llm = ChatOpenAI(
-                model="gpt-4o-mini",
-                temperature=0.1
-            )
-            self.problem_solver_llm = ChatOpenAI(
-                model="claude-3-5-sonnet-20241022",  # Claude for problem solving
-                temperature=0.2
-            )
-        else:
-            # Use specialized local models for different personas
-            # Product Manager: Focused, instruction-following model
-            self.product_manager_llm = ChatOpenAI(
-                base_url="http://localhost:1234/v1",
-                api_key="lm-studio",
-                model="llama-3.1-8b-instruct",  # Good for structured tasks
-                temperature=0.1
-            )
+            # Check if API keys are available
+            import os
+            openai_key = os.getenv("OPENAI_API_KEY")
+            anthropic_key = os.getenv("ANTHROPIC_API_KEY")
             
-            # Architect: Reasoning-capable model for complex design
-            self.architect_llm = ChatOpenAI(
-                base_url="http://localhost:1234/v1",
-                api_key="lm-studio",
-                model="deepseek-coder-6.7b-instruct",  # Strong reasoning for architecture
-                temperature=0.1
-            )
+            if not openai_key:
+                print("Warning: OPENAI_API_KEY not found. Falling back to local models.")
+                use_online_models = False
+            else:
+                try:
+                    self.product_manager_llm = ChatOpenAI(
+                        model="gpt-4o-mini",
+                        temperature=0.1
+                    )
+                    self.architect_llm = ChatOpenAI(
+                        model="o1-mini",  # Use reasoning model for complex design
+                        temperature=0.1
+                    )
+                    self.implementer_llm = ChatOpenAI(
+                        model="gpt-4o-mini",
+                        temperature=0.1
+                    )
+                    
+                    # Use Claude if available, otherwise GPT-4o-mini
+                    if anthropic_key:
+                        from langchain_anthropic import ChatAnthropic
+                        self.problem_solver_llm = ChatAnthropic(
+                            model="claude-3-5-sonnet-20241022",
+                            temperature=0.2
+                        )
+                    else:
+                        self.problem_solver_llm = ChatOpenAI(
+                            model="gpt-4o-mini",  # Fallback to GPT-4o-mini
+                            temperature=0.2
+                        )
+                except Exception as e:
+                    print(f"Error initializing online models: {e}")
+                    print("Falling back to local models.")
+                    use_online_models = False
+        
+        if not use_online_models:
+            # Try specialized local models, fallback to single model if needed
+            base_config = {
+                "base_url": "http://localhost:1234/v1",
+                "api_key": "lm-studio"
+            }
             
-            # Implementer: Code-focused model
-            self.implementer_llm = ChatOpenAI(
-                base_url="http://localhost:1234/v1",
-                api_key="lm-studio",
-                model="codellama-13b-instruct",  # Specialized for code generation
-                temperature=0.1
-            )
-            
-            # Problem Solver: Creative problem-solving model
-            self.problem_solver_llm = ChatOpenAI(
-                base_url="http://localhost:1234/v1",
-                api_key="lm-studio",
-                model="mistral-7b-instruct",  # Good at creative problem solving
-                temperature=0.2
-            )
+            try:
+                # Product Manager: Focused, instruction-following model
+                self.product_manager_llm = ChatOpenAI(
+                    **base_config,
+                    model="llama-3.1-8b-instruct",  # Good for structured tasks
+                    temperature=0.1
+                )
+                
+                # Architect: Reasoning-capable model for complex design
+                self.architect_llm = ChatOpenAI(
+                    **base_config,
+                    model="deepseek-coder-6.7b-instruct",  # Strong reasoning for architecture
+                    temperature=0.1
+                )
+                
+                # Implementer: Code-focused model
+                self.implementer_llm = ChatOpenAI(
+                    **base_config,
+                    model="codellama-13b-instruct",  # Specialized for code generation
+                    temperature=0.1
+                )
+                
+                # Problem Solver: Creative problem-solving model
+                self.problem_solver_llm = ChatOpenAI(
+                    **base_config,
+                    model="mistral-7b-instruct",  # Good at creative problem solving
+                    temperature=0.2
+                )
+            except Exception as e:
+                print(f"Warning: Could not initialize specialized local models: {e}")
+                print("Using single local model for all personas.")
+                
+                # Fallback to single local model for all personas
+                fallback_llm = ChatOpenAI(
+                    **base_config,
+                    model="gemma-3",  # Generic fallback model
+                    temperature=0.1
+                )
+                
+                self.product_manager_llm = fallback_llm
+                self.architect_llm = fallback_llm
+                self.implementer_llm = fallback_llm
+                self.problem_solver_llm = fallback_llm
         
         # Persona system prompts
         self.persona_prompts = {
@@ -547,5 +588,16 @@ def create_persona_agent(use_online_models: bool = True) -> PersonaMigrationAgen
 
 
 # Export graph for LangGraph Studio
-agent = create_persona_agent()
+# Default to local models to avoid API key errors in LangGraph Studio
+try:
+    import os
+    if os.getenv("OPENAI_API_KEY"):
+        agent = create_persona_agent(use_online_models=True)
+    else:
+        agent = create_persona_agent(use_online_models=False)
+except Exception as e:
+    print(f"Warning: Error creating agent with online models: {e}")
+    print("Creating agent with local models instead.")
+    agent = create_persona_agent(use_online_models=False)
+
 graph = agent.graph

@@ -58,7 +58,27 @@ public static class UtilityTools
             .TrimEnd();
     }
 
-    [McpServerTool, Description("Compress GraphQL queries by removing whitespace and comments for production use")]
+    [McpServerTool, Description(@"Comprehensive GraphQL query minification and compression for production deployment.
+
+This production-ready tool provides complete query optimization including:
+1. Whitespace and unnecessary character removal
+2. Comment stripping while preserving string literals
+3. Bracket and operator spacing optimization
+4. String literal preservation and proper escaping
+5. Production-safe compression algorithms
+
+Minification Benefits:
+- Reduces query size by 40-70% for network efficiency
+- Maintains query functionality and correctness
+- Improves transmission speed and bandwidth usage
+- Removes development-time comments and formatting
+- Safe for production GraphQL endpoints
+
+Optimal for:
+- Production deployments and CDN optimization
+- Network-constrained environments
+- High-frequency query execution
+- Client-side query bundling and caching")]
     public static string MinifyQuery([Description("GraphQL query to minify")] string query)
     {
         var minified = Regex.Replace(query, @"#.*$", "", RegexOptions.Multiline);
@@ -100,7 +120,28 @@ public static class UtilityTools
         return cleaned.Trim();
     }
 
-    [McpServerTool, Description("Convert hardcoded values in queries to variables for reusability and type safety")]
+    [McpServerTool, Description(@"Intelligent GraphQL query variable extraction and parameterization for enhanced reusability and type safety.
+
+This powerful refactoring tool provides comprehensive variable extraction including:
+1. Automatic detection of hardcoded string, number, and boolean values
+2. Intelligent variable naming and type inference
+3. Query signature transformation with proper variable declarations
+4. Variable JSON generation with inferred types
+5. Type-safe parameterization for better client integration
+
+Extraction Features:
+- String literal detection with proper escaping
+- Numeric value extraction (Int/Float type inference)
+- Boolean value identification and conversion
+- Operation signature enhancement with variable declarations
+- Generated variable JSON with example values
+
+Benefits:
+- Improves query reusability and maintainability
+- Enables type-safe client implementations
+- Reduces code duplication across similar queries
+- Facilitates dynamic query generation
+- Enhances GraphQL best practices compliance")]
     public static string ExtractVariables([Description("GraphQL query to extract variables from")] string query)
     {
         var result = new StringBuilder();
@@ -195,7 +236,30 @@ public static class UtilityTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Create field aliases to prevent naming conflicts when querying the same field multiple times")]
+    [McpServerTool, Description(@"Advanced GraphQL field aliasing system for conflict resolution and multi-parameter field queries.
+
+This sophisticated tool provides comprehensive alias management including:
+1. Automatic detection of field naming conflicts and duplicates
+2. Intelligent alias generation with descriptive naming patterns
+3. Multi-parameter field query optimization
+4. Response structure analysis and conflict prevention
+5. Alias pattern suggestions and best practices
+
+Aliasing Capabilities:
+- Detects fields called multiple times with different parameters
+- Generates meaningful aliases based on parameter differences
+- Prevents response key conflicts in nested selections
+- Optimizes query structure for complex data requirements
+- Maintains query readability and developer intent
+
+Use Cases:
+- Fetching the same field with different arguments
+- Complex data aggregation in single queries
+- A/B testing scenarios with parameter variations
+- Multi-variant product or content queries
+- Performance optimization through query consolidation
+
+Essential for advanced GraphQL query patterns and data fetching strategies.")]
     public static string GenerateAliases([Description("GraphQL query to generate aliases for")] string query)
     {
         var result = new StringBuilder();

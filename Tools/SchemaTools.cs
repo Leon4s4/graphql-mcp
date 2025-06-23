@@ -179,13 +179,32 @@ Provides comprehensive type analysis including:
         }
     }
 
-    [McpServerTool, Description(@"List all available operations (queries, mutations, subscriptions) for an endpoint.
+    [McpServerTool, Description(@"Comprehensive GraphQL operations discovery and documentation system with intelligent categorization and detailed analysis.
 
-Provides organized listing of all GraphQL operations including:
-- Operation signatures with parameters
-- Return types and descriptions
-- Deprecation warnings
-- Usage examples and patterns")]
+This advanced schema exploration tool provides complete operation analysis including:
+1. Systematic operation discovery across all GraphQL types
+2. Detailed parameter analysis with type information
+3. Return type documentation and field mapping
+4. Deprecation tracking and migration guidance
+5. Usage pattern identification and best practices
+6. Operation complexity assessment and recommendations
+
+Operation Analysis Features:
+- Complete query, mutation, and subscription enumeration
+- Parameter type analysis with nullability information
+- Return type exploration with nested field discovery
+- Deprecation warnings with replacement suggestions
+- Operation signature documentation and examples
+- Complexity scoring and performance implications
+
+Output Formats:
+- Organized by operation type with clear categorization
+- Detailed parameter specifications and validation rules
+- Interactive examples with variable suggestions
+- Documentation links and usage recommendations
+- Performance considerations and optimization tips
+
+Essential for API discovery, client development, and comprehensive GraphQL endpoint understanding.")]
     public static async Task<string> ListOperations(
         [Description("Name of the registered GraphQL endpoint")]
         string endpointName,
@@ -222,13 +241,39 @@ Provides organized listing of all GraphQL operations including:
         }
     }
 
-    [McpServerTool, Description(@"Search schema for types, fields, or operations matching a pattern.
+    [McpServerTool, Description(@"Advanced GraphQL schema search engine with intelligent pattern matching and contextual discovery capabilities.
 
-Powerful search capabilities including:
-- Regex pattern matching across names and descriptions
-- Type and field search with context
-- Operation discovery by name patterns
-- Related entity identification")]
+This powerful search system provides comprehensive schema exploration including:
+1. Multi-target search across types, fields, operations, and descriptions
+2. Advanced regex pattern matching with case sensitivity options
+3. Contextual result grouping and relationship mapping
+4. Fuzzy matching and suggestion algorithms
+5. Cross-reference analysis and dependency tracking
+6. Search result ranking and relevance scoring
+
+Search Capabilities:
+- Intelligent pattern matching across all schema elements
+- Type definition search with inheritance analysis
+- Field search with parent type context and relationships
+- Operation discovery with parameter and return type analysis
+- Description and documentation content search
+- Directive and annotation pattern matching
+
+Advanced Features:
+- Related entity identification and suggestion
+- Dependency graph analysis and visualization
+- Search result clustering by relevance and type
+- Export capabilities for search results
+- Search history and pattern optimization
+- Performance-optimized indexing for large schemas
+
+Search Targets:
+- Types: Classes, interfaces, enums, scalars, unions
+- Fields: Properties, methods, parameters, return types
+- Operations: Queries, mutations, subscriptions
+- Documentation: Descriptions, comments, annotations
+
+Essential for large schema navigation, API discovery, and development workflow optimization.")]
     public static async Task<string> SearchSchema(
         [Description("Name of the registered GraphQL endpoint")]
         string endpointName,

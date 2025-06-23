@@ -10,7 +10,33 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class TestingMockingTools
 {
-    [McpServerTool, Description("Generate realistic mock data that conforms to GraphQL schema type definitions")]
+    [McpServerTool, Description(@"Comprehensive GraphQL mock data generation system with intelligent schema analysis and realistic data synthesis.
+
+This advanced testing tool provides complete mock data capabilities including:
+1. Schema-aware type analysis and field discovery
+2. Realistic data generation with contextual field names
+3. Relationship mapping and nested object creation
+4. Custom data patterns and domain-specific generators
+5. Bulk data generation with variety and uniqueness
+6. Edge case and boundary value testing scenarios
+
+Mock Data Features:
+- Intelligent field name recognition (email, phone, address, etc.)
+- Realistic data patterns matching field semantics
+- Configurable data variety and randomization
+- Nested object and array generation
+- Null value handling and optional field management
+- Consistent relationship mapping across generated data
+
+Testing Benefits:
+- Accelerates development with immediate test data
+- Enables comprehensive testing scenarios
+- Provides edge cases and boundary conditions
+- Supports load testing with bulk data generation
+- Facilitates API development without backend dependencies
+- Ensures type safety and schema compliance
+
+Essential for GraphQL API development, testing, and quality assurance workflows.")]
     public static async Task<string> GenerateMockData(
         [Description("Name of the registered GraphQL endpoint")] string endpointName,
         [Description("Type name to generate mock data for")]

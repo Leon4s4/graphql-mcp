@@ -151,7 +151,49 @@ public static class PerformanceMonitoringTools
         }
     }
 
-    [McpServerTool, Description("Identify potential N+1 query problems and recommend DataLoader optimization patterns")]
+    [McpServerTool, Description(@"Advanced N+1 query detection and DataLoader optimization system with comprehensive performance analysis and intelligent batching recommendations.
+
+This sophisticated performance analysis tool provides complete N+1 optimization including:
+1. Comprehensive N+1 query pattern detection and analysis
+2. DataLoader implementation recommendations and code generation
+3. Batch loading strategy optimization and efficiency analysis
+4. Database query consolidation and performance impact assessment
+5. Caching layer integration and intelligent cache key design
+6. Real-time performance monitoring and optimization suggestions
+
+N+1 Detection Features:
+- Intelligent pattern recognition for potential N+1 scenarios
+- Nested field analysis and relationship mapping
+- Query execution path analysis and bottleneck identification
+- Database hit prediction and load estimation
+- Performance impact scoring and risk assessment
+- Alternative query pattern suggestions and optimizations
+
+DataLoader Optimization:
+- Custom DataLoader implementation guidance and code generation
+- Batch function optimization and key mapping strategies
+- Cache integration patterns and invalidation strategies
+- Error handling and retry logic for batch operations
+- Performance monitoring and metrics collection
+- Load balancing and connection pooling recommendations
+
+Performance Analysis:
+- Execution time prediction and resource utilization analysis
+- Database connection impact and pooling optimization
+- Memory usage analysis and garbage collection optimization
+- Concurrent request handling and throughput optimization
+- Cache hit ratio analysis and improvement strategies
+- Scalability assessment and capacity planning recommendations
+
+Implementation Guidance:
+- Multi-language DataLoader pattern implementations
+- Framework-specific optimization recommendations
+- Database-specific batching strategies and query optimization
+- Monitoring and alerting setup for production environments
+- Performance testing scenarios and validation frameworks
+- Production deployment strategies and rollback procedures
+
+Essential for high-performance GraphQL APIs, enterprise scalability, and production optimization workflows.")]
     public static string AnalyzeDataLoaderPatterns([Description("GraphQL query to analyze")] string query)
     {
         try

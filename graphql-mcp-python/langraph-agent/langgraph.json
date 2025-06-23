@@ -3,6 +3,12 @@
   "graphs": {
     "csharp_migration": {
       "path": "csharp_to_graphql_agent:graph"
+    },
+    "persona_migration": {
+      "path": "persona_migration_agent:graph"
+    },
+    "dev_team": {
+      "path": "software_dev_team_agent:graph"
     }
   }
 }

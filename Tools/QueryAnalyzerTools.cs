@@ -112,7 +112,49 @@ public static class QueryAnalyzerTools
         return analysis.ToString();
     }
 
-    [McpServerTool, Description("Automatically construct GraphQL queries from schema types with intelligent field selection")]
+    [McpServerTool, Description(@"Intelligent GraphQL query construction system with automated field selection and schema-aware optimization.
+
+This advanced query building tool provides comprehensive query generation including:
+1. Schema-aware type analysis and field discovery
+2. Intelligent field selection with relationship mapping
+3. Nested object traversal and depth optimization
+4. Required vs optional field identification
+5. Performance-optimized query structure generation
+6. Variable integration and parameter optimization
+
+Query Construction Features:
+- Automatic field discovery from schema introspection
+- Smart field selection based on type relationships
+- Nested object inclusion with configurable depth limits
+- Related entity identification and inclusion options
+- Variable placeholder generation and type mapping
+- Fragment suggestion for repeated field patterns
+
+Schema Integration:
+- Real-time schema validation and field verification
+- Type compatibility checking and validation
+- Argument analysis and parameter suggestion
+- Deprecation warning and alternative recommendations
+- Performance impact assessment for complex queries
+- Security validation and safe query construction
+
+Optimization Capabilities:
+- Query complexity analysis and reduction suggestions
+- Field selection optimization and redundancy removal
+- Fragment extraction for reusable query components
+- Variable extraction and parameterization
+- Performance scoring and execution cost estimation
+- Caching strategy recommendations and implementation
+
+Development Benefits:
+- Accelerates query development with automated construction
+- Ensures type safety and schema compliance
+- Reduces manual field selection and validation overhead
+- Provides intelligent suggestions for query optimization
+- Facilitates rapid prototyping and API exploration
+- Supports complex query patterns with minimal manual effort
+
+Essential for rapid GraphQL development, schema exploration, and automated query generation workflows.")]
     public static async Task<string> BuildQuery(
         [Description("Name of the registered GraphQL endpoint")]
         string endpointName,

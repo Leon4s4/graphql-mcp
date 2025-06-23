@@ -9,7 +9,49 @@ namespace Graphql.Mcp.Tools;
 [McpServerToolType]
 public static class SchemaEvolutionTools
 {
-    [McpServerTool, Description("Identify breaking changes between GraphQL schema versions with impact analysis")]
+    [McpServerTool, Description(@"Advanced GraphQL schema evolution analysis system with comprehensive breaking change detection and migration planning.
+
+This enterprise-grade schema analysis tool provides complete version comparison including:
+1. Comprehensive breaking change detection and categorization
+2. Impact assessment with client compatibility analysis
+3. Migration strategy planning and implementation guidance
+4. Severity-based change filtering and risk assessment
+5. Automated migration path generation and testing recommendations
+6. Backward compatibility scoring and deprecation tracking
+
+Breaking Change Detection:
+- Field removal and type modification analysis
+- Argument changes and nullability impact assessment
+- Enum value deprecation and interface modifications
+- Directive changes and custom scalar type evolution
+- Input type modifications and validation rule changes
+- Operation signature changes and return type analysis
+
+Impact Analysis Features:
+- Client query compatibility validation
+- API consumer impact assessment and notification
+- Database schema synchronization requirements
+- Performance implications and optimization opportunities
+- Security impact analysis and access control changes
+- Documentation update requirements and changelog generation
+
+Migration Planning:
+- Step-by-step migration strategy development
+- Deprecation timeline and sunset planning
+- Client notification strategies and communication plans
+- Testing scenarios and validation frameworks
+- Rollback procedures and emergency response plans
+- Version compatibility matrix and support lifecycle
+
+Enterprise Benefits:
+- Prevents production breaking changes and client disruption
+- Enables confident schema evolution and API versioning
+- Facilitates large-scale API migration projects
+- Supports regulatory compliance and change management
+- Reduces deployment risks and rollback requirements
+- Ensures seamless client upgrade experiences
+
+Essential for API versioning, enterprise schema management, and production deployment safety.")]
     public static async Task<string> DetectBreakingChanges(
         [Description("Old schema endpoint or SDL")]
         string oldSchema,
@@ -94,7 +136,49 @@ public static class SchemaEvolutionTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Monitor GraphQL schema changes over time and generate evolution trend reports")]
+    [McpServerTool, Description(@"Comprehensive GraphQL schema evolution monitoring system with intelligent trend analysis and predictive insights.
+
+This advanced monitoring tool provides complete schema lifecycle tracking including:
+1. Multi-version schema comparison and historical analysis
+2. Evolution trend identification and pattern recognition
+3. Change velocity monitoring and development pace analysis
+4. Breaking change frequency tracking and risk assessment
+5. Schema complexity growth analysis and optimization recommendations
+6. API maturity scoring and governance compliance tracking
+
+Evolution Tracking Features:
+- Historical schema version comparison and diff analysis
+- Change frequency patterns and development velocity metrics
+- Breaking change trend analysis and risk prediction
+- Schema complexity evolution and performance impact
+- Field usage patterns and deprecation effectiveness
+- API surface area growth and maintenance overhead analysis
+
+Trend Analysis Capabilities:
+- Change pattern recognition and anomaly detection
+- Development team productivity and collaboration metrics
+- Schema quality trends and technical debt accumulation
+- Client adoption patterns and migration success rates
+- Performance degradation patterns and optimization opportunities
+- Governance compliance trends and policy effectiveness
+
+Reporting and Insights:
+- Executive dashboards with key metrics and KPIs
+- Development team reports with actionable recommendations
+- Compliance reports for governance and audit requirements
+- Performance trend analysis with optimization suggestions
+- Risk assessment reports with mitigation strategies
+- Predictive analysis for future evolution planning
+
+Enterprise Benefits:
+- Enables data-driven API governance and decision making
+- Identifies schema evolution patterns and optimization opportunities
+- Supports strategic planning and technical debt management
+- Facilitates team performance analysis and improvement
+- Ensures compliance with API governance policies
+- Provides insights for capacity planning and resource allocation
+
+Essential for enterprise API governance, schema lifecycle management, and strategic technical planning.")]
     public static async Task<string> TrackSchemaEvolution(
         [Description("List of schema endpoints or versions as JSON array")]
         string schemaVersions,

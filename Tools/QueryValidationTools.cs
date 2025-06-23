@@ -124,7 +124,49 @@ public static class QueryValidationTools
         return result.ToString();
     }
 
-    [McpServerTool, Description("Perform syntax validation on GraphQL queries without schema or execution requirements")]
+    [McpServerTool, Description(@"Comprehensive GraphQL query syntax validation system with intelligent error detection and correction suggestions.
+
+This advanced validation tool provides complete query analysis including:
+1. Comprehensive syntax validation with detailed error reporting
+2. Intelligent error detection and correction suggestions
+3. Best practice compliance checking and recommendations
+4. Query structure analysis and optimization opportunities
+5. Security pattern validation and vulnerability detection
+6. Development-friendly error messages and resolution guidance
+
+Syntax Validation Features:
+- Complete GraphQL syntax compliance checking
+- Bracket and parentheses balancing validation
+- String literal and escape sequence verification
+- Variable declaration and usage validation
+- Fragment definition and reference checking
+- Directive syntax and placement validation
+
+Error Detection and Reporting:
+- Precise error location identification with line/column numbers
+- Intelligent error categorization and severity assessment
+- Suggested corrections and alternative syntax recommendations
+- Common mistake detection and prevention guidance
+- Copy-paste error identification and resolution
+- IDE-friendly error formatting and integration
+
+Development Benefits:
+- Fast validation without requiring schema access or server connection
+- Offline validation capability for development environments
+- Instant feedback during query development and testing
+- Educational error messages with learning opportunities
+- Integration support for CI/CD pipelines and automated testing
+- Performance-optimized validation for large query sets
+
+Security and Best Practices:
+- Detection of potentially dangerous query patterns
+- Validation of input sanitization and injection prevention
+- Best practice compliance checking and recommendations
+- Query complexity analysis and risk assessment
+- Performance pattern validation and optimization suggestions
+- Authentication and authorization placeholder validation
+
+Essential for development workflows, CI/CD pipelines, and educational GraphQL development environments.")]
     public static string ValidateQuery([Description("GraphQL query to validate")] string query)
     {
         var result = new StringBuilder();
