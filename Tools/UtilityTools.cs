@@ -372,7 +372,7 @@ Supported Languages:
             result.AppendLine($"# Generated {language.ToUpper()} Code\n");
 
             // Get schema for code generation
-            var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+            var schemaResult = await SchemaTools.IntrospectSchema(endpointInfo);
             if (!schemaResult.IsSuccess)
                 return schemaResult.FormatForDisplay();
 

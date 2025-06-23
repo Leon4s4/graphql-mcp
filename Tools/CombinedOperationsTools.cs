@@ -667,7 +667,7 @@ This tool is essential for microservices architectures and distributed GraphQL s
 
         try
         {
-            var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+            var schemaResult = await SchemaTools.IntrospectSchema(endpointInfo);
             if (!schemaResult.IsSuccess)
                 return new { error = schemaResult.ErrorMessage };
 

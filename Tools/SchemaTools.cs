@@ -55,7 +55,7 @@ Use this as your primary tool for all schema-related operations.")]
 
         try
         {
-            var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+            var schemaResult = await IntrospectSchema(endpointInfo);
             if (!schemaResult.IsSuccess)
             {
                 return schemaResult.FormatForDisplay();
@@ -150,7 +150,7 @@ Provides comprehensive type analysis including:
 
         try
         {
-            var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+            var schemaResult = await IntrospectSchema(endpointInfo);
             if (!schemaResult.IsSuccess)
                 return schemaResult.FormatForDisplay();
 
@@ -223,7 +223,7 @@ Essential for API discovery, client development, and comprehensive GraphQL endpo
 
         try
         {
-            var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+            var schemaResult = await IntrospectSchema(endpointInfo);
             if (!schemaResult.IsSuccess)
                 return schemaResult.FormatForDisplay();
 
@@ -294,7 +294,7 @@ Essential for large schema navigation, API discovery, and development workflow o
         {
             var regex = new Regex(searchPattern, caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase);
             
-            var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+            var schemaResult = await IntrospectSchema(endpointInfo);
             if (!schemaResult.IsSuccess)
                 return schemaResult.FormatForDisplay();
 
@@ -736,6 +736,115 @@ Essential for large schema navigation, API discovery, and development workflow o
                 ? name.GetString() ?? "unknown" 
                 : "unknown"
         };
+    }
+
+    /// <summary>
+    /// Internal helper method for backward compatibility with consolidated tools
+    /// </summary>
+    internal static async Task<GraphQlResponse> IntrospectSchema(GraphQlEndpointInfo endpointInfo)
+    {
+        try
+        {
+            const string introspectionQuery = @"
+                query IntrospectionQuery {
+                    __schema {
+                        queryType { name }
+                        mutationType { name }
+                        subscriptionType { name }
+                        types {
+                            ...FullType
+                        }
+                        directives {
+                            name
+                            description
+                            locations
+                            args {
+                                ...InputValue
+                            }
+                        }
+                    }
+                }
+
+                fragment FullType on __Type {
+                    kind
+                    name
+                    description
+                    fields(includeDeprecated: true) {
+                        name
+                        description
+                        args {
+                            ...InputValue
+                        }
+                        type {
+                            ...TypeRef
+                        }
+                        isDeprecated
+                        deprecationReason
+                    }
+                    inputFields {
+                        ...InputValue
+                    }
+                    interfaces {
+                        ...TypeRef
+                    }
+                    enumValues(includeDeprecated: true) {
+                        name
+                        description
+                        isDeprecated
+                        deprecationReason
+                    }
+                    possibleTypes {
+                        ...TypeRef
+                    }
+                }
+
+                fragment InputValue on __InputValue {
+                    name
+                    description
+                    type { ...TypeRef }
+                    defaultValue
+                }
+
+                fragment TypeRef on __Type {
+                    kind
+                    name
+                    ofType {
+                        kind
+                        name
+                        ofType {
+                            kind
+                            name
+                            ofType {
+                                kind
+                                name
+                                ofType {
+                                    kind
+                                    name
+                                    ofType {
+                                        kind
+                                        name
+                                        ofType {
+                                            kind
+                                            name
+                                            ofType {
+                                                kind
+                                                name
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }";
+
+            var requestBody = new { query = introspectionQuery };
+            return await HttpClientHelper.ExecuteGraphQlRequestAsync(endpointInfo, requestBody);
+        }
+        catch (Exception ex)
+        {
+            return GraphQlResponse.UnexpectedError(ex.Message);
+        }
     }
 
     #endregion

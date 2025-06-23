@@ -326,7 +326,7 @@ This tool provides query construction assistance including:
             result.AppendLine($"# Query Builder: {endpointName}\n");
 
             // Get schema information
-            var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+            var schemaResult = await SchemaTools.IntrospectSchema(endpointInfo);
             if (!schemaResult.IsSuccess)
                 return schemaResult.FormatForDisplay();
 

@@ -51,7 +51,7 @@ Essential for GraphQL API development, testing, and quality assurance workflows.
         }
 
         // Get schema introspection
-        var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+        var schemaResult = await SchemaTools.IntrospectSchema(endpointInfo);
         if (!schemaResult.IsSuccess)
             return schemaResult.FormatForDisplay();
 
@@ -204,10 +204,10 @@ Essential for GraphQL API development, testing, and quality assurance workflows.
         }
 
         // Get both schemas
-        var originalResult = await SchemaIntrospectionTools.IntrospectSchema(originalEndpointInfo);
+        var originalResult = await SchemaTools.IntrospectSchema(originalEndpointInfo);
         if (!originalResult.IsSuccess)
             return originalResult.FormatForDisplay();
-        var newResult = await SchemaIntrospectionTools.IntrospectSchema(newEndpointInfo);
+        var newResult = await SchemaTools.IntrospectSchema(newEndpointInfo);
         if (!newResult.IsSuccess)
             return newResult.FormatForDisplay();
 

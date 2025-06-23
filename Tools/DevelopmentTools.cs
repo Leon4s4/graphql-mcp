@@ -116,7 +116,7 @@ This tool provides testing support including:
             result.AppendLine($"# Test Data Generation: {endpointName}\n");
 
             // Get schema for data generation
-            var schemaResult = await SchemaIntrospectionTools.IntrospectSchema(endpointInfo);
+            var schemaResult = await SchemaTools.IntrospectSchema(endpointInfo);
             if (!schemaResult.IsSuccess)
                 return schemaResult.FormatForDisplay();
 
