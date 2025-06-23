@@ -52,16 +52,19 @@ public static class GraphQlOperationHelper
         var returnTypeName = GetTypeName(field.Type);
         operation.AppendLine(" {");
         
-        // Add some common scalar fields that are likely to exist
-        operation.AppendLine("    # Common fields - customize based on your needs:");
-        operation.AppendLine("    # id");
-        operation.AppendLine("    # name");
-        operation.AppendLine("    # title");
-        operation.AppendLine("    # createdAt");
-        operation.AppendLine("    # updatedAt");
+        // Add actual working field selections instead of comments
+        operation.AppendLine("    # IMPORTANT: This query template requires field selection.");
+        operation.AppendLine("    # Replace this comment block with actual fields from your schema.");
+        operation.AppendLine("    # Common field patterns:");
+        operation.AppendLine("    id");
+        operation.AppendLine("    name");
+        operation.AppendLine("    # For collections, you may need:");
+        operation.AppendLine("    # items { id name }");
         operation.AppendLine("    ");
-        operation.AppendLine("    # Use BuildSmartQuery tool for automatic field selection");
-        operation.AppendLine("    # Use GetSchema tool to see available fields");
+        operation.AppendLine("    # To get the correct fields automatically:");
+        operation.AppendLine("    # 1. Use GetTypeDefinition tool to see available fields");
+        operation.AppendLine("    # 2. Use BuildSmartQuery tool for automatic field selection");
+        operation.AppendLine("    # 3. Use QueryGraphQLComprehensive tool for complete queries");
         
         operation.AppendLine("  }");
         operation.AppendLine("}");
@@ -112,17 +115,27 @@ public static class GraphQlOperationHelper
         description.AppendLine();
         description.AppendLine($"Returns: {returnType}");
         
-        // Add usage examples
+        // Add usage examples and field selection guidance
+        description.AppendLine();
+        description.AppendLine("⚠️  FIELD SELECTION REQUIRED:");
+        description.AppendLine("This operation requires field selection. The generated query template includes basic fields (id, name)");
+        description.AppendLine("but you may need to customize based on your schema.");
+        description.AppendLine();
+        description.AppendLine("To get correct field selection:");
+        description.AppendLine($"1. Use GetTypeDefinition tool to see available fields for {returnType}");
+        description.AppendLine("2. Use BuildSmartQuery tool for automatic field generation");
+        description.AppendLine("3. Use QueryGraphQLComprehensive for complete working queries");
         description.AppendLine();
         description.AppendLine("Usage Examples:");
         if (field.Arguments.Any())
         {
             description.AppendLine($"- With variables: Use ExecuteDynamicOperation with toolName '{operationType.ToLower()}_{fieldName}'");
-            description.AppendLine($"- Direct query: Use QueryGraphQl with operation string");
+            description.AppendLine($"- Better option: Use QueryGraphQLComprehensive with proper field selection");
         }
         else
         {
-            description.AppendLine($"- Simple execution: Use ExecuteDynamicOperation with toolName '{operationType.ToLower()}_{fieldName}'");
+            description.AppendLine($"- Basic execution: Use ExecuteDynamicOperation with toolName '{operationType.ToLower()}_{fieldName}'");
+            description.AppendLine($"- Recommended: Use QueryGraphQLComprehensive for complete queries");
         }
         
         return description.ToString();
@@ -194,15 +207,18 @@ public static class GraphQlOperationHelper
         }
 
         operation.AppendLine(" {");
-        operation.AppendLine("    # Common fields - customize based on your needs:");
-        operation.AppendLine("    # id");
-        operation.AppendLine("    # name");
-        operation.AppendLine("    # title");
-        operation.AppendLine("    # createdAt");
-        operation.AppendLine("    # updatedAt");
+        operation.AppendLine("    # IMPORTANT: This query template requires field selection.");
+        operation.AppendLine("    # Replace this comment block with actual fields from your schema.");
+        operation.AppendLine("    # Common field patterns:");
+        operation.AppendLine("    id");
+        operation.AppendLine("    name");
+        operation.AppendLine("    # For collections, you may need:");
+        operation.AppendLine("    # items { id name }");
         operation.AppendLine("    ");
-        operation.AppendLine("    # Use BuildSmartQuery tool for automatic field selection");
-        operation.AppendLine("    # Use GetSchema tool to see available fields for this type");
+        operation.AppendLine("    # To get the correct fields automatically:");
+        operation.AppendLine("    # 1. Use GetTypeDefinition tool to see available fields");
+        operation.AppendLine("    # 2. Use BuildSmartQuery tool for automatic field selection");
+        operation.AppendLine("    # 3. Use QueryGraphQLComprehensive tool for complete queries");
         operation.AppendLine("  }");
         operation.AppendLine("}");
 
@@ -275,17 +291,33 @@ public static class GraphQlOperationHelper
             description.AppendLine($"Returns: {returnTypeName}");
         }
         
-        // Add usage examples
+        // Add usage examples and field selection guidance
+        var fieldReturnTypeName = "Unknown";
+        if (field.TryGetProperty("type", out var returnTypeElement))
+        {
+            fieldReturnTypeName = GraphQlTypeHelpers.GetTypeName(returnTypeElement);
+        }
+        
+        description.AppendLine();
+        description.AppendLine("⚠️  FIELD SELECTION REQUIRED:");
+        description.AppendLine("This operation requires field selection. The generated query template includes basic fields (id, name)");
+        description.AppendLine("but you may need to customize based on your schema.");
+        description.AppendLine();
+        description.AppendLine("To get correct field selection:");
+        description.AppendLine($"1. Use GetTypeDefinition tool to see available fields for {fieldReturnTypeName}");
+        description.AppendLine("2. Use BuildSmartQuery tool for automatic field generation");
+        description.AppendLine("3. Use QueryGraphQLComprehensive for complete working queries");
         description.AppendLine();
         description.AppendLine("Usage Examples:");
         if (field.TryGetProperty("args", out var fieldArgs) && fieldArgs.ValueKind == JsonValueKind.Array && fieldArgs.GetArrayLength() > 0)
         {
             description.AppendLine($"- With variables: Use ExecuteDynamicOperation with toolName '{operationType.ToLower()}_{fieldName}'");
-            description.AppendLine($"- Direct query: Use QueryGraphQl with operation string");
+            description.AppendLine($"- Better option: Use QueryGraphQLComprehensive with proper field selection");
         }
         else
         {
-            description.AppendLine($"- Simple execution: Use ExecuteDynamicOperation with toolName '{operationType.ToLower()}_{fieldName}'");
+            description.AppendLine($"- Basic execution: Use ExecuteDynamicOperation with toolName '{operationType.ToLower()}_{fieldName}'");
+            description.AppendLine($"- Recommended: Use QueryGraphQLComprehensive for complete queries");
         }
 
         return description.ToString();
